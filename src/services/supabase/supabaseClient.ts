@@ -1,17 +1,30 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const metaEnv = (import.meta as any).env || {};
-const supabaseUrl = metaEnv.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = metaEnv.VITE_SUPABASE_ANON_KEY || '';
+let rawUrl = (metaEnv.VITE_SUPABASE_URL || '').trim();
+
+// Sanitize URL if user entered the full REST endpoint
+if (rawUrl.endsWith('/rest/v1/')) {
+  rawUrl = rawUrl.replace('/rest/v1/', '');
+} else if (rawUrl.endsWith('/rest/v1')) {
+  rawUrl = rawUrl.replace('/rest/v1', '');
+}
+if (rawUrl.endsWith('/')) {
+  rawUrl = rawUrl.slice(0, -1);
+}
+
+const supabaseUrl = rawUrl;
+const supabaseAnonKey = (metaEnv.VITE_SUPABASE_ANON_KEY || '').trim();
 
 export const isSupabaseConfigured = Boolean(
   supabaseUrl &&
   supabaseAnonKey &&
   supabaseUrl !== 'https://your-project-ref.supabase.co' &&
-  !supabaseUrl.includes('your-project')
+  !supabaseUrl.includes('your-project') &&
+  !supabaseAnonKey.includes('your-anon-key')
 );
 
-// Fallback dummy client for offline development when keys are not yet configured in .env
+// Supabase client instance (with offline fallback if not configured)
 export const supabase: SupabaseClient = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
