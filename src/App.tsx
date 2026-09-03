@@ -77,20 +77,36 @@ export function App() {
 
   // Load data from Supabase Cloud whenever user logs in
   useEffect(() => {
-    if (authUser && !authUser.isGuest) {
-      CloudSyncService.loadStateFromCloud(authUser).then((cloudState) => {
-        if (cloudState && cloudState.accounts.length > 0) {
-          setState((prev) => ({
-            ...cloudState,
-            categories: prev.categories.length > 0 ? prev.categories : cloudState.categories,
-          }));
-        } else {
-          // New user on cloud: sync initial state up to Supabase
-          CloudSyncService.syncStateToCloud(state, authUser);
-        }
-      });
+    if (authUser) {
+      const userNameToSet = authUser.fullName || authUser.email.split('@')[0] || 'User';
+      setState((prev) => ({
+        ...prev,
+        settings: {
+          ...prev.settings,
+          userId: authUser.id,
+          userName: userNameToSet,
+        },
+      }));
+
+      if (!authUser.isGuest) {
+        CloudSyncService.loadStateFromCloud(authUser).then((cloudState) => {
+          if (cloudState && cloudState.accounts.length > 0) {
+            setState((prev) => ({
+              ...cloudState,
+              categories: prev.categories.length > 0 ? prev.categories : cloudState.categories,
+              settings: {
+                ...cloudState.settings,
+                userName: userNameToSet,
+              },
+            }));
+          } else {
+            // New user on cloud: sync initial state up to Supabase
+            CloudSyncService.syncStateToCloud(state, authUser);
+          }
+        });
+      }
     }
-  }, [authUser?.id, authUser?.isGuest]);
+  }, [authUser?.id, authUser?.fullName, authUser?.isGuest]);
 
   // Sync state to local storage & Supabase Cloud
   useEffect(() => {
