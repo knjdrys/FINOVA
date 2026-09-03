@@ -1,4 +1,4 @@
-import { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
+import { Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 export interface AuthUserProfile {
@@ -25,7 +25,7 @@ export class AuthService {
             user: {
               id: user.id,
               email: user.email || '',
-              fullName: user.user_metadata?.full_name || user.user_metadata?.name || 'Juan Dela Cruz',
+              fullName: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Juan Dela Cruz',
               avatarUrl: user.user_metadata?.avatar_url,
               isGuest: false,
             },
@@ -33,7 +33,7 @@ export class AuthService {
           };
         }
       } catch (err) {
-        console.warn('Supabase session fetch failed:', err);
+        console.warn('Supabase session fetch error:', err);
       }
     }
 
@@ -52,7 +52,7 @@ export class AuthService {
   }
 
   /**
-   * Listen for Supabase auth state changes
+   * Listen for Supabase auth state changes (OAuth callbacks, login, logout)
    */
   public static onAuthStateChange(
     callback: (event: AuthChangeEvent, session: Session | null, user: AuthUserProfile | null) => void
@@ -67,7 +67,7 @@ export class AuthService {
         profile = {
           id: session.user.id,
           email: session.user.email || '',
-          fullName: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'Juan Dela Cruz',
+          fullName: session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Juan Dela Cruz',
           avatarUrl: session.user.user_metadata?.avatar_url,
           isGuest: false,
         };
@@ -81,7 +81,7 @@ export class AuthService {
    */
   public static async signInWithGoogle(): Promise<{ error: Error | null }> {
     if (!isSupabaseConfigured) {
-      // If keys aren't added yet, sign in as a demo Google user locally
+      // Offline fallback: Demo Google user
       const demoUser: AuthUserProfile = {
         id: 'demo-google-user',
         email: 'juan.delacruz@gmail.com',
@@ -94,13 +94,30 @@ export class AuthService {
     }
 
     try {
+      const redirectUrl = window.location.origin;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: redirectUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
-      return { error };
+
+      if (error) {
+        if (error.message.toLowerCase().includes('provider is not enabled') || error.message.toLowerCase().includes('unsupported provider')) {
+          return {
+            error: new Error(
+              'Google login is not yet enabled in your Supabase project. Go to Supabase -> Authentication -> Providers -> Google to enable it, or log in with Email & Password below.'
+            ),
+          };
+        }
+        return { error };
+      }
+
+      return { error: null };
     } catch (err: any) {
       return { error: err };
     }
@@ -113,12 +130,13 @@ export class AuthService {
     email: string,
     password: string
   ): Promise<{ user: AuthUserProfile | null; error: Error | null }> {
+    const cleanEmail = email.trim();
+
     if (!isSupabaseConfigured) {
-      // Offline / Local mock login
       const mockUser: AuthUserProfile = {
         id: 'local-email-user',
-        email: email.trim(),
-        fullName: email.split('@')[0] || 'Juan Dela Cruz',
+        email: cleanEmail,
+        fullName: cleanEmail.split('@')[0] || 'Juan Dela Cruz',
         isGuest: false,
       };
       localStorage.setItem(LOCAL_GUEST_USER_KEY, JSON.stringify(mockUser));
@@ -127,20 +145,38 @@ export class AuthService {
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: cleanEmail,
         password,
       });
 
-      if (error) return { user: null, error };
-      if (!data.user) return { user: null, error: new Error('User not found') };
+      if (error) {
+        if (error.message.toLowerCase().includes('invalid login credentials')) {
+          return {
+            user: null,
+            error: new Error('Incorrect email or password. If you do not have an account yet, click "Create account" above.'),
+          };
+        }
+        if (error.message.toLowerCase().includes('email not confirmed')) {
+          return {
+            user: null,
+            error: new Error('Please confirm your email address by clicking the verification link sent to your inbox before logging in.'),
+          };
+        }
+        return { user: null, error };
+      }
+
+      if (!data.user) {
+        return { user: null, error: new Error('User account not found.') };
+      }
 
       const profile: AuthUserProfile = {
         id: data.user.id,
-        email: data.user.email || '',
-        fullName: data.user.user_metadata?.full_name || 'Juan Dela Cruz',
+        email: data.user.email || cleanEmail,
+        fullName: data.user.user_metadata?.full_name || cleanEmail.split('@')[0] || 'Juan Dela Cruz',
         avatarUrl: data.user.user_metadata?.avatar_url,
         isGuest: false,
       };
+
       return { user: profile, error: null };
     } catch (err: any) {
       return { user: null, error: err };
@@ -155,41 +191,68 @@ export class AuthService {
     password: string,
     fullName: string
   ): Promise<{ user: AuthUserProfile | null; error: Error | null; message?: string }> {
+    const cleanEmail = email.trim();
+    const cleanName = fullName.trim() || cleanEmail.split('@')[0] || 'Juan Dela Cruz';
+
+    if (password.length < 6) {
+      return {
+        user: null,
+        error: new Error('Password must be at least 6 characters long.'),
+      };
+    }
+
     if (!isSupabaseConfigured) {
       const mockUser: AuthUserProfile = {
         id: 'local-signup-user',
-        email: email.trim(),
-        fullName: fullName.trim() || 'Juan Dela Cruz',
+        email: cleanEmail,
+        fullName: cleanName,
         isGuest: false,
       };
       localStorage.setItem(LOCAL_GUEST_USER_KEY, JSON.stringify(mockUser));
-      return { user: mockUser, error: null };
+      return { user: mockUser, error: null, message: 'Account created successfully!' };
     }
 
     try {
       const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
+        email: cleanEmail,
         password,
         options: {
           data: {
-            full_name: fullName.trim() || 'Juan Dela Cruz',
+            full_name: cleanName,
+            name: cleanName,
           },
+          emailRedirectTo: window.location.origin,
         },
       });
 
-      if (error) return { user: null, error };
+      if (error) {
+        if (error.message.toLowerCase().includes('already registered')) {
+          return {
+            user: null,
+            error: new Error('This email is already registered. Please sign in instead.'),
+          };
+        }
+        return { user: null, error };
+      }
 
       if (data.user) {
         const profile: AuthUserProfile = {
           id: data.user.id,
-          email: data.user.email || '',
-          fullName: data.user.user_metadata?.full_name || fullName || 'Juan Dela Cruz',
+          email: data.user.email || cleanEmail,
+          fullName: data.user.user_metadata?.full_name || cleanName,
+          avatarUrl: data.user.user_metadata?.avatar_url,
           isGuest: false,
         };
+
+        // Check if email confirmation is required by Supabase
+        const isSessionActive = Boolean(data.session);
+
         return {
-          user: profile,
+          user: isSessionActive ? profile : null,
           error: null,
-          message: data.session ? undefined : 'Confirmation email sent. Please check your inbox.',
+          message: isSessionActive
+            ? 'Account created and signed in successfully!'
+            : `Account created for ${cleanEmail}! Please check your email inbox to confirm your account, or log in if confirmation is turned off.`,
         };
       }
 
@@ -222,7 +285,7 @@ export class AuthService {
       try {
         await supabase.auth.signOut();
       } catch (err) {
-        console.error('Supabase sign out error:', err);
+        console.warn('Supabase sign out error:', err);
       }
     }
   }

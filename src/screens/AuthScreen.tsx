@@ -79,6 +79,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
         } else if (user) {
           setSuccessMessage(message || 'Account created successfully! Logging you in...');
           setTimeout(() => onAuthenticated(user), 600);
+        } else if (message) {
+          setSuccessMessage(message);
+          setMode('SIGN_IN');
         }
       }
     } catch (err: any) {
