@@ -168,10 +168,14 @@ export function App() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    setState((prev) => ({
-      ...prev,
-      accounts: [...prev.accounts, newAccount],
-    }));
+    const nextState = {
+      ...state,
+      accounts: [...state.accounts, newAccount],
+    };
+    setState(nextState);
+    if (authUser && !authUser.isGuest) {
+      CloudSyncService.syncStateToCloud(nextState, authUser);
+    }
   };
 
   // Handler: Delete Account
@@ -180,10 +184,14 @@ export function App() {
       alert('You must have at least one account.');
       return;
     }
-    setState((prev) => ({
-      ...prev,
-      accounts: prev.accounts.filter((a) => a.id !== accountId),
-    }));
+    const nextState = {
+      ...state,
+      accounts: state.accounts.filter((a) => a.id !== accountId),
+    };
+    setState(nextState);
+    if (authUser && !authUser.isGuest) {
+      CloudSyncService.syncStateToCloud(nextState, authUser);
+    }
     if (selectedAccountId === accountId) {
       setSelectedAccountId('ALL');
     }
@@ -202,11 +210,17 @@ export function App() {
     const updatedAccounts = TransactionEngine.applyTransactionToAccounts(newTx, state.accounts);
     const updatedTransactions = [newTx, ...state.transactions];
 
-    setState((prev) => ({
-      ...prev,
+    const nextState = {
+      ...state,
       accounts: updatedAccounts,
       transactions: updatedTransactions,
-    }));
+    };
+
+    setState(nextState);
+
+    if (authUser && !authUser.isGuest) {
+      CloudSyncService.syncStateToCloud(nextState, authUser);
+    }
   };
 
   // Handler: Delete Transaction
