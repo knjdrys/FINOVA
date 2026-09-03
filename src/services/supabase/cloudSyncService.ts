@@ -1,4 +1,4 @@
-import { FinovaState } from '../storage/FinovaStorage';
+import { FinovaState, INITIAL_CATEGORIES } from '../storage/FinovaStorage';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import { AuthUserProfile } from './authService';
 import {
@@ -11,6 +11,27 @@ import {
   UserSettings,
 } from '../../types';
 
+// Convert any string ID into a valid UUID string for Supabase PostgreSQL
+export function toValidUuid(rawId: string): string {
+  if (!rawId) return '00000000-0000-4000-8000-000000000001';
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (uuidRegex.test(rawId)) {
+    return rawId.toLowerCase();
+  }
+
+  // Hash the raw string into 32 hex chars
+  let hash = 0;
+  for (let i = 0; i < rawId.length; i++) {
+    hash = ((hash << 5) - hash) + rawId.charCodeAt(i);
+    hash |= 0;
+  }
+  const hex = Math.abs(hash).toString(16).padStart(8, '0');
+  const hexPart2 = (Math.abs(hash * 31)).toString(16).padStart(12, '0').slice(0, 12);
+  const hexPart3 = (Math.abs(hash * 97)).toString(16).padStart(12, '0').slice(0, 12);
+
+  return `${hex}-${hexPart2.slice(0, 4)}-4${hexPart2.slice(4, 7)}-8${hexPart2.slice(7, 10)}-${hexPart3}`;
+}
+
 export class CloudSyncService {
   /**
    * Load complete state from Supabase PostgreSQL for the authenticated user
@@ -22,26 +43,32 @@ export class CloudSyncService {
 
     try {
       // 1. Fetch User Settings
-      const { data: settingsData } = await supabase
+      const { data: settingsData, error: sErr } = await supabase
         .from('user_settings')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
 
+      if (sErr) console.warn('Supabase settings load error:', sErr);
+
       // 2. Fetch Accounts
-      const { data: accountsData } = await supabase
+      const { data: accountsData, error: aErr } = await supabase
         .from('accounts')
         .select('*')
         .eq('user_id', user.id)
         .eq('is_archived', false)
         .order('created_at', { ascending: true });
 
+      if (aErr) console.warn('Supabase accounts load error:', aErr);
+
       // 3. Fetch Transactions
-      const { data: txData } = await supabase
+      const { data: txData, error: tErr } = await supabase
         .from('transactions')
         .select('*')
         .eq('user_id', user.id)
         .order('date', { ascending: false });
+
+      if (tErr) console.warn('Supabase tx load error:', tErr);
 
       // 4. Fetch Budgets
       const { data: budgetData } = await supabase
@@ -63,7 +90,7 @@ export class CloudSyncService {
         .select('*')
         .eq('user_id', user.id);
 
-      // If no data exists yet on cloud for this user, return null so local defaults or onboarding trigger
+      // If user has no existing cloud data yet, return null
       if (!settingsData && (!accountsData || accountsData.length === 0)) {
         return null;
       }
@@ -176,7 +203,7 @@ export class CloudSyncService {
       return {
         accounts,
         transactions,
-        categories: [],
+        categories: INITIAL_CATEGORIES,
         budgets,
         goals,
         commitments,
@@ -198,7 +225,15 @@ export class CloudSyncService {
     }
 
     try {
-      // 1. Sync User Settings
+      // 1. Sync User Profile & Settings
+      await supabase.from('profiles').upsert({
+        id: user.id,
+        email: user.email,
+        full_name: user.fullName || state.settings.userName,
+        avatar_url: user.avatarUrl,
+        updated_at: new Date().toISOString(),
+      });
+
       await supabase.from('user_settings').upsert({
         user_id: user.id,
         currency: state.settings.currency || 'PHP',
@@ -217,30 +252,66 @@ export class CloudSyncService {
       // 2. Sync Accounts
       if (state.accounts.length > 0) {
         const accountPayloads = state.accounts.map((acc) => ({
-          id: acc.id.includes('-') && acc.id.length >= 30 ? acc.id : undefined,
+          id: toValidUuid(acc.id),
           user_id: user.id,
           name: acc.name,
           bank_preset_id: acc.bankPresetId || 'grbi',
           account_number_mask: acc.accountNumberMask,
           type: acc.type || 'BANK',
-          currency: acc.currency || 'PHP',
+          currency: acc.currency || state.settings.currency || 'PHP',
           initial_balance: acc.initialBalance,
           current_balance: acc.currentBalance,
-          icon: acc.icon,
-          color: acc.color,
-          include_in_total_balance: acc.includeInTotalBalance,
-          is_archived: acc.isArchived,
-        })).filter((p) => p.id !== undefined);
+          icon: acc.icon || 'Building2',
+          color: acc.color || '#1C205E',
+          include_in_total_balance: acc.includeInTotalBalance ?? true,
+          is_archived: acc.isArchived ?? false,
+          updated_at: new Date().toISOString(),
+        }));
 
-        if (accountPayloads.length > 0) {
-          await supabase.from('accounts').upsert(accountPayloads);
-        }
+        const { error: accErr } = await supabase.from('accounts').upsert(accountPayloads);
+        if (accErr) console.warn('Supabase accounts upsert error:', accErr);
+      }
+
+      // 3. Sync Transactions
+      if (state.transactions.length > 0) {
+        const firstAccId = state.accounts[0]?.id ? toValidUuid(state.accounts[0].id) : toValidUuid('acc-1');
+        const txPayloads = state.transactions.map((tx) => ({
+          id: toValidUuid(tx.id),
+          user_id: user.id,
+          account_id: tx.accountId ? toValidUuid(tx.accountId) : firstAccId,
+          category_id: null,
+          type: tx.type || 'EXPENSE',
+          amount: Math.round(tx.amount),
+          currency: tx.currency || state.settings.currency || 'PHP',
+          merchant: tx.merchant || '',
+          note: tx.note || '',
+          date: tx.date || new Date().toISOString().substring(0, 10),
+          time: tx.time || '12:00',
+          tags: tx.tags || [],
+          status: tx.status || 'CONFIRMED',
+          updated_at: new Date().toISOString(),
+        }));
+
+        const { error: txErr } = await supabase.from('transactions').upsert(txPayloads);
+        if (txErr) console.warn('Supabase transactions upsert error:', txErr);
       }
 
       return true;
     } catch (err) {
       console.warn('Cloud sync to Supabase error:', err);
       return false;
+    }
+  }
+
+  /**
+   * Delete a transaction from Supabase
+   */
+  public static async deleteTransactionFromCloud(txId: string, user: AuthUserProfile): Promise<void> {
+    if (!isSupabaseConfigured || user.isGuest) return;
+    try {
+      await supabase.from('transactions').delete().eq('id', toValidUuid(txId)).eq('user_id', user.id);
+    } catch (err) {
+      console.warn('Supabase delete tx error:', err);
     }
   }
 }

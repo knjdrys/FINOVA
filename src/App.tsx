@@ -75,6 +75,23 @@ export function App() {
     };
   }, []);
 
+  // Load data from Supabase Cloud whenever user logs in
+  useEffect(() => {
+    if (authUser && !authUser.isGuest) {
+      CloudSyncService.loadStateFromCloud(authUser).then((cloudState) => {
+        if (cloudState && cloudState.accounts.length > 0) {
+          setState((prev) => ({
+            ...cloudState,
+            categories: prev.categories.length > 0 ? prev.categories : cloudState.categories,
+          }));
+        } else {
+          // New user on cloud: sync initial state up to Supabase
+          CloudSyncService.syncStateToCloud(state, authUser);
+        }
+      });
+    }
+  }, [authUser?.id, authUser?.isGuest]);
+
   // Sync state to local storage & Supabase Cloud
   useEffect(() => {
     FinovaStorage.saveState(state);
@@ -193,6 +210,10 @@ export function App() {
       accounts: updatedAccounts,
       transactions: updatedTransactions,
     }));
+
+    if (authUser && !authUser.isGuest) {
+      CloudSyncService.deleteTransactionFromCloud(txId, authUser);
+    }
 
     setSelectedTxForDetail(null);
   };
