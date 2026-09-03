@@ -1,0 +1,106 @@
+import React from 'react';
+import { Home, ListOrdered, Plus, BarChart3, Settings } from 'lucide-react';
+
+export type NavTab = 'HOME' | 'ALL_EXPENSES' | 'ANALYTICS' | 'SETTINGS';
+
+interface BottomNavigationProps {
+  currentTab: NavTab;
+  onSelectTab: (tab: NavTab) => void;
+  onOpenQuickAdd: () => void;
+}
+
+export const BottomNavigation: React.FC<BottomNavigationProps> = ({
+  currentTab,
+  onSelectTab,
+  onOpenQuickAdd,
+}) => {
+  return (
+    <div className="fixed bottom-0 inset-x-0 z-40 flex justify-center pointer-events-none pb-safe">
+      <nav className="pointer-events-auto w-full max-w-lg md:max-w-2xl bg-white/95 backdrop-blur-lg border-t border-slate-200/70 sm:border sm:rounded-t-[32px] sm:shadow-2xl px-4 sm:px-6 py-2">
+        <div className="flex items-center justify-between relative">
+          {/* Home Tab */}
+          <button
+            type="button"
+            onClick={() => onSelectTab('HOME')}
+            className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer ${
+              currentTab === 'HOME' ? 'text-slate-900 scale-105' : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <Home className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
+            <span className="text-[11px] font-bold mt-1">Home</span>
+            {currentTab === 'HOME' ? (
+              <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
+            ) : (
+              <span className="h-1.5 w-1.5 mt-0.5 opacity-0"></span>
+            )}
+          </button>
+
+          {/* All Expense Tab */}
+          <button
+            type="button"
+            onClick={() => onSelectTab('ALL_EXPENSES')}
+            className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer ${
+              currentTab === 'ALL_EXPENSES' ? 'text-slate-900 scale-105' : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <ListOrdered className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
+            <span className="text-[11px] font-bold mt-1">All Expense</span>
+            {currentTab === 'ALL_EXPENSES' ? (
+              <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
+            ) : (
+              <span className="h-1.5 w-1.5 mt-0.5 opacity-0"></span>
+            )}
+          </button>
+
+          {/* Elevated Floating Quick-Add Button with soft glow ring */}
+          <div data-tour="quick-add" className="relative -top-5 sm:-top-6 flex items-center justify-center px-2">
+            <div className="rounded-full bg-[#E8F8B6]/80 p-1.5 shadow-sm">
+              <button
+                type="button"
+                onClick={onOpenQuickAdd}
+                aria-label="Add Transaction"
+                className="flex h-13 w-13 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-[#C6F432] text-[#122A1E] shadow-md shadow-lime-600/30 transition-transform duration-150 hover:scale-105 active:scale-95 cursor-pointer"
+              >
+                <Plus className="h-7 w-7 sm:h-8 sm:w-8 stroke-[3]" />
+              </button>
+            </div>
+          </div>
+
+          {/* Analytics Tab */}
+          <button
+            type="button"
+            onClick={() => onSelectTab('ANALYTICS')}
+            className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer ${
+              currentTab === 'ANALYTICS' ? 'text-slate-900 scale-105' : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
+            <span className="text-[11px] font-bold mt-1">Analytics</span>
+            {currentTab === 'ANALYTICS' ? (
+              <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
+            ) : (
+              <span className="h-1.5 w-1.5 mt-0.5 opacity-0"></span>
+            )}
+          </button>
+
+          {/* Settings Tab */}
+          <button
+            type="button"
+            onClick={() => onSelectTab('SETTINGS')}
+            className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer ${
+              currentTab === 'SETTINGS' ? 'text-slate-900 scale-105' : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <Settings className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
+            <span className="text-[11px] font-bold mt-1">Settings</span>
+            {currentTab === 'SETTINGS' ? (
+              <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
+            ) : (
+              <span className="h-1.5 w-1.5 mt-0.5 opacity-0"></span>
+            )}
+          </button>
+        </div>
+      </nav>
+    </div>
+  );
+};

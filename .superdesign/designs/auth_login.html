@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | FINOVA Financial OS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: #ffffff;
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-outfit {
+      font-family: 'Outfit', sans-serif;
+      letter-spacing: -0.02em;
+    }
+    .dot-grid {
+      background-image: radial-gradient(#0f2420 1px, transparent 1px);
+      background-size: 32px 32px;
+      opacity: 0.4;
+    }
+    .underline-lime {
+      position: relative;
+      display: inline-block;
+      z-index: 1;
+    }
+    .underline-lime::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: 8px;
+      width: 100%;
+      height: 12px;
+      background-color: #c4f042;
+      z-index: -1;
+      transform: rotate(-1.5deg);
+      border-radius: 2px;
+    }
+    .auth-input:focus {
+      outline: none;
+      border-color: #c4f042 !important;
+      box-shadow: 0 0 0 4px rgba(196, 240, 66, 0.14);
+    }
+    .btn-lime {
+      background-color: #c4f042;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-lime:hover {
+      background-color: #b5e032;
+      transform: translateY(-1px);
+    }
+    .btn-sso:hover {
+      border-color: #c4f042;
+      background-color: #fafbf9;
+    }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen flex flex-col lg:flex-row">
+    
+    <!-- LEFT: BRAND AUTHORITY PANEL -->
+    <section class="relative w-full lg:w-1/2 bg-[#1a3a2e] p-8 md:p-12 lg:p-20 flex flex-col justify-between text-white overflow-hidden">
+      <!-- Geometric Pattern Layer -->
+      <div class="absolute inset-0 dot-grid pointer-events-none"></div>
+      
+      <!-- Top: Geometric Logo Lockup -->
+      <div class="relative z-10">
+        <a href="#" id="nav-brand-logo-lockup" class="flex flex-col items-start gap-6 group">
+          <!-- Geometric Icon: Connected Nodes SVG -->
+          <div class="relative">
+            <div class="w-20 h-20 md:w-24 md:h-24 relative z-10 flex items-center justify-center bg-white/5 rounded-2xl border border-white/10">
+              <svg viewBox="0 0 100 100" class="w-14 h-14 md:w-16 md:h-16 text-[#c4f042] fill-current" aria-hidden="true">
+                <!-- Nodes -->
+                <circle cx="30" cy="35" r="12" fill="white" />
+                <circle cx="70" cy="35" r="12" fill="white" />
+                <circle cx="50" cy="70" r="12" fill="white" />
+                <!-- Connections -->
+                <path d="M38 40 L62 40" stroke="#c4f042" stroke-width="4" stroke-linecap="round" />
+                <path d="M35 45 L45 62" stroke="#c4f042" stroke-width="4" stroke-linecap="round" />
+                <path d="M65 45 L55 62" stroke="#c4f042" stroke-width="4" stroke-linecap="round" />
+              </svg>
+            </div>
+          </div>
+          <div class="flex flex-col gap-1">
+            <span class="font-outfit text-3xl md:text-4xl font-800 tracking-tighter text-white group-hover:text-[#c4f042] transition-colors">FINOVA</span>
+            <span class="text-[10px] md:text-xs font-600 tracking-[0.4em] text-[#c4f042] uppercase">Personal Finance OS</span>
+          </div>
+        </a>
+      </div>
+
+      <!-- Middle Content: Hero & Value Props -->
+      <div class="relative z-10 my-12 lg:my-0">
+        <h1 class="font-outfit text-5xl md:text-6xl lg:text-7xl font-800 leading-[1.05] text-white mb-8">
+          Your money, your rules, one <span class="underline-lime">place.</span>
+        </h1>
+        <p class="text-[rgba(255,255,255,0.75)] text-lg md:text-xl max-w-lg mb-12 font-medium leading-relaxed">
+          All your accounts, one operating system. No tabs. No chaos. Just clarity.
+        </p>
+        
+        <!-- Value Props -->
+        <div class="space-y-8 max-w-sm">
+          <div class="flex items-start gap-4">
+            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-[#c4f042]/10 flex items-center justify-center text-[#c4f042]">
+              <iconify-icon icon="ph:eye-bold" class="text-xl"></iconify-icon>
+            </div>
+            <div>
+              <p class="font-600 text-white">See everything at a glance</p>
+              <p class="text-sm text-white/60">Consolidated real-time views.</p>
+            </div>
+          </div>
+          
+          <div class="flex items-start gap-4">
+            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-[#c4f042]/10 flex items-center justify-center text-[#c4f042]">
+              <iconify-icon icon="ph:lightning-bold" class="text-xl"></iconify-icon>
+            </div>
+            <div>
+              <p class="font-600 text-white">Make smarter decisions faster</p>
+              <p class="text-sm text-white/60">AI-powered insights at your fingertips.</p>
+            </div>
+          </div>
+          
+          <div class="flex items-start gap-4">
+            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-[#c4f042]/10 flex items-center justify-center text-[#c4f042]">
+              <iconify-icon icon="ph:shield-check-bold" class="text-xl"></iconify-icon>
+            </div>
+            <div>
+              <p class="font-600 text-white">Your financial OS, no complexity</p>
+              <p class="text-sm text-white/60">Simple, secure, and purely intuitive.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom: Trust Row -->
+      <div class="relative z-10 pt-12 border-t border-white/10 hidden md:block">
+        <p class="text-[11px] font-600 tracking-[0.2em] text-white/40 mb-6 uppercase">
+          Powered by FINOVA Infrastructure
+        </p>
+        <div class="flex items-center gap-8 text-white/30 font-outfit text-lg font-700 uppercase tracking-tighter">
+          <span>Global Cap</span>
+          <span>Apex Finance</span>
+          <span>Ledger Pro</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: AUTH FORM PANEL -->
+    <section class="w-full lg:w-1/2 bg-white flex flex-col">
+      <!-- Top-right Contextual Action -->
+      <div class="p-6 lg:p-10 flex justify-end text-sm">
+        <p class="text-[#5b6478] font-medium">
+          New here? <a href="#" id="header-signup-link" class="text-[#c4f042] font-600 hover:text-[#b5e032] ml-1 transition-colors">Create account</a>
+        </p>
+      </div>
+
+      <!-- Form Center Container -->
+      <div class="flex-1 flex items-center justify-center p-6 md:p-12 lg:p-24">
+        <div class="w-full max-w-[420px]">
+          <div class="mb-10 text-center lg:text-left">
+            <h2 class="font-outfit text-3xl md:text-4xl font-700 text-[#0d1220] mb-2">Welcome back</h2>
+            <p class="text-[#5b6478] font-medium">Access your financial operating system</p>
+          </div>
+
+          <!-- SSO Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+            <button class="flex items-center justify-center gap-2 px-4 py-3 border border-[#dfe2ea] rounded-[12px] text-[#0d1220] font-600 text-sm btn-sso transition-all">
+              <iconify-icon icon="logos:google-icon" class="text-lg"></iconify-icon>
+              Google
+            </button>
+            <button class="flex items-center justify-center gap-2 px-4 py-3 border border-[#dfe2ea] rounded-[12px] text-[#0d1220] font-600 text-sm btn-sso transition-all">
+              <iconify-icon icon="ph:apple-logo-fill" class="text-xl"></iconify-icon>
+              Apple
+            </button>
+          </div>
+
+          <!-- Divider -->
+          <div class="relative flex items-center mb-8">
+            <div class="flex-grow border-t border-[#e6e8ee]"></div>
+            <span class="flex-shrink mx-4 text-[10px] font-700 text-[#aab0c0] uppercase tracking-widest">or with email</span>
+            <div class="flex-grow border-t border-[#e6e8ee]"></div>
+          </div>
+
+          <!-- Form -->
+          <form class="space-y-6">
+            <div>
+              <label for="email" class="block text-[13px] font-600 text-[#0d1220] mb-2">Email address</label>
+              <div class="relative group">
+                <iconify-icon icon="ph:envelope-simple-bold" class="absolute left-4 top-1/2 -translate-y-1/2 text-[#aab0c0] group-focus-within:text-[#0d1220] text-xl transition-colors"></iconify-icon>
+                <input type="email" id="email" placeholder="you@example.com" class="auth-input w-full pl-12 pr-4 py-3.5 border border-[#dfe2ea] rounded-[12px] bg-white text-sm text-[#0d1220] placeholder-[#aab0c0] transition-all" required>
+              </div>
+            </div>
+
+            <div>
+              <label for="password" class="block text-[13px] font-600 text-[#0d1220] mb-2">Password</label>
+              <div class="relative group">
+                <iconify-icon icon="ph:lock-simple-bold" class="absolute left-4 top-1/2 -translate-y-1/2 text-[#aab0c0] group-focus-within:text-[#0d1220] text-xl transition-colors"></iconify-icon>
+                <input type="password" id="password" placeholder="••••••••" class="auth-input w-full pl-12 pr-16 py-3.5 border border-[#dfe2ea] rounded-[12px] bg-white text-sm text-[#0d1220] placeholder-[#aab0c0] transition-all" required>
+                <button type="button" class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-700 text-[#c4f042] hover:text-[#b5e032] uppercase tracking-wider transition-colors">
+                  Show
+                </button>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <label class="flex items-center cursor-pointer">
+                <input type="checkbox" class="h-4 w-4 rounded border-[#dfe2ea] text-[#c4f042] focus:ring-[#c4f042]">
+                <span class="ml-2 text-sm font-500 text-[#5b6478]">Keep me signed in</span>
+              </label>
+              <a href="#" id="forgot-link" class="text-sm font-600 text-[#c4f042] hover:underline decoration-[#c4f042]">
+                Forgot password?
+              </a>
+            </div>
+
+            <button type="submit" class="w-full btn-lime text-[#0d1220] font-700 py-4 rounded-[12px] text-sm shadow-md active:scale-[0.98]">
+              Sign in to FINOVA
+            </button>
+          </form>
+
+          <!-- Footnote -->
+          <div class="mt-12 text-center">
+            <p class="text-sm text-[#5b6478] mb-6">
+              Don't have an account? <a href="#" id="footer-signup-link" class="text-[#c4f042] font-600 hover:underline">Sign up</a>
+            </p>
+            <p class="text-[10px] text-[#aab0c0] leading-relaxed max-w-[320px] mx-auto">
+              Protected by enterprise-grade security. By continuing, you agree to our <a href="#" id="tos-link" class="text-[#0d1220] font-500 underline decoration-1 underline-offset-4">Terms of Service</a> and <a href="#" id="privacy-link" class="text-[#0d1220] font-500 underline decoration-1 underline-offset-4">Privacy Policy</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</body>
+</html>
