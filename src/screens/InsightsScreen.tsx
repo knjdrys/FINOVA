@@ -11,6 +11,8 @@ import {
 import { InsightEngine } from '../domain/insight/InsightEngine';
 import { MoneyValue } from '../domain/money/MoneyValue';
 import { DateUtils } from '../domain/date/DateUtils';
+import { TransactionEngine } from '../domain/transaction/TransactionEngine';
+import { t, categoryName } from '../i18n';
 import {
   PieChart,
   Sparkles,
@@ -20,7 +22,7 @@ import {
   ShieldCheck,
   Target,
   CheckCircle,
-  HelpCircle,
+  Inbox,
 } from 'lucide-react';
 
 interface InsightsScreenProps {
@@ -79,8 +81,12 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
   for (const tx of transactions) {
     if (tx.type !== 'EXPENSE' || tx.status === 'PENDING') continue;
     if (DateUtils.isDateInRange(tx.date, currentMonthStart, currentMonthEnd)) {
-      const curr = categoryTotals.get(tx.categoryId) || 0;
-      categoryTotals.set(tx.categoryId, curr + tx.amount);
+      // Split-aware: a split expense contributes per allocated category.
+      const allocations = TransactionEngine.getCategoryAllocations(tx);
+      for (const [catId, amt] of allocations) {
+        const curr = categoryTotals.get(catId) || 0;
+        categoryTotals.set(catId, curr + amt);
+      }
       totalExpenseMinor += tx.amount;
     }
   }
@@ -91,7 +97,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
       const percentage = totalExpenseMinor > 0 ? (amount / totalExpenseMinor) * 100 : 0;
       return {
         catId,
-        name: cat?.name || 'Other',
+        name: categoryName(cat) || t('analytics.other'),
         amount,
         color: cat?.color || '#059669',
         percentage: Math.round(percentage),
@@ -109,13 +115,13 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
         <div>
           <span className="text-xs font-bold text-[#D4F63D] uppercase tracking-wider flex items-center gap-1.5 mb-1">
             <Sparkles className="h-3.5 w-3.5" />
-            Purchase Simulator
+            {t('analytics.simulatorKicker')}
           </span>
           <h3 className="text-base sm:text-lg font-black text-white">
-            Test a Purchase Before You Buy
+            {t('analytics.simulatorTitle')}
           </h3>
           <p className="text-xs sm:text-sm text-emerald-200/80 mt-0.5 max-w-sm">
-            See how buying something new changes your daily spending limit before you spend money.
+            {t('analytics.simulatorHint')}
           </p>
         </div>
 
@@ -124,7 +130,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
           onClick={onOpenWhatIf}
           className="rounded-2xl bg-[#D4F63D] px-5 py-2.5 text-xs sm:text-sm font-black text-[#122A1E] shadow-lg shadow-lime-500/20 hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer"
         >
-          Test a Purchase
+          {t('analytics.simulatorCta')}
         </button>
       </div>
 
@@ -134,105 +140,123 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
           <div className="flex items-center gap-2">
             <PieChart className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-800" />
             <h4 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wider">
-              Spending by Category (This Month)
+              {t('analytics.breakdownTitle')}
             </h4>
           </div>
           <span className="text-xs sm:text-sm font-bold text-slate-500">
-            Total: {MoneyValue.fromMinorUnits(totalExpenseMinor, currency).format()}
+            {t('analytics.total')} {MoneyValue.fromMinorUnits(totalExpenseMinor, currency).format()}
           </span>
         </div>
 
-        {/* Stacked Segment Bar */}
-        <div className="h-3.5 sm:h-4 w-full rounded-full bg-slate-100 flex overflow-hidden">
-          {categoryBreakdown.map((item) => (
-            <div
-              key={item.catId}
-              style={{ width: `${item.percentage}%`, backgroundColor: item.color }}
-              title={`${item.name}: ${item.percentage}%`}
-              className="h-full first:rounded-l-full last:rounded-r-full transition-all"
-            />
-          ))}
-        </div>
-
-        {/* Category List */}
-        <div className="space-y-2 pt-1">
-          {categoryBreakdown.slice(0, 5).map((item) => (
-            <div key={item.catId} className="flex items-center justify-between text-xs sm:text-sm">
-              <div className="flex items-center gap-2">
-                <span
-                  className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full"
-                  style={{ backgroundColor: item.color }}
+        {categoryBreakdown.length === 0 ? (
+          <div className="flex flex-col items-center gap-1.5 py-6 text-center">
+            <Inbox className="h-6 w-6 text-slate-300" aria-hidden="true" />
+            <p className="text-sm font-bold text-slate-700">{t('analytics.emptyTitle')}</p>
+            <p className="text-xs text-slate-500 max-w-xs">{t('analytics.emptyHint')}</p>
+          </div>
+        ) : (
+          <>
+            {/* Stacked Segment Bar */}
+            <div className="h-3.5 sm:h-4 w-full rounded-full bg-slate-100 flex overflow-hidden" aria-hidden="true">
+              {categoryBreakdown.map((item) => (
+                <div
+                  key={item.catId}
+                  style={{ width: `${item.percentage}%`, backgroundColor: item.color }}
+                  title={`${item.name}: ${item.percentage}%`}
+                  className="h-full first:rounded-l-full last:rounded-r-full transition-all"
                 />
-                <span className="font-bold text-slate-700">{item.name}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-black text-slate-900">
-                  {MoneyValue.fromMinorUnits(item.amount, currency).format()}
-                </span>
-                <span className="text-slate-400 font-semibold">({item.percentage}%)</span>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
+
+            {/* Category List */}
+            <div className="space-y-2 pt-1">
+              {categoryBreakdown.slice(0, 5).map((item) => (
+                <div key={item.catId} className="flex items-center justify-between text-xs sm:text-sm">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full"
+                      style={{ backgroundColor: item.color }}
+                      aria-hidden="true"
+                    />
+                    <span className="font-bold text-slate-700">{item.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-slate-900">
+                      {MoneyValue.fromMinorUnits(item.amount, currency).format()}
+                    </span>
+                    <span className="text-slate-400 font-semibold">({item.percentage}%)</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Smart Money Tips List */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
           <span className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wider">
-            Smart Money Tips
+            {t('analytics.tipsTitle')}
           </span>
           <span className="text-xs font-bold text-emerald-800">
-            Based on your numbers
+            {t('analytics.tipsSubtitle')}
           </span>
         </div>
 
-        <div className="space-y-3">
-          {insights.map((insight) => {
-            const IconComp = ICON_MAP[insight.iconName] || Sparkles;
+        {insights.length === 0 ? (
+          <div className="rounded-[22px] sm:rounded-[26px] bg-white p-5 shadow-xs border border-slate-100 flex flex-col items-center gap-1.5 text-center">
+            <Sparkles className="h-6 w-6 text-slate-300" aria-hidden="true" />
+            <p className="text-xs sm:text-sm text-slate-500 max-w-sm">{t('analytics.noTips')}</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {insights.map((insight) => {
+              const IconComp = ICON_MAP[insight.iconName] || Sparkles;
 
-            const badgeBg =
-              insight.severity === 'POSITIVE'
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80'
-                : insight.severity === 'WARNING'
-                ? 'bg-amber-50 text-amber-800 border-amber-200/80'
-                : insight.severity === 'ALERT'
-                ? 'bg-rose-50 text-rose-800 border-rose-200/80'
-                : 'bg-slate-50 text-slate-800 border-slate-200/80';
+              const badgeBg =
+                insight.severity === 'POSITIVE'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80'
+                  : insight.severity === 'WARNING'
+                  ? 'bg-amber-50 text-amber-800 border-amber-200/80'
+                  : insight.severity === 'ALERT'
+                  ? 'bg-rose-50 text-rose-800 border-rose-200/80'
+                  : 'bg-slate-50 text-slate-800 border-slate-200/80';
 
-            return (
-              <div
-                key={insight.id}
-                className="rounded-[22px] sm:rounded-[26px] bg-white p-4 sm:p-5 shadow-xs border border-slate-100 space-y-2.5"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2.5 rounded-2xl border ${badgeBg}`}>
-                      <IconComp className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </div>
-                    <div>
-                      <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-slate-400 block">
-                        {insight.category}
-                      </span>
-                      <h4 className="text-xs sm:text-sm font-extrabold text-slate-900">{insight.title}</h4>
+              return (
+                <div
+                  key={insight.id}
+                  className="rounded-[22px] sm:rounded-[26px] bg-white p-4 sm:p-5 shadow-xs border border-slate-100 space-y-2.5"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2.5 rounded-2xl border ${badgeBg}`}>
+                        <IconComp className="h-4 w-4 sm:h-5 sm:w-5" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-slate-400 block">
+                          {t(`insightCat.${insight.category}`)}
+                        </span>
+                        <h4 className="text-xs sm:text-sm font-extrabold text-slate-900">{insight.title}</h4>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Fact */}
-                <div className="rounded-xl bg-slate-50 p-3 text-xs sm:text-sm text-slate-700">
-                  <p className="font-bold text-slate-900">{insight.fact}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">{insight.calculation}</p>
-                </div>
+                  {/* Fact */}
+                  <div className="rounded-xl bg-slate-50 p-3 text-xs sm:text-sm text-slate-700">
+                    <p className="font-bold text-slate-900">{insight.fact}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{insight.calculation}</p>
+                  </div>
 
-                {/* Interpretation */}
-                <p className="text-xs sm:text-sm font-semibold text-emerald-950/90 pl-1">
-                  💡 {insight.interpretation}
-                </p>
-              </div>
-            );
-          })}
-        </div>
+                  {/* Interpretation */}
+                  <p className="text-xs sm:text-sm font-semibold text-emerald-950/90 pl-1">
+                    {insight.interpretation}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

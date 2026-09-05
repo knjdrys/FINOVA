@@ -4,8 +4,8 @@ import { AuthUserProfile } from './authService';
 import {
   Account,
   Budget,
-  Category,
   MoneyCommitment,
+  RecurringTransaction,
   SavingsGoal,
   Transaction,
   UserSettings,
@@ -90,6 +90,12 @@ export class CloudSyncService {
         .select('*')
         .eq('user_id', user.id);
 
+      // 7. Fetch Recurring Transactions
+      const { data: recurringData } = await supabase
+        .from('recurring_transactions')
+        .select('*')
+        .eq('user_id', user.id);
+
       // If user has no existing cloud data yet, return null
       if (!settingsData && (!accountsData || accountsData.length === 0) && (!txData || txData.length === 0)) {
         return null;
@@ -134,7 +140,7 @@ export class CloudSyncService {
         userId: t.user_id,
         accountId: t.account_id,
         categoryId: t.category_id || 'cat-general',
-        toAccountId: t.to_account_id,
+        destinationAccountId: t.to_account_id || undefined,
         type: t.type,
         amount: Number(t.amount),
         currency: t.currency || 'PHP',
@@ -144,6 +150,8 @@ export class CloudSyncService {
         time: t.time || '12:00',
         tags: t.tags || [],
         status: t.status || 'CONFIRMED',
+        splitParts: Array.isArray(t.split_parts) && t.split_parts.length > 0 ? t.split_parts : undefined,
+        receiptDataUrl: t.receipt_data_url || undefined,
         createdAt: t.created_at,
         updatedAt: t.updated_at,
       }));
@@ -200,6 +208,25 @@ export class CloudSyncService {
         updatedAt: c.updated_at,
       }));
 
+      const recurring: RecurringTransaction[] = (recurringData || []).map((r) => ({
+        id: r.id,
+        userId: r.user_id,
+        title: r.title,
+        amount: Number(r.amount),
+        currency: r.currency || 'PHP',
+        type: r.type || 'EXPENSE',
+        categoryId: r.category_id || 'cat-bills',
+        accountId: r.account_id || accounts[0]?.id || 'acc-1',
+        frequency: r.frequency || 'MONTHLY',
+        startDate: r.start_date,
+        nextOccurrence: r.next_occurrence,
+        endDate: r.end_date,
+        isActive: r.is_active ?? true,
+        reminderEnabled: r.reminder_enabled ?? true,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+      }));
+
       return {
         accounts,
         transactions,
@@ -207,7 +234,8 @@ export class CloudSyncService {
         budgets,
         goals,
         commitments,
-        recurring: [],
+        recurring,
+        readNotificationIds: [],
         settings,
       };
     } catch (err) {
@@ -284,11 +312,13 @@ export class CloudSyncService {
         const txPayloads = state.transactions.map((tx) => {
           const targetAccId = toValidUuid(tx.accountId);
           const validAccId = insertedAccountIds.has(targetAccId) ? targetAccId : fallbackAccountId;
+          const destTargetId = tx.destinationAccountId ? toValidUuid(tx.destinationAccountId) : null;
           return {
             id: toValidUuid(tx.id),
             user_id: user.id,
             account_id: validAccId,
-            category_id: null,
+            category_id: tx.categoryId || null,
+            to_account_id: destTargetId && insertedAccountIds.has(destTargetId) ? destTargetId : null,
             type: tx.type || 'EXPENSE',
             amount: Math.round(tx.amount),
             currency: tx.currency || state.settings.currency || 'PHP',
@@ -298,12 +328,103 @@ export class CloudSyncService {
             time: tx.time || '12:00',
             tags: tx.tags || [],
             status: tx.status || 'CONFIRMED',
+            split_parts: tx.splitParts && tx.splitParts.length > 0 ? tx.splitParts : null,
+            // Receipts stay local-only (data URLs would bloat the row); cloud syncs metadata.
+            receipt_data_url: null,
             updated_at: new Date().toISOString(),
           };
         });
 
         const { error: txErr } = await supabase.from('transactions').upsert(txPayloads);
         if (txErr) console.error('Supabase transactions upsert error:', txErr);
+      }
+
+      // 5. Sync Budgets
+      if (state.budgets.length > 0) {
+        const budgetPayloads = state.budgets.map((b) => ({
+          id: toValidUuid(b.id),
+          user_id: user.id,
+          name: b.name,
+          amount: Math.round(b.amount),
+          currency: b.currency || state.settings.currency || 'PHP',
+          category_ids: b.categoryIds || [],
+          period: b.period || 'MONTHLY',
+          start_date: b.startDate,
+          end_date: b.endDate,
+          notify_threshold_percentage: b.notifyThresholdPercentage || 80,
+          rollover_unused: b.rolloverUnused ?? false,
+          is_active: b.isActive ?? true,
+          updated_at: new Date().toISOString(),
+        }));
+        const { error: bErr } = await supabase.from('budgets').upsert(budgetPayloads);
+        if (bErr) console.error('Supabase budgets upsert error:', bErr);
+      }
+
+      // 6. Sync Savings Goals
+      if (state.goals.length > 0) {
+        const goalPayloads = state.goals.map((g) => ({
+          id: toValidUuid(g.id),
+          user_id: user.id,
+          name: g.name,
+          target_amount: Math.round(g.targetAmount),
+          current_amount: Math.round(g.currentAmount || 0),
+          currency: g.currency || state.settings.currency || 'PHP',
+          target_date: g.targetDate,
+          linked_account_id: g.accountId ? toValidUuid(g.accountId) : null,
+          priority: g.priority || 'ESSENTIAL',
+          status: g.status || 'ON_TRACK',
+          icon: g.icon || 'Target',
+          color: g.color || '#059669',
+          is_archived: g.isArchived ?? false,
+          updated_at: new Date().toISOString(),
+        }));
+        const { error: gErr } = await supabase.from('savings_goals').upsert(goalPayloads);
+        if (gErr) console.error('Supabase goals upsert error:', gErr);
+      }
+
+      // 7. Sync Money Commitments
+      if (state.commitments.length > 0) {
+        const commitmentPayloads = state.commitments.map((c) => ({
+          id: toValidUuid(c.id),
+          user_id: user.id,
+          name: c.title,
+          amount: Math.round(c.amount),
+          currency: c.currency || state.settings.currency || 'PHP',
+          due_date: c.dueDate,
+          type: c.type || 'BILL',
+          status: c.status || 'PROJECTED',
+          priority: c.priority || 'ESSENTIAL',
+          direction: c.direction || 'OUTFLOW',
+          category_id: c.categoryId ? toValidUuid(c.categoryId) : null,
+          account_id: c.accountId ? toValidUuid(c.accountId) : null,
+          is_auto_generated: c.isAutoGenerated ?? false,
+          updated_at: new Date().toISOString(),
+        }));
+        const { error: cErr } = await supabase.from('money_commitments').upsert(commitmentPayloads);
+        if (cErr) console.error('Supabase commitments upsert error:', cErr);
+      }
+
+      // 8. Sync Recurring Transactions
+      if (state.recurring.length > 0) {
+        const recurringPayloads = state.recurring.map((r) => ({
+          id: toValidUuid(r.id),
+          user_id: user.id,
+          title: r.title,
+          amount: Math.round(r.amount),
+          currency: r.currency || state.settings.currency || 'PHP',
+          type: r.type || 'EXPENSE',
+          category_id: r.categoryId ? toValidUuid(r.categoryId) : null,
+          account_id: r.accountId ? toValidUuid(r.accountId) : null,
+          frequency: r.frequency || 'MONTHLY',
+          start_date: r.startDate,
+          next_occurrence: r.nextOccurrence,
+          end_date: r.endDate || null,
+          is_active: r.isActive ?? true,
+          reminder_enabled: r.reminderEnabled ?? true,
+          updated_at: new Date().toISOString(),
+        }));
+        const { error: rErr } = await supabase.from('recurring_transactions').upsert(recurringPayloads);
+        if (rErr) console.error('Supabase recurring upsert error:', rErr);
       }
 
       return true;
@@ -316,12 +437,14 @@ export class CloudSyncService {
   /**
    * Delete a transaction from Supabase
    */
-  public static async deleteTransactionFromCloud(txId: string, user: AuthUserProfile): Promise<void> {
-    if (!isSupabaseConfigured || user.isGuest) return;
+  public static async deleteTransactionFromCloud(txId: string, user: AuthUserProfile): Promise<boolean> {
+    if (!isSupabaseConfigured || user.isGuest) return false;
     try {
-      await supabase.from('transactions').delete().eq('id', toValidUuid(txId)).eq('user_id', user.id);
+      const { error } = await supabase.from('transactions').delete().eq('id', toValidUuid(txId)).eq('user_id', user.id);
+      return !error;
     } catch (err) {
       console.error('Supabase delete tx error:', err);
+      return false;
     }
   }
 }

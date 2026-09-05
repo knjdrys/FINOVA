@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#122A1E"/>
+  <g stroke="#D4F63D" stroke-width="44" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- stem of the peso sign -->
+    <line x1="206" y1="122" x2="206" y2="398"/>
+    <!-- bowl: top bar out, right semicircle, bottom bar back to stem -->
+    <path d="M206 144 H258 a68 68 0 0 1 0 136 H206"/>
+    <!-- two peso bars crossing the stem, clear of the bowl -->
+    <line x1="138" y1="330" x2="298" y2="330"/>
+    <line x1="138" y1="378" x2="298" y2="378"/>
+  </g>
+</svg>

@@ -1,4 +1,4 @@
-import { GoalProgress, GoalStatus, SavingsGoal } from '../../types';
+import { GoalInsight, GoalProgress, GoalStatus, RiskLevel, SavingsGoal } from '../../types';
 import { DateUtils } from '../date/DateUtils';
 import { MoneyValue } from '../money/MoneyValue';
 
@@ -62,6 +62,73 @@ export class GoalEngine {
       explanation,
     };
   }
+
+  /**
+   * Pure contribution logic: returns the next goal state after adding `amount`,
+   * clamped at target, with status flipped to COMPLETED when fully funded.
+   * No side effects — the caller applies it to app state.
+   */
+  public static contribute(
+    goal: SavingsGoal,
+    amount: number
+  ): SavingsGoal {
+    if (amount <= 0) return goal;
+    const nextCurrent = Math.min(goal.targetAmount, goal.currentAmount + amount);
+    const isCompleted = nextCurrent >= goal.targetAmount;
+    return {
+      ...goal,
+      currentAmount: nextCurrent,
+      status: isCompleted ? 'COMPLETED' : goal.status,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Planned-vs-actual tracking + goal risk detection.
+   * "Planned" = even pace required (target / total span since creation).
+   * "Actual" = currentAmount. Variance and paceRatio surface whether the user is on track,
+   * and `risk` escalates when the goal is in danger of missing its date.
+   */
+  public static getGoalInsight(goal: SavingsGoal, referenceDateISO?: string): GoalInsight {
+    const todayISO = referenceDateISO || DateUtils.getTodayISO();
+    const progress = this.calculateGoalProgress(goal, todayISO);
+
+    const isCompleted = goal.currentAmount >= goal.targetAmount;
+
+    // Total planned span from creation to target (months). Guard against zero.
+    const totalSpanDays = Math.max(1, DateUtils.daysBetween(goal.createdAt.substring(0, 10), goal.targetDate));
+    const elapsedDays = Math.max(0, DateUtils.daysBetween(goal.createdAt.substring(0, 10), todayISO));
+
+    // Expected contribution had the user saved evenly across the whole plan.
+    const expectedContributionToDate = Math.round((goal.targetAmount * elapsedDays) / totalSpanDays);
+
+    const variance = goal.currentAmount - expectedContributionToDate;
+    const paceRatio = expectedContributionToDate > 0 ? goal.currentAmount / expectedContributionToDate : goal.currentAmount > 0 ? 1.5 : 0;
+
+    // Actual monthly contribution rate so far (annualized from elapsed time).
+    const elapsedMonths = Math.max(1 / 30, elapsedDays / 30.4375);
+    const actualContributionRate = Math.round(goal.currentAmount / elapsedMonths);
+
+    let risk: RiskLevel = 'NONE';
+    if (!isCompleted) {
+      if (progress.status === 'AT_RISK') risk = 'HIGH';
+      else if (progress.status === 'SLIGHTLY_BEHIND') risk = 'MEDIUM';
+      else if (paceRatio < 0.95) risk = 'LOW';
+    }
+
+    return {
+      goal,
+      progress,
+      expectedContributionToDate,
+      variance,
+      paceRatio,
+      actualContributionRate,
+      requiredRate: progress.requiredMonthlySaving,
+      risk,
+      isCompleted,
+    };
+  }
+
 
   /**
    * Aggregates total reserved goal contributions across all active goals for Safe-to-Spend allocation.

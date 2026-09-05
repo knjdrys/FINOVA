@@ -19,8 +19,10 @@ export class TimelineEngine {
     const categoryMap = new Map<string, Category>(categories.map((c) => [c.id, c]));
     const accountMap = new Map<string, Account>(accounts.map((a) => [a.id, a]));
 
-    // Start with liquid balance as of today
-    const liquidAccounts = accounts.filter((a) => a.includeInTotalBalance && !a.isArchived);
+    // Start with liquid balance as of today — ISOLATED to the active currency.
+    // The projected running balance must never mix currencies.
+    const currency = accounts[0]?.currency || 'PHP';
+    const liquidAccounts = accounts.filter((a) => a.includeInTotalBalance && !a.isArchived && a.currency === currency);
     const currentLiquidBalance = liquidAccounts.reduce((sum, a) => sum + a.currentBalance, 0);
 
     // Group events by date

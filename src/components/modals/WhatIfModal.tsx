@@ -42,10 +42,10 @@ export const WhatIfModal: React.FC<WhatIfModalProps> = ({
 }) => {
   const [title, setTitle] = useState('New Laptop');
   const [amountStr, setAmountStr] = useState('45000');
-  const [type, setType] = useState<'EXPENSE' | 'INCOME' | 'RECURRING_EXPENSE'>('EXPENSE');
+  const [type] = useState<'EXPENSE' | 'INCOME' | 'RECURRING_EXPENSE'>('EXPENSE');
   const [categoryId, setCategoryId] = useState(categories[0]?.id || 'cat-shopping');
   const [accountId, setAccountId] = useState(accounts[0]?.id || '');
-  const [date, setDate] = useState(DateUtils.getTodayISO());
+  const [date] = useState(DateUtils.getTodayISO());
 
   const currency = settings.currency || 'PHP';
   const currencySymbol = MoneyValue.zero(currency).getCurrencySymbol();

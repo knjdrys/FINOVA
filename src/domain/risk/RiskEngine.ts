@@ -1,6 +1,7 @@
-import { Account, CashFlowRisk, MoneyCommitment, RiskSeverity, SavingsGoal, TimelineDay, UserSettings } from '../../types';
+import { Account, CashFlowRisk, MoneyCommitment, SavingsGoal, TimelineDay, UserSettings } from '../../types';
 import { DateUtils } from '../date/DateUtils';
 import { MoneyValue } from '../money/MoneyValue';
+import { t } from '../../i18n/core';
 
 export class RiskEngine {
   /**
@@ -35,12 +36,15 @@ export class RiskEngine {
           id: `risk-neg-${day.date}`,
           severity: 'CRITICAL',
           date: day.date,
-          title: `Projected Overdraft / Deficit on ${DateUtils.formatDisplayDate(day.date, { fullYear: true })}`,
-          description: `Your balance is projected to reach -${deficitMoney.format()} on ${DateUtils.formatDisplayDate(day.date)}.`,
+          title: t('risk.overdraftTitle', { date: DateUtils.formatDisplayDate(day.date, { fullYear: true }) }),
+          description: t('risk.overdraftBody', {
+            amount: `-${deficitMoney.format()}`,
+            date: DateUtils.formatDisplayDate(day.date),
+          }),
           projectedBalance: projected,
           minimumReserve: minReserve,
           primaryCause,
-          recommendedAction: 'Reschedule optional payments or deposit funds before this date.',
+          recommendedAction: t('risk.actionReschedule'),
         });
         break; // Report the earliest critical deficit
       } else if (minReserve > 0 && projected < minReserve) {
@@ -53,20 +57,24 @@ export class RiskEngine {
           id: `risk-reserve-${day.date}`,
           severity: 'HIGH',
           date: day.date,
-          title: `Reserve Violation on ${DateUtils.formatDisplayDate(day.date, { fullYear: true })}`,
-          description: `Projected balance (${projectedMoney.format()}) will drop ${belowAmount.format()} below your ${reserveMoney.format()} minimum safety reserve.`,
+          title: t('risk.reserveTitle', { date: DateUtils.formatDisplayDate(day.date, { fullYear: true }) }),
+          description: t('risk.reserveBody', {
+            balance: projectedMoney.format(),
+            below: belowAmount.format(),
+            reserve: reserveMoney.format(),
+          }),
           projectedBalance: projected,
           minimumReserve: minReserve,
           primaryCause: majorOutflow ? `${majorOutflow.title} (${MoneyValue.fromMinorUnits(majorOutflow.amount, currency).format()})` : 'Cumulative outflows',
-          recommendedAction: 'Limit discretionary spending or adjust upcoming commitments.',
+          recommendedAction: t('risk.actionLimit'),
         });
         break;
       }
     }
 
-    // 2. Check for overdue commitments
+    // 2. Check for overdue commitments — SAME currency only (no cross-currency totals).
     const overdue = commitments.filter(
-      (c) => c.dueDate < todayISO && c.status !== 'COMPLETED' && c.status !== 'CANCELLED'
+      (c) => c.currency === currency && c.dueDate < todayISO && c.status !== 'COMPLETED' && c.status !== 'CANCELLED'
     );
     if (overdue.length > 0) {
       const overdueTotal = overdue.reduce((sum, c) => sum + c.amount, 0);
@@ -76,12 +84,12 @@ export class RiskEngine {
         id: `risk-overdue-${todayISO}`,
         severity: 'HIGH',
         date: todayISO,
-        title: `${overdue.length} Overdue Bill${overdue.length > 1 ? 's' : ''}`,
-        description: `You have ${overdue.length} pending obligations totaling ${overdueMoney.format()} that were due before today.`,
+        title: t('risk.overdueTitle', { count: overdue.length }),
+        description: t('risk.overdueBody', { count: overdue.length, amount: overdueMoney.format() }),
         projectedBalance: 0,
         minimumReserve: minReserve,
         primaryCause: overdue.map((o) => o.title).slice(0, 2).join(', '),
-        recommendedAction: 'Mark settled commitments as completed to keep projections accurate.',
+        recommendedAction: t('risk.actionMarkSettled'),
       });
     }
 

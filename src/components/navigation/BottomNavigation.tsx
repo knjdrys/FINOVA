@@ -1,7 +1,8 @@
 import React from 'react';
-import { Home, ListOrdered, Plus, BarChart3, Settings } from 'lucide-react';
+import { Home, ListOrdered, Plus, BarChart3, Settings, CalendarDays } from 'lucide-react';
+import { useI18n } from '../../i18n';
 
-export type NavTab = 'HOME' | 'ALL_EXPENSES' | 'ANALYTICS' | 'SETTINGS';
+export type NavTab = 'HOME' | 'ALL_EXPENSES' | 'PLANS' | 'ANALYTICS' | 'SETTINGS';
 
 interface BottomNavigationProps {
   currentTab: NavTab;
@@ -14,6 +15,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   onSelectTab,
   onOpenQuickAdd,
 }) => {
+  const { t } = useI18n();
   return (
     <div className="fixed bottom-0 inset-x-0 z-40 flex justify-center pointer-events-none pb-safe">
       <nav className="pointer-events-auto w-full max-w-lg md:max-w-2xl bg-white/95 backdrop-blur-lg border-t border-slate-200/70 sm:border sm:rounded-t-[32px] sm:shadow-2xl px-4 sm:px-6 py-2">
@@ -27,7 +29,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             }`}
           >
             <Home className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
-            <span className="text-[11px] font-bold mt-1">Home</span>
+            <span className="text-[11px] font-bold mt-1">{t('nav.home')}</span>
             {currentTab === 'HOME' ? (
               <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
             ) : (
@@ -35,7 +37,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             )}
           </button>
 
-          {/* All Expense Tab */}
+          {/* Transactions Tab */}
           <button
             type="button"
             onClick={() => onSelectTab('ALL_EXPENSES')}
@@ -44,8 +46,25 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             }`}
           >
             <ListOrdered className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
-            <span className="text-[11px] font-bold mt-1">All Expense</span>
+            <span className="text-[11px] font-bold mt-1">{t('nav.transactions')}</span>
             {currentTab === 'ALL_EXPENSES' ? (
+              <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
+            ) : (
+              <span className="h-1.5 w-1.5 mt-0.5 opacity-0"></span>
+            )}
+          </button>
+
+          {/* Plans Tab */}
+          <button
+            type="button"
+            onClick={() => onSelectTab('PLANS')}
+            className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer ${
+              currentTab === 'PLANS' ? 'text-slate-900 scale-105' : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <CalendarDays className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
+            <span className="text-[11px] font-bold mt-1">{t('nav.plans')}</span>
+            {currentTab === 'PLANS' ? (
               <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
             ) : (
               <span className="h-1.5 w-1.5 mt-0.5 opacity-0"></span>
@@ -58,7 +77,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
               <button
                 type="button"
                 onClick={onOpenQuickAdd}
-                aria-label="Add Transaction"
+                aria-label={t('nav.addTransaction')}
                 className="flex h-13 w-13 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-[#C6F432] text-[#122A1E] shadow-md shadow-lime-600/30 transition-transform duration-150 hover:scale-105 active:scale-95 cursor-pointer"
               >
                 <Plus className="h-7 w-7 sm:h-8 sm:w-8 stroke-[3]" />
@@ -75,7 +94,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             }`}
           >
             <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
-            <span className="text-[11px] font-bold mt-1">Analytics</span>
+            <span className="text-[11px] font-bold mt-1">{t('nav.insights')}</span>
             {currentTab === 'ANALYTICS' ? (
               <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
             ) : (
@@ -92,7 +111,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             }`}
           >
             <Settings className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
-            <span className="text-[11px] font-bold mt-1">Settings</span>
+            <span className="text-[11px] font-bold mt-1">{t('nav.settings')}</span>
             {currentTab === 'SETTINGS' ? (
               <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
             ) : (

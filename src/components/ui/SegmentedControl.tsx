@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface SegmentedControlProps<T extends string> {
   options: Array<{ value: T; label: string }>;
   value: T;

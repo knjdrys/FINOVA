@@ -230,7 +230,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
           text: 'If you made a mistake and delete a transaction, your bank balance automatically corrects itself.',
         },
       ],
-      interactivePreview: (sym) => (
+      interactivePreview: () => (
         <div className="flex items-center justify-center p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#D4F63D] text-[#122A1E] shadow-lg shadow-lime-500/30">

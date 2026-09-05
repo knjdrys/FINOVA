@@ -10,6 +10,7 @@ import {
 } from '../../types';
 import { MoneyValue } from '../../domain/money/MoneyValue';
 import { GrbiLogo } from '../ui/GrbiLogo';
+import { useI18n } from '../../i18n';
 import { Sparkles, ArrowRight, CheckCircle2, Building2, Smartphone, Wallet } from 'lucide-react';
 
 interface OnboardingModalProps {
@@ -22,6 +23,7 @@ interface OnboardingModalProps {
 }
 
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComplete }) => {
+  const { t } = useI18n();
   const [step, setStep] = useState<1 | 2>(1);
   const [userName, setUserName] = useState('');
   const [currency, setCurrency] = useState<CurrencyCode>('PHP');
@@ -39,6 +41,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
       userId: 'user-1',
       userName: userName.trim() || 'Juan Dela Cruz',
       currency,
+      language: 'en',
       defaultTrackingPeriod: 'TODAY',
       budgetCycleMode,
       semiMonthlyCutoffDay: 15,
@@ -85,21 +88,21 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
 
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                Welcome to FINOVA
+                {t('onboard.welcome')}
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-sm mx-auto font-medium">
-                Simple & Smart Money Tracker ✨ — Track your real money with daily spending limits and easy budgets.
+                {t('onboard.tagline')}
               </p>
             </div>
 
             <div className="space-y-3 pt-2 text-left bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">
-                  What is your name?
+                  {t('onboard.namePrompt')}
                 </label>
                 <input
                   type="text"
-                  placeholder="Your Name (e.g. Juan Dela Cruz, Maria, Alex)"
+                  placeholder={t('onboard.namePlaceholder')}
                   value={userName}
                   onChange={(e) => setUserName(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-bold text-slate-800 outline-none focus:border-emerald-600"
@@ -108,7 +111,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
 
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">
-                  Choose your Currency (Default: PHP ₱)
+                  {t('onboard.currencyPrompt')}
                 </label>
                 <select
                   value={currency}
@@ -129,7 +132,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
               onClick={() => setStep(2)}
               className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#122A1E] py-3.5 text-sm font-bold text-[#D4F63D] shadow-md shadow-emerald-950/20 hover:bg-[#183625] transition-all cursor-pointer"
             >
-              <span>Continue</span>
+              <span>{t('onboard.continue')}</span>
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
@@ -140,20 +143,20 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
           <div className="space-y-4">
             <div className="text-center">
               <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full">
-                Step 2 of 2
+                {t('onboard.stepOf', { current: 2, total: 2 })}
               </span>
               <h3 className="text-lg sm:text-xl font-black text-slate-900 mt-1">
-                Your Primary Bank & Payday Schedule
+                {t('onboard.step2Title')}
               </h3>
               <p className="text-xs text-slate-500">
-                Choose your primary bank and how often you get paid
+                {t('onboard.step2Body')}
               </p>
             </div>
 
             {/* Bank Preset Picker */}
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                Select your Primary Account / Bank
+                {t('onboard.bankLabel')}
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-44 overflow-y-auto pr-1">
                 {POPULAR_BANKS_AND_WALLETS.slice(0, 9).map((preset) => {
@@ -200,7 +203,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
             {/* Starting Balance (Default 0) */}
             <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2">
               <label className="text-xs font-bold text-slate-700 block">
-                Starting Balance (Enter 0 or your real current money)
+                {t('onboard.startingBalanceLabel')}
               </label>
               <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 focus-within:border-emerald-600">
                 <span className="text-sm font-black text-slate-400">{currencySymbol}</span>

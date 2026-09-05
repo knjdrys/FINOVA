@@ -47,13 +47,15 @@ export class SafeToSpendEngine {
       periodLabel = `Through end of ${periodMonthName} (${remainingDays} days left)`;
     }
 
-    // 1. Total available liquid balance
-    const liquidAccounts = accounts.filter((a) => a.includeInTotalBalance && !a.isArchived);
+    // 1. Total available liquid balance — ISOLATED to the active currency.
+    // Cross-currency money is never summed (e.g. PHP + USD must not be added).
+    const liquidAccounts = accounts.filter((a) => a.includeInTotalBalance && !a.isArchived && a.currency === currency);
     const totalAvailableBalance = liquidAccounts.reduce((sum, a) => sum + a.currentBalance, 0);
 
-    // 2. Essential upcoming commitments due between today and period end
+    // 2. Essential upcoming commitments due between today and period end — SAME currency only.
     let essentialCommitments = 0;
     for (const c of commitments) {
+      if (c.currency !== currency) continue; // never mix currencies
       if (c.direction !== 'OUTFLOW') continue;
       if (c.status === 'COMPLETED' || c.status === 'CANCELLED') continue;
       if (c.priority !== 'ESSENTIAL' && c.priority !== 'IMPORTANT') continue;
@@ -62,8 +64,10 @@ export class SafeToSpendEngine {
       }
     }
 
-    // 3. Reserved goal contributions (pro-rated for 15-day cycle if active)
-    const monthlyGoalCommitments = GoalEngine.calculateMonthlyGoalCommitments(goals, todayISO);
+    // 3. Reserved goal contributions (pro-rated for 15-day cycle if active).
+    // Only goals in the active currency reserve money from this currency's pool.
+    const sameCurrencyGoals = goals.filter((g) => (g.currency || currency) === currency);
+    const monthlyGoalCommitments = GoalEngine.calculateMonthlyGoalCommitments(sameCurrencyGoals, todayISO);
     let reservedGoalContributions = monthlyGoalCommitments.getMinorUnits();
     if (is15DayMode) {
       // Half-month goal allocation

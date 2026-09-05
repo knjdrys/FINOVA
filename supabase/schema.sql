@@ -279,3 +279,62 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ======================================================================================
+-- 9. RECURRING TRANSACTIONS (Templates that auto-generate transactions)
+-- ======================================================================================
+
+CREATE TABLE IF NOT EXISTS public.recurring_transactions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    amount BIGINT NOT NULL, -- Minor units
+    currency VARCHAR(5) DEFAULT 'PHP',
+    type TEXT NOT NULL DEFAULT 'EXPENSE', -- 'EXPENSE' | 'INCOME'
+    category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
+    account_id UUID REFERENCES public.accounts(id) ON DELETE SET NULL,
+    frequency TEXT NOT NULL DEFAULT 'MONTHLY', -- 'DAILY' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY' | 'YEARLY'
+    start_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    next_occurrence DATE NOT NULL DEFAULT CURRENT_DATE,
+    end_date DATE,
+    is_active BOOLEAN DEFAULT true,
+    reminder_enabled BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_recurring_user ON public.recurring_transactions(user_id);
+
+-- --------------------------------------------------------------------------------------
+-- 10. MIGRATION: bring legacy live schema in line with the app's data contract
+--     (idempotent — safe to re-run on a fresh OR already-deployed database)
+-- --------------------------------------------------------------------------------------
+
+-- budgets: add planning-window + threshold columns the client round-trips
+ALTER TABLE public.budgets ADD COLUMN IF NOT EXISTS start_date DATE;
+ALTER TABLE public.budgets ADD COLUMN IF NOT EXISTS end_date DATE;
+ALTER TABLE public.budgets ADD COLUMN IF NOT EXISTS notify_threshold_percentage INT DEFAULT 80;
+ALTER TABLE public.budgets ADD COLUMN IF NOT EXISTS semi_monthly_cutoff_day INT DEFAULT 15;
+
+-- money_commitments: add the status/type/priority/direction fields the client uses
+ALTER TABLE public.money_commitments ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'BILL';
+ALTER TABLE public.money_commitments ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'PROJECTED';
+ALTER TABLE public.money_commitments ADD COLUMN IF NOT EXISTS priority TEXT NOT NULL DEFAULT 'ESSENTIAL';
+ALTER TABLE public.money_commitments ADD COLUMN IF NOT EXISTS direction TEXT NOT NULL DEFAULT 'OUTFLOW';
+
+-- transactions: split allocations + local-only receipt pointer
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS split_parts JSONB;
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS receipt_data_url TEXT;
+
+-- recurring_transactions: RLS + owner policies
+ALTER TABLE public.recurring_transactions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY IF NOT EXISTS "Users can read own recurring" ON public.recurring_transactions
+    FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY IF NOT EXISTS "Users can insert own recurring" ON public.recurring_transactions
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY IF NOT EXISTS "Users can update own recurring" ON public.recurring_transactions
+    FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY IF NOT EXISTS "Users can delete own recurring" ON public.recurring_transactions
+    FOR DELETE USING (auth.uid() = user_id);
+

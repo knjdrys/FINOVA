@@ -32,7 +32,7 @@ export class CommitmentEngine {
             title: rec.title,
             type: commitmentType,
             amount: rec.amount,
-            currency: 'PKR',
+            currency: rec.currency || 'PHP',
             direction,
             status: 'PROJECTED',
             dueDate: occurrenceDate,

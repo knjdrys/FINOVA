@@ -1,15 +1,33 @@
-import { Account, Transaction } from '../../types';
+import { Account, CurrencyCode, Transaction } from '../../types';
 import { MoneyValue } from '../money/MoneyValue';
 
 export class AccountEngine {
   /**
-   * Calculates the total available liquid balance across all active, included accounts.
+   * Calculates the total available liquid balance across all active, included accounts
+   * of a SINGLE currency. Passing a currency prevents silent cross-currency summation
+   * (e.g. PHP + USD must never be added together). When omitted, the first account's
+   * currency is used (single-currency apps behave as before).
    */
-  public static calculateTotalBalance(accounts: Account[]): MoneyValue {
+  public static calculateTotalBalance(accounts: Account[], currency?: CurrencyCode): MoneyValue {
     const included = accounts.filter((acc) => acc.includeInTotalBalance && !acc.isArchived);
-    const sumMinor = included.reduce((sum, acc) => sum + acc.currentBalance, 0);
-    const currency = accounts[0]?.currency || 'PKR';
-    return MoneyValue.fromMinorUnits(sumMinor, currency);
+    const targetCurrency = currency || included[0]?.currency || 'PHP';
+    const sumMinor = included
+      .filter((acc) => acc.currency === targetCurrency)
+      .reduce((sum, acc) => sum + acc.currentBalance, 0);
+    return MoneyValue.fromMinorUnits(sumMinor, targetCurrency);
+  }
+
+  /**
+   * Returns the liquid balance broken down per currency. Use this for multi-currency
+   * surfaces so no two currencies are ever summed.
+   */
+  public static getTotalBalanceByCurrency(accounts: Account[]): Record<string, number> {
+    const included = accounts.filter((acc) => acc.includeInTotalBalance && !acc.isArchived);
+    const map: Record<string, number> = {};
+    for (const acc of included) {
+      map[acc.currency] = (map[acc.currency] || 0) + acc.currentBalance;
+    }
+    return map;
   }
 
   /**

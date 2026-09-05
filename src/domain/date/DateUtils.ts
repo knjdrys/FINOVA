@@ -1,3 +1,5 @@
+import { t, monthAbbr, monthFull, dayAbbr } from '../../i18n/core';
+
 export interface SemiMonthlyCycleInfo {
   cycleLabel: string;
   isFirstHalf: boolean;
@@ -12,6 +14,14 @@ export class DateUtils {
   public static getTodayISO(): string {
     const now = new Date();
     return this.formatISO(now);
+  }
+
+  /** Returns current local time as HH:MM (24h), used for new transaction timestamps. */
+  public static getCurrentTimeString(): string {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    return `${h}:${m}`;
   }
 
   public static formatISO(date: Date): string {
@@ -81,7 +91,7 @@ export class DateUtils {
       const totalDays = cutoffDay;
 
       return {
-        cycleLabel: `1st Cutoff (1st - ${cutoffDay}th)`,
+        cycleLabel: t('date.cutoffFirst', { cutoffDay }),
         isFirstHalf: true,
         startDate,
         endDate,
@@ -98,7 +108,7 @@ export class DateUtils {
       const totalDays = totalDaysInMonth - cutoffDay;
 
       return {
-        cycleLabel: `2nd Cutoff (${cutoffDay + 1}th - End)`,
+        cycleLabel: t('date.cutoffSecond', { cutoffDay: cutoffDay + 1 }),
         isFirstHalf: false,
         startDate,
         endDate,
@@ -124,7 +134,14 @@ export class DateUtils {
 
   public static addMonthsISO(dateStr: string, months: number): string {
     const d = this.parseISO(dateStr);
+    const day = d.getDate();
+    // Set to day 1 first so the month shift can't overflow (e.g. Jan 31 -> Mar 3).
+    d.setDate(1);
     d.setMonth(d.getMonth() + months);
+    // Clamp the original day to the last day of the target month:
+    // monthly on the 31st -> Feb 28/29, Apr 30, etc. — never skips a month.
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(day, lastDay));
     return this.formatISO(d);
   }
 
@@ -133,9 +150,8 @@ export class DateUtils {
   }
 
   public static getDayAbbreviation(dateStr: string): string {
-    const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
     const d = this.parseISO(dateStr);
-    return days[d.getDay()] || 'SUN';
+    return dayAbbr(d.getDay());
   }
 
   public static formatDisplayDate(dateStr: string, options?: { fullYear?: boolean; includeDay?: boolean }): string {
@@ -143,19 +159,18 @@ export class DateUtils {
     const yesterdayISO = this.addDaysISO(todayISO, -1);
     const tomorrowISO = this.addDaysISO(todayISO, 1);
 
-    if (dateStr === todayISO) return 'Today';
-    if (dateStr === yesterdayISO) return 'Yesterday';
-    if (dateStr === tomorrowISO) return 'Tomorrow';
+    if (dateStr === todayISO) return t('common.today');
+    if (dateStr === yesterdayISO) return t('common.yesterday');
+    if (dateStr === tomorrowISO) return t('common.tomorrow');
 
     const d = this.parseISO(dateStr);
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const month = months[d.getMonth()];
+    const month = monthAbbr(d.getMonth());
     const day = d.getDate();
     const year = d.getFullYear();
-    const dayAbbr = this.getDayAbbreviation(dateStr);
+    const dayName = this.getDayAbbreviation(dateStr);
 
     if (options?.includeDay) {
-      return `${dayAbbr} ${month} ${day}${options.fullYear ? `, ${year}` : ''}`;
+      return `${dayName} ${month} ${day}${options.fullYear ? `, ${year}` : ''}`;
     }
 
     if (options?.fullYear) {
@@ -166,7 +181,6 @@ export class DateUtils {
   }
 
   public static getMonthName(monthNumber: number): string {
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    return months[monthNumber - 1] || '';
+    return monthFull(monthNumber);
   }
 }

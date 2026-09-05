@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
-import { Account, Category, Transaction, UserSettings } from '../types';
+import React, { useMemo, useState } from 'react';
+import { Account, Category, Transaction, TransactionType, UserSettings } from '../types';
 import { WaveCard } from '../components/ui/WaveCard';
 import { FilterChips } from '../components/ui/FilterChips';
 import { TransactionItem } from '../components/ui/TransactionItem';
 import { DateUtils } from '../domain/date/DateUtils';
 import { MoneyValue } from '../domain/money/MoneyValue';
-import { TransactionEngine } from '../domain/transaction/TransactionEngine';
-import { ChevronLeft, Download, ChevronDown, Search, Plus, Sparkles } from 'lucide-react';
+import { TransactionEngine, TransactionFilterOptions } from '../domain/transaction/TransactionEngine';
+import { ChevronLeft, Download, Search, SlidersHorizontal, X } from 'lucide-react';
 import { FinovaStorage } from '../services/storage/FinovaStorage';
+import { t } from '../i18n/core';
+import { notice } from '../components/ui/dialog';
 
 interface AllExpensesScreenProps {
   accounts: Account[];
@@ -16,6 +18,19 @@ interface AllExpensesScreenProps {
   settings: UserSettings;
   onBackToHome: () => void;
   onSelectTransaction: (tx: Transaction) => void;
+}
+
+type PeriodFilter = 'ALL' | 'THIS_MONTH' | 'LAST_MONTH' | 'CUSTOM';
+type SortFilter = NonNullable<TransactionFilterOptions['sortBy']>;
+
+function monthBounds(anchor: Date, offsetMonths: number): { start: string; end: string } {
+  const y = anchor.getFullYear();
+  const m = anchor.getMonth() + offsetMonths;
+  const d = new Date(y, m, 1);
+  const start = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  const end = `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`;
+  return { start, end };
 }
 
 export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
@@ -28,52 +43,114 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
 }) => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMonth] = useState('May 26');
+  const [typeFilter, setTypeFilter] = useState<TransactionType | 'ALL'>('ALL');
+  const [period, setPeriod] = useState<PeriodFilter>('ALL');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+  const [accountId, setAccountId] = useState('ALL');
+  const [minStr, setMinStr] = useState('');
+  const [maxStr, setMaxStr] = useState('');
+  const [sortBy, setSortBy] = useState<SortFilter>('NEWEST');
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const categoryMap = new Map(categories.map((c) => [c.id, c]));
   const accountMap = new Map(accounts.map((a) => [a.id, a]));
   const currency = settings.currency || 'PHP';
   const currencySymbol = MoneyValue.zero(currency).getCurrencySymbol();
 
-  // Filter transactions dynamically
+  const today = new Date();
+  const periodBounds = useMemo(() => {
+    if (period === 'THIS_MONTH') return monthBounds(today, 0);
+    if (period === 'LAST_MONTH') return monthBounds(today, -1);
+    if (period === 'CUSTOM' && (customStart || customEnd)) {
+      return { start: customStart || '0000-01-01', end: customEnd || '9999-12-31' };
+    }
+    return undefined;
+  }, [period, customStart, customEnd]);
+
+  const minMinor = minStr ? MoneyValue.parse(minStr, currency).getMinorUnits() : undefined;
+  const maxMinor = maxStr ? MoneyValue.parse(maxStr, currency).getMinorUnits() : undefined;
+
+  // Filter transactions dynamically — every control feeds the engine, nothing is hardcoded.
   const filtered = TransactionEngine.filterTransactions(transactions, {
     searchQuery,
+    type: typeFilter,
     categoryId: selectedCategoryId !== 'ALL' ? selectedCategoryId : undefined,
-    type: 'EXPENSE',
-    sortBy: 'NEWEST',
+    accountId: accountId !== 'ALL' ? accountId : undefined,
+    startDate: periodBounds?.start,
+    endDate: periodBounds?.end,
+    minAmount: minMinor,
+    maxAmount: maxMinor,
+    sortBy,
   });
 
-  // Dynamically calculate total spent from real transactions
-  const totalExpenseMinor = filtered.reduce((sum, tx) => sum + tx.amount, 0);
-  const totalSpentMoney = MoneyValue.fromMinorUnits(totalExpenseMinor, currency);
+  const activeFilterCount =
+    (typeFilter !== 'ALL' ? 1 : 0) +
+    (selectedCategoryId !== 'ALL' ? 1 : 0) +
+    (accountId !== 'ALL' ? 1 : 0) +
+    (period !== 'ALL' ? 1 : 0) +
+    (minStr || maxStr ? 1 : 0) +
+    (searchQuery ? 1 : 0);
 
-  // Group filtered transactions by date
-  const groupedDatesMap = new Map<string, { transactions: Transaction[]; dayTotal: number }>();
+  const resetFilters = () => {
+    setTypeFilter('ALL');
+    setSelectedCategoryId('ALL');
+    setAccountId('ALL');
+    setPeriod('ALL');
+    setCustomStart('');
+    setCustomEnd('');
+    setMinStr('');
+    setMaxStr('');
+    setSearchQuery('');
+    setSortBy('NEWEST');
+  };
+
+  // Adaptive summary — honest about what the current view contains.
+  const expenseMinor = filtered.filter((t) => t.type === 'EXPENSE').reduce((s, t) => s + t.amount, 0);
+  const incomeMinor = filtered.filter((t) => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0);
+  const transferMinor = filtered.filter((t) => t.type === 'TRANSFER').reduce((s, t) => s + t.amount, 0);
+  const summary =
+    typeFilter === 'EXPENSE'
+      ? { label: t('tx.sumSpent'), amount: expenseMinor }
+      : typeFilter === 'INCOME'
+      ? { label: t('tx.sumEarned'), amount: incomeMinor }
+      : typeFilter === 'TRANSFER'
+      ? { label: t('tx.sumMoved'), amount: transferMinor }
+      : { label: t('tx.netFlow'), amount: incomeMinor - expenseMinor };
+  const summaryMoney = MoneyValue.fromMinorUnits(Math.abs(summary.amount), currency);
+
+  // Group filtered transactions by date (day header shows the day's net flow).
+  const groupedDatesMap = new Map<string, { transactions: Transaction[]; net: number }>();
   for (const tx of filtered) {
-    const existing = groupedDatesMap.get(tx.date) || { transactions: [], dayTotal: 0 };
+    const existing = groupedDatesMap.get(tx.date) || { transactions: [], net: 0 };
     existing.transactions.push(tx);
-    existing.dayTotal += tx.amount;
+    if (tx.type === 'EXPENSE') existing.net -= tx.amount;
+    if (tx.type === 'INCOME') existing.net += tx.amount;
     groupedDatesMap.set(tx.date, existing);
   }
-
-  const sortedDates = Array.from(groupedDatesMap.keys()).sort((a, b) => b.localeCompare(a));
-  const hasExpenses = filtered.length > 0;
+  const sortedDates =
+    sortBy === 'NEWEST' || sortBy === 'OLDEST'
+      ? Array.from(groupedDatesMap.keys()).sort((a, b) => (sortBy === 'NEWEST' ? b.localeCompare(a) : a.localeCompare(b)))
+      : Array.from(groupedDatesMap.keys());
 
   const handleExport = () => {
-    if (transactions.length === 0) {
-      alert('No transactions recorded yet to export.');
+    if (filtered.length === 0) {
+      notice(t('dialog.exportEmpty'));
       return;
     }
-    const csvContent = FinovaStorage.exportToCSV(transactions, categories, accounts);
+    const csvContent = FinovaStorage.exportToCSV(filtered, categories, accounts);
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `finova_expenses_${DateUtils.getTodayISO()}.csv`);
+    link.setAttribute('download', `finova_transactions_${DateUtils.getTodayISO()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
+
+  const selectCls =
+    'rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-slate-700 outline-none focus:border-emerald-600 cursor-pointer';
 
   return (
     <div className="space-y-4 sm:space-y-5 pb-6">
@@ -83,42 +160,165 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
           type="button"
           onClick={onBackToHome}
           className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-2xl bg-white text-slate-800 shadow-xs border border-slate-200/80 hover:bg-slate-50 transition-colors cursor-pointer"
-          aria-label="Back to Home"
+          aria-label={t('tx.backHome')}
         >
           <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.5]" />
         </button>
 
         <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
-          All Expenses
+          {t('tx.title')}
         </h2>
 
         <button
           type="button"
           onClick={handleExport}
-          title="Export CSV"
+          title={t('tx.exportCsv')}
+          aria-label={t('tx.exportCsv')}
           className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-2xl bg-white text-slate-800 shadow-xs border border-slate-200/80 hover:bg-slate-50 transition-colors cursor-pointer"
         >
           <Download className="h-4 w-4 sm:h-5 sm:w-5 stroke-[2.2]" />
         </button>
       </div>
 
-      {/* 2. Total Spent WaveCard (100% Dynamic Real Math) */}
+      {/* 2. Adaptive Summary WaveCard */}
       <WaveCard
-        subtitle="TOTAL SPENT"
-        amount={totalSpentMoney.format({ includeSymbol: false })}
-        currencySymbol={currencySymbol}
-        trendText={hasExpenses ? `${filtered.length} entries` : 'Zero Spend'}
-        trendDirection={hasExpenses ? 'down' : 'neutral'}
-        metaText={`${filtered.length} transactions`}
+        subtitle={summary.label}
+        amount={summaryMoney.format({ includeSymbol: false })}
+        currencySymbol={summary.amount < 0 ? `-${currencySymbol}` : currencySymbol}
+        trendText={t('tx.entries', { count: filtered.length })}
+        trendDirection={typeFilter === 'INCOME' ? 'up' : typeFilter === 'EXPENSE' ? 'down' : 'neutral'}
+        metaText={
+          typeFilter === 'ALL'
+            ? `↑ ${MoneyValue.fromMinorUnits(incomeMinor, currency).format()} · ↓ ${MoneyValue.fromMinorUnits(expenseMinor, currency).format()}`
+            : undefined
+        }
         rightBadge={
-          <div className="flex items-center gap-1.5 rounded-full bg-[#183625] px-3.5 py-1.5 text-xs font-black text-white border border-emerald-800/60 shadow-xs">
-            <span>{selectedMonth}</span>
-            <ChevronDown className="h-3.5 w-3.5 text-emerald-200" />
-          </div>
+          <select
+            value={period}
+            onChange={(e) => setPeriod(e.target.value as PeriodFilter)}
+            aria-label={t('tx.periodAria')}
+            className="rounded-full border border-emerald-800/60 bg-[#183625] px-3 py-1.5 text-xs font-black text-white outline-none cursor-pointer"
+          >
+            <option value="ALL">{t('tx.allTime')}</option>
+            <option value="THIS_MONTH">{t('tx.thisMonth')}</option>
+            <option value="LAST_MONTH">{t('tx.lastMonth')}</option>
+            <option value="CUSTOM">{t('tx.customRange')}</option>
+          </select>
         }
       />
 
-      {/* 3. Category Filter Chips Carousel */}
+      {/* 3. Type segmented control + sort + advanced toggle */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex rounded-xl bg-slate-100 p-1" role="tablist" aria-label={t('tx.typeAria')}>
+          {(
+            [
+              ['ALL', t('tx.segAll')],
+              ['EXPENSE', t('tx.segExpenses')],
+              ['INCOME', t('tx.segIncome')],
+              ['TRANSFER', t('tx.segTransfers')],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={typeFilter === value}
+              onClick={() => setTypeFilter(value)}
+              className={`rounded-lg px-3 py-1.5 text-[11px] font-bold transition-all cursor-pointer ${
+                typeFilter === value ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortFilter)}
+          aria-label={t('tx.sortAria')}
+          className={selectCls + ' ml-auto'}
+        >
+          <option value="NEWEST">{t('tx.sortNewest')}</option>
+          <option value="OLDEST">{t('tx.sortOldest')}</option>
+          <option value="HIGHEST_AMOUNT">{t('tx.sortHighest')}</option>
+          <option value="LOWEST_AMOUNT">{t('tx.sortLowest')}</option>
+        </select>
+
+        <button
+          type="button"
+          onClick={() => setShowAdvanced((v) => !v)}
+          aria-expanded={showAdvanced}
+          className={`flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] font-bold transition-colors cursor-pointer ${
+            showAdvanced || activeFilterCount > 0
+              ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+              : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-300'
+          }`}
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          {t('tx.filters')}
+          {activeFilterCount > 0 && (
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-700 text-[9px] font-black text-white">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* 4. Advanced filters — account, amount range, custom dates (contextual, collapsible) */}
+      {showAdvanced && (
+        <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">{t('tx.filterAccount')}</label>
+              <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className={selectCls + ' w-full'} aria-label={t('tx.filterAccount')}>
+                <option value="ALL">{t('tx.allAccounts')}</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">{t('tx.amount')}</label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number" min="0" placeholder={`${t('tx.filterMin')} ${currencySymbol}`} value={minStr}
+                  onChange={(e) => setMinStr(e.target.value)} aria-label={t('tx.minAria')}
+                  className={selectCls + ' w-full'}
+                />
+                <input
+                  type="number" min="0" placeholder={`${t('tx.filterMax')} ${currencySymbol}`} value={maxStr}
+                  onChange={(e) => setMaxStr(e.target.value)} aria-label={t('tx.maxAria')}
+                  className={selectCls + ' w-full'}
+                />
+              </div>
+            </div>
+          </div>
+          {period === 'CUSTOM' && (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">{t('tx.filterFrom')}</label>
+                <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className={selectCls + ' w-full'} aria-label={t('tx.filterFrom')} />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">{t('tx.filterTo')}</label>
+                <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className={selectCls + ' w-full'} aria-label={t('tx.filterTo')} />
+              </div>
+            </div>
+          )}
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="flex items-center gap-1 text-[11px] font-bold text-rose-600 hover:text-rose-700 cursor-pointer"
+            >
+              <X className="h-3.5 w-3.5" /> {t('tx.clearFilters')}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* 5. Category Filter Chips Carousel */}
       <div data-tour="category-chips">
         <FilterChips
           categories={categories.filter((c) => c.type === 'EXPENSE')}
@@ -132,31 +332,45 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
         <input
           type="text"
-          placeholder="Search transactions, merchants, notes..."
+          placeholder={t('tx.searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          aria-label={t('tx.searchPlaceholder')}
           className="w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-800 placeholder:text-slate-400 outline-none focus:border-emerald-600 shadow-xs"
         />
       </div>
 
-      {/* 4. Date Group Timeline List or Zero State */}
+      {/* 6. Date Group Timeline List or Zero State */}
       <div className="space-y-4 pt-1">
-        {!hasExpenses ? (
+        {filtered.length === 0 ? (
           <div className="rounded-[28px] bg-white p-6 text-center border border-slate-200/80 shadow-xs space-y-2">
             <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
-              <Sparkles className="h-5 w-5" />
+              <Search className="h-5 w-5" />
             </div>
-            <h4 className="text-xs sm:text-sm font-black text-slate-900">No Expenses Recorded</h4>
+            <h4 className="text-xs sm:text-sm font-black text-slate-900">
+              {transactions.length === 0 ? t('tx.noTransactions') : t('tx.nothingMatches')}
+            </h4>
             <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
-              All transactions recorded with the <strong>+</strong> button will appear here grouped chronologically.
+              {transactions.length === 0
+                ? t('tx.noTransactionsHint')
+                : t('tx.nothingMatchesHint')}
             </p>
+            {transactions.length > 0 && activeFilterCount > 0 && (
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="mt-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600 hover:border-emerald-300 hover:text-emerald-700 transition-colors cursor-pointer"
+              >
+                {t('tx.resetFilters')}
+              </button>
+            )}
           </div>
         ) : (
           sortedDates.map((dateStr) => {
             const group = groupedDatesMap.get(dateStr)!;
             const dayAbbr = DateUtils.getDayAbbreviation(dateStr);
             const dateDisplay = DateUtils.formatDisplayDate(dateStr, { fullYear: true });
-            const dayTotalMoney = MoneyValue.fromMinorUnits(group.dayTotal, currency);
+            const dayNetMoney = MoneyValue.fromMinorUnits(Math.abs(group.net), currency);
 
             return (
               <div key={dateStr} className="space-y-2">
@@ -170,8 +384,12 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
                       {dateDisplay}
                     </span>
                   </div>
-                  <span className="text-xs sm:text-sm font-black text-slate-900">
-                    {dayTotalMoney.format()}
+                  <span
+                    className={`text-xs sm:text-sm font-black ${
+                      group.net > 0 ? 'text-emerald-700' : group.net < 0 ? 'text-slate-900' : 'text-slate-400'
+                    }`}
+                  >
+                    {group.net > 0 ? `+${dayNetMoney.format()}` : group.net < 0 ? `-${dayNetMoney.format()}` : dayNetMoney.format()}
                   </span>
                 </div>
 
@@ -183,6 +401,10 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
                       transaction={tx}
                       category={categoryMap.get(tx.categoryId)}
                       accountName={accountMap.get(tx.accountId)?.name}
+                      destinationAccountName={
+                        tx.destinationAccountId ? accountMap.get(tx.destinationAccountId)?.name : undefined
+                      }
+                      categories={categories}
                       onClick={onSelectTransaction}
                     />
                   ))}

@@ -1,8 +1,10 @@
 import React from 'react';
-import { User as UserIcon, ChevronDown, Globe, LogIn, LogOut, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { User as UserIcon, ChevronDown, Globe, LogIn, LogOut, ShieldCheck, Download, CloudOff, RefreshCw, CloudUpload } from 'lucide-react';
 import { Account, CurrencyCode, UserSettings, ALL_CURRENCIES } from '../../types';
 import { AuthUserProfile } from '../../services/supabase/authService';
-import { isSupabaseConfigured } from '../../services/supabase/supabaseClient';
+import type { SyncStatus } from '../../services/sync/syncQueue';
+import { useI18n } from '../../i18n';
+import { confirmDialog } from '../ui/dialog';
 
 interface HeaderProps {
   settings: UserSettings;
@@ -14,7 +16,55 @@ interface HeaderProps {
   onNavigateToSettings?: () => void;
   onOpenSignIn?: () => void;
   onSignOut?: () => void;
+  syncStatus?: SyncStatus | null;
+  canInstall?: boolean;
+  onInstall?: () => void;
+  updateReady?: boolean;
+  onApplyUpdate?: () => void;
 }
+
+/**
+ * Truthful connectivity pill. Only claims what the sync layer actually knows:
+ *  - offline (navigator.onLine) with/without queued ops
+ *  - an in-flight or retrying cloud flush
+ *  - a confirmed successful push ("Synced")
+ * Guest / unconfigured users see nothing (the guest banner already explains).
+ */
+const SyncPill: React.FC<{ status: SyncStatus | null }> = ({ status }) => {
+  const { t } = useI18n();
+  if (!status || status.phase === 'local-only' || status.phase === 'idle') return null;
+
+  let icon = <CloudUpload className="h-3 w-3" />;
+  let label = '';
+  let tone = 'bg-emerald-500/15 text-emerald-800 border-emerald-600/25';
+
+  if (!status.online) {
+    icon = <CloudOff className="h-3 w-3" />;
+    label = status.pending > 0 ? t('sync.offlinePending', { count: status.pending }) : t('sync.offline');
+    tone = 'bg-slate-500/15 text-slate-700 border-slate-500/25';
+  } else if (status.phase === 'syncing') {
+    icon = <RefreshCw className="h-3 w-3 animate-spin" />;
+    label = t('sync.syncing');
+    tone = 'bg-sky-500/15 text-sky-800 border-sky-600/25';
+  } else if (status.phase === 'retrying' || status.phase === 'queued-offline') {
+    icon = <RefreshCw className="h-3 w-3" />;
+    label = t('sync.pending', { count: status.pending });
+    tone = 'bg-amber-500/15 text-amber-800 border-amber-500/30';
+  } else if (status.phase === 'synced') {
+    label = t('sync.synced');
+  }
+
+  return (
+    <span
+      role="status"
+      aria-live="polite"
+      className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${tone}`}
+    >
+      {icon}
+      {label}
+    </span>
+  );
+};
 
 export const Header: React.FC<HeaderProps> = ({
   settings,
@@ -26,10 +76,16 @@ export const Header: React.FC<HeaderProps> = ({
   onNavigateToSettings,
   onOpenSignIn,
   onSignOut,
+  syncStatus,
+  canInstall,
+  onInstall,
+  updateReady,
+  onApplyUpdate,
 }) => {
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId);
   const accountLabel = selectedAccountId === 'ALL' ? 'Personal' : selectedAccount?.name || 'Personal';
   const isGuest = authUser?.isGuest ?? true;
+  const { t } = useI18n();
 
   return (
     <div className="space-y-2 pb-2">
@@ -66,8 +122,8 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             type="button"
-            onClick={() => {
-              if (confirm('Are you sure you want to log out of FINOVA?')) {
+            onClick={async () => {
+              if (await confirmDialog({ title: t('dialog.signOut') })) {
                 onSignOut?.();
               }
             }}
@@ -107,6 +163,33 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Header Actions */}
         <div className="flex items-center gap-2 shrink-0">
+          {/* Offline / sync status (real connectivity, not decoration) */}
+          <SyncPill status={syncStatus ?? null} />
+
+          {/* New version ready — user chooses when to reload, never forced */}
+          {updateReady && (
+            <button
+              type="button"
+              onClick={onApplyUpdate}
+              className="flex items-center gap-1 rounded-full bg-sky-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white shadow-xs hover:bg-sky-700 active:scale-95 transition-all cursor-pointer"
+            >
+              <RefreshCw className="h-3 w-3" />
+              <span>{t('sync.update')}</span>
+            </button>
+          )}
+
+          {/* Install app — only when the browser actually offered it */}
+          {canInstall && (
+            <button
+              type="button"
+              onClick={onInstall}
+              className="flex items-center gap-1 rounded-full bg-[#122A1E] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-[#D4F63D] shadow-xs hover:bg-[#183625] active:scale-95 transition-all cursor-pointer"
+            >
+              <Download className="h-3 w-3" />
+              <span>{t('sync.install')}</span>
+            </button>
+          )}
+
           {/* Currency Quick Selector */}
           <div className="relative">
             <select

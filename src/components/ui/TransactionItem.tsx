@@ -12,14 +12,21 @@ import {
   ArrowRightLeft,
   CircleDollarSign,
   LucideIcon,
+  Scissors,
+  Paperclip,
 } from 'lucide-react';
 import { Category, Transaction } from '../../types';
 import { MoneyValue } from '../../domain/money/MoneyValue';
+import { useI18n } from '../../i18n';
+import { categoryName } from '../../i18n/core';
 
 interface TransactionItemProps {
   transaction: Transaction;
   category?: Category;
   accountName?: string;
+  destinationAccountName?: string;
+  /** Full category list — used to name the categories inside a split. */
+  categories?: Category[];
   onClick?: (transaction: Transaction) => void;
 }
 
@@ -40,13 +47,18 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   transaction,
   category,
   accountName,
+  destinationAccountName,
+  categories,
   onClick,
 }) => {
+  const { t } = useI18n();
   const IconComponent = category?.icon ? ICON_MAP[category.icon] || CircleDollarSign : CircleDollarSign;
   const money = MoneyValue.fromMinorUnits(transaction.amount, transaction.currency);
 
   const isIncome = transaction.type === 'INCOME';
   const isTransfer = transaction.type === 'TRANSFER';
+  const splitCount = transaction.splitParts?.length || 0;
+  const hasReceipt = Boolean(transaction.receiptDataUrl);
 
   // Card Icon container styles from screenshot
   const isFood = category?.id === 'cat-food' || transaction.categoryId === 'cat-food';
@@ -69,9 +81,24 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
     ? '#4F46E5'
     : category?.color || (isIncome ? '#059669' : '#334155');
 
-  const titleText = transaction.merchant || category?.name || 'Transaction';
-  const subtitleText = transaction.subtitle || category?.name || 'Expense';
-  const noteSubline = transaction.note || `${accountName || 'Personal Account'} • ${category?.name || 'General'}`;
+  const titleText = transaction.merchant || categoryName(category) || t('tx.generic');
+  const splitNames =
+    splitCount > 0
+      ? (transaction.splitParts || [])
+          .map((p) => categoryName(categories?.find((c) => c.id === p.categoryId)))
+          .filter(Boolean)
+          .join(', ')
+      : '';
+  const subtitleText = isTransfer
+    ? destinationAccountName
+      ? t('tx.fromTo', { from: accountName || t('common.account'), to: destinationAccountName })
+      : transaction.subtitle || t('tx.transfer')
+    : splitCount > 0
+    ? t('tx.splitDetail', { names: splitNames || t('tx.splitCount', { count: splitCount }) })
+    : transaction.subtitle || categoryName(category) || t('tx.expense');
+  const noteSubline =
+    transaction.note ||
+    `${accountName || t('tx.personalAccount')}${isTransfer ? '' : ` • ${categoryName(category) || t('tx.general')}`}`;
 
   return (
     <div
@@ -99,7 +126,24 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
             </h4>
             {isTransfer && (
               <span className="shrink-0 rounded bg-blue-50 px-1 py-0.5 text-[9px] font-bold text-blue-700">
-                Transfer
+                {t('tx.transfer')}
+              </span>
+            )}
+            {splitCount > 0 && (
+              <span
+                className="shrink-0 flex items-center gap-0.5 rounded bg-violet-50 px-1 py-0.5 text-[9px] font-bold text-violet-700"
+                title={t('tx.splitAcross', { count: splitCount })}
+              >
+                <Scissors className="h-2.5 w-2.5" aria-hidden="true" />
+                {splitCount}
+              </span>
+            )}
+            {hasReceipt && (
+              <span
+                className="shrink-0 flex items-center rounded bg-slate-100 px-1 py-0.5 text-[9px] font-bold text-slate-600"
+                title={t('tx.receiptAttached')}
+              >
+                <Paperclip className="h-2.5 w-2.5" aria-label={t('tx.receiptAttached')} />
               </span>
             )}
           </div>

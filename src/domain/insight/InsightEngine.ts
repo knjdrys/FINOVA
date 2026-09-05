@@ -13,10 +13,12 @@ import { MoneyValue } from '../money/MoneyValue';
 import { BudgetEngine } from '../budget/BudgetEngine';
 import { SafeToSpendEngine } from '../safe-to-spend/SafeToSpendEngine';
 import { GoalEngine } from '../goal/GoalEngine';
+import { t, categoryName } from '../../i18n/core';
 
 export class InsightEngine {
   /**
    * Generates clear, easy-to-understand smart money tips.
+   * Strings are localized at generation time via i18n/core (no React needed).
    */
   public static generateInsights(
     accounts: Account[],
@@ -60,7 +62,7 @@ export class InsightEngine {
     for (const [catId, currentAmount] of currentCategoryExpenses.entries()) {
       const prevAmount = prevCategoryExpenses.get(catId) || 0;
       const cat = categoryMap.get(catId);
-      const catName = cat?.name || 'Expenses';
+      const catName = categoryName(cat) || t('insights.expenses');
 
       if (prevAmount > 0) {
         const diff = currentAmount - prevAmount;
@@ -71,10 +73,14 @@ export class InsightEngine {
           insights.push({
             id: `insight-cat-down-${catId}`,
             category: 'SPENDING',
-            title: `${catName} spending is down ${pctChange}%`,
-            fact: `You spent ${diffMoney.format()} less on ${catName} compared to last month.`,
-            calculation: `${MoneyValue.fromMinorUnits(currentAmount, currency).format()} this month vs ${MoneyValue.fromMinorUnits(prevAmount, currency).format()} last month (${pctChange}% drop)`,
-            interpretation: `Great job! You are spending less on ${catName}.`,
+            title: t('insights.catDownTitle', { cat: catName, pct: pctChange }),
+            fact: t('insights.catDownFact', { amount: diffMoney.format(), cat: catName }),
+            calculation: t('insights.catDownCalc', {
+              current: MoneyValue.fromMinorUnits(currentAmount, currency).format(),
+              previous: MoneyValue.fromMinorUnits(prevAmount, currency).format(),
+              pct: pctChange,
+            }),
+            interpretation: t('insights.catDownInterp', { cat: catName }),
             severity: 'POSITIVE',
             score: 85,
             iconName: 'TrendingDown',
@@ -84,10 +90,14 @@ export class InsightEngine {
           insights.push({
             id: `insight-cat-up-${catId}`,
             category: 'SPENDING',
-            title: `${catName} spending is up ${pctChange}%`,
-            fact: `You spent ${diffMoney.format()} more on ${catName} than last month.`,
-            calculation: `${MoneyValue.fromMinorUnits(currentAmount, currency).format()} this month vs ${MoneyValue.fromMinorUnits(prevAmount, currency).format()} last month (+${pctChange}%)`,
-            interpretation: `Check your recent ${catName} purchases to keep your spending in check.`,
+            title: t('insights.catUpTitle', { cat: catName, pct: pctChange }),
+            fact: t('insights.catUpFact', { amount: diffMoney.format(), cat: catName }),
+            calculation: t('insights.catUpCalc', {
+              current: MoneyValue.fromMinorUnits(currentAmount, currency).format(),
+              previous: MoneyValue.fromMinorUnits(prevAmount, currency).format(),
+              pct: pctChange,
+            }),
+            interpretation: t('insights.catUpInterp', { cat: catName }),
             severity: 'WARNING',
             score: 80,
             iconName: 'TrendingUp',
@@ -106,10 +116,20 @@ export class InsightEngine {
         insights.push({
           id: `insight-budget-risk-${b.id}`,
           category: 'BUDGET',
-          title: `${b.name} budget is close to limit`,
-          fact: `You spent ${MoneyValue.fromMinorUnits(forecast.actualSpent, currency).format()} with ${forecast.remainingDays} days remaining.`,
-          calculation: `At your current average of ${MoneyValue.fromMinorUnits(forecast.avgDailySpent, currency).format()} / day, you may spend ${MoneyValue.fromMinorUnits(forecast.projectedMonthEndSpent, currency).format()} vs your ${MoneyValue.fromMinorUnits(b.amount, currency).format()} limit.`,
-          interpretation: `You might go over your ${b.name} budget by about ${MoneyValue.fromMinorUnits(Math.abs(forecast.projectedVariance), currency).format()}.`,
+          title: t('insights.budgetRiskTitle', { name: b.name }),
+          fact: t('insights.budgetRiskFact', {
+            spent: MoneyValue.fromMinorUnits(forecast.actualSpent, currency).format(),
+            days: forecast.remainingDays,
+          }),
+          calculation: t('insights.budgetRiskCalc', {
+            avg: MoneyValue.fromMinorUnits(forecast.avgDailySpent, currency).format(),
+            projected: MoneyValue.fromMinorUnits(forecast.projectedMonthEndSpent, currency).format(),
+            limit: MoneyValue.fromMinorUnits(b.amount, currency).format(),
+          }),
+          interpretation: t('insights.budgetRiskInterp', {
+            name: b.name,
+            variance: MoneyValue.fromMinorUnits(Math.abs(forecast.projectedVariance), currency).format(),
+          }),
           severity: 'ALERT',
           score: 95,
           iconName: 'AlertTriangle',
@@ -119,10 +139,13 @@ export class InsightEngine {
         insights.push({
           id: `insight-budget-good-${b.id}`,
           category: 'BUDGET',
-          title: `${b.name} is well under budget`,
-          fact: `You have only used ${forecast.percentageUsed}% of your budget halfway through the month.`,
-          calculation: `${MoneyValue.fromMinorUnits(forecast.remainingAmount, currency).format()} left for the next ${forecast.remainingDays} days.`,
-          interpretation: `You are doing great staying below your ${b.name} budget.`,
+          title: t('insights.budgetGoodTitle', { name: b.name }),
+          fact: t('insights.budgetGoodFact', { pct: forecast.percentageUsed }),
+          calculation: t('insights.budgetGoodCalc', {
+            remaining: MoneyValue.fromMinorUnits(forecast.remainingAmount, currency).format(),
+            days: forecast.remainingDays,
+          }),
+          interpretation: t('insights.budgetGoodInterp', { name: b.name }),
           severity: 'POSITIVE',
           score: 60,
           iconName: 'ShieldCheck',
@@ -140,10 +163,17 @@ export class InsightEngine {
         insights.push({
           id: `insight-goal-ontrack-${g.id}`,
           category: 'SAVINGS',
-          title: `On track for ${g.name}`,
-          fact: `You have saved ${progress.progressPercentage}% (${MoneyValue.fromMinorUnits(g.currentAmount, currency).format()}) toward your ${MoneyValue.fromMinorUnits(g.targetAmount, currency).format()} goal.`,
-          calculation: `Saving ${MoneyValue.fromMinorUnits(progress.requiredMonthlySaving, currency).format()} each month will reach your goal on ${DateUtils.formatDisplayDate(g.targetDate, { fullYear: true })}.`,
-          interpretation: 'You are making steady progress toward your savings goal!',
+          title: t('insights.goalOnTrackTitle', { name: g.name }),
+          fact: t('insights.goalOnTrackFact', {
+            pct: progress.progressPercentage,
+            saved: MoneyValue.fromMinorUnits(g.currentAmount, currency).format(),
+            target: MoneyValue.fromMinorUnits(g.targetAmount, currency).format(),
+          }),
+          calculation: t('insights.goalOnTrackCalc', {
+            monthly: MoneyValue.fromMinorUnits(progress.requiredMonthlySaving, currency).format(),
+            date: DateUtils.formatDisplayDate(g.targetDate, { fullYear: true }),
+          }),
+          interpretation: t('insights.goalOnTrackInterp'),
           severity: 'POSITIVE',
           score: 75,
           iconName: 'Target',
@@ -158,10 +188,19 @@ export class InsightEngine {
       insights.push({
         id: 'insight-safetospend-healthy',
         category: 'CASH_FLOW',
-        title: `Safe to spend ${MoneyValue.fromMinorUnits(safeToSpend.dailySafeToSpend, currency).format()} / day`,
-        fact: `You have ${MoneyValue.fromMinorUnits(safeToSpend.discretionaryPool, currency).format()} available for the next ${safeToSpend.remainingDaysInPeriod} days.`,
-        calculation: `Total money minus upcoming bills (${MoneyValue.fromMinorUnits(safeToSpend.essentialUpcomingCommitments, currency).format()}), savings (${MoneyValue.fromMinorUnits(safeToSpend.reservedGoalContributions, currency).format()}), and emergency cushion (${MoneyValue.fromMinorUnits(safeToSpend.minimumReserve, currency).format()}).`,
-        interpretation: 'Spending within this daily amount keeps all your upcoming bills and savings completely protected.',
+        title: t('insights.safeTitle', {
+          amount: MoneyValue.fromMinorUnits(safeToSpend.dailySafeToSpend, currency).format(),
+        }),
+        fact: t('insights.safeFact', {
+          pool: MoneyValue.fromMinorUnits(safeToSpend.discretionaryPool, currency).format(),
+          days: safeToSpend.remainingDaysInPeriod,
+        }),
+        calculation: t('insights.safeCalc', {
+          bills: MoneyValue.fromMinorUnits(safeToSpend.essentialUpcomingCommitments, currency).format(),
+          savings: MoneyValue.fromMinorUnits(safeToSpend.reservedGoalContributions, currency).format(),
+          reserve: MoneyValue.fromMinorUnits(safeToSpend.minimumReserve, currency).format(),
+        }),
+        interpretation: t('insights.safeInterp'),
         severity: 'NEUTRAL',
         score: 70,
         iconName: 'CheckCircle',

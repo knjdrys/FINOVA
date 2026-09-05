@@ -18,10 +18,19 @@ export interface FinovaState {
   goals: SavingsGoal[];
   commitments: MoneyCommitment[];
   recurring: RecurringTransaction[];
+  /** Notification read-state, persisted by id so re-derivation stays idempotent. */
+  readNotificationIds: string[];
   settings: UserSettings;
 }
 
 const STORAGE_KEY = 'FINOVA_FINANCIAL_OS_DATA_V4';
+
+/**
+ * Per-user storage scoping. Financial data is namespaced by account id so a
+ * second user on the same device can never read the first user's data.
+ * 'legacy' is the pre-scoping key, auto-migrated once into the first scope.
+ */
+let activeScope = 'legacy';
 
 export const INITIAL_CATEGORIES: Category[] = [
   { id: 'cat-food', userId: 'user-1', name: 'Food', type: 'EXPENSE', icon: 'Utensils', emoji: '🍔', color: '#EA580C', bgColor: '#FFEDD5', isSystem: true, isArchived: false },
@@ -77,6 +86,7 @@ export const DEMO_SETTINGS: UserSettings = {
   userId: 'user-1',
   userName: 'Juan Dela Cruz',
   currency: 'PHP',
+  language: 'en',
   defaultTrackingPeriod: 'TODAY',
   budgetCycleMode: 'SEMI_MONTHLY_15_DAYS',
   semiMonthlyCutoffDay: 15,
@@ -257,10 +267,12 @@ export const CLEAN_ZERO_STATE: FinovaState = {
   goals: [],
   commitments: [],
   recurring: [],
+  readNotificationIds: [],
   settings: {
     userId: 'user-1',
     userName: 'Finova User',
     currency: 'PHP',
+    language: 'en',
     defaultTrackingPeriod: 'TODAY',
     budgetCycleMode: 'SEMI_MONTHLY_15_DAYS',
     semiMonthlyCutoffDay: 15,
@@ -275,16 +287,46 @@ export const CLEAN_ZERO_STATE: FinovaState = {
 };
 
 export class FinovaStorage {
+  /** Point storage at a user's namespace. Call on login/logout transitions. */
+  public static setScopeForUser(user: { id: string; isGuest?: boolean } | null): void {
+    activeScope = user ? (user.isGuest ? 'guest' : `u:${user.id}`) : 'none';
+  }
+
+  public static getScope(): string {
+    return activeScope;
+  }
+
+  /** Remove a user's stored data entirely (used on sign-out wipe). */
+  public static wipeForUser(userId: string): void {
+    localStorage.removeItem(`${STORAGE_KEY}:u:${userId}`);
+  }
+
+  private static scopedKey(): string {
+    return activeScope === 'legacy' ? STORAGE_KEY : `${STORAGE_KEY}:${activeScope}`;
+  }
+
   public static loadState(): FinovaState {
     try {
-      const serialized = localStorage.getItem(STORAGE_KEY);
+      const key = FinovaStorage.scopedKey();
+      let serialized = localStorage.getItem(key);
+      // One-time migration: the first scoped user inherits pre-scoping data.
+      // Guarded by a device flag so a wiped namespace can never re-pull the
+      // legacy (guest) data after the migration already happened once.
+      if (!serialized && activeScope !== 'legacy' && activeScope !== 'none' && !localStorage.getItem(`${STORAGE_KEY}:migrated`)) {
+        const legacy = localStorage.getItem(STORAGE_KEY);
+        if (legacy) {
+          localStorage.setItem(key, legacy);
+          localStorage.setItem(`${STORAGE_KEY}:migrated`, '1');
+          serialized = legacy;
+        }
+      }
       if (serialized) {
         const parsed = JSON.parse(serialized);
         const loadedSettings = { ...CLEAN_ZERO_STATE.settings, ...(parsed.settings || {}) };
-        if (loadedSettings.userName && (loadedSettings.userName.includes('Hassan') || loadedSettings.userName.includes('Muhammad'))) {
-          loadedSettings.userName = 'Juan Dela Cruz';
-        }
-        return {
+        // Deep-clone fallback arrays: returning references into the shared
+        // CLEAN_ZERO_STATE singleton lets one caller's in-place mutation
+        // leak into the next caller's "clean" state.
+        return structuredClone({
           accounts: parsed.accounts || CLEAN_ZERO_STATE.accounts,
           transactions: parsed.transactions || [],
           categories: parsed.categories || INITIAL_CATEGORIES,
@@ -292,19 +334,20 @@ export class FinovaStorage {
           goals: parsed.goals || [],
           commitments: parsed.commitments || [],
           recurring: parsed.recurring || [],
+          readNotificationIds: parsed.readNotificationIds || [],
           settings: loadedSettings,
-        };
+        });
       }
     } catch (e) {
       console.warn('FinovaStorage load error, falling back to clean state', e);
     }
 
-    return CLEAN_ZERO_STATE;
+    return structuredClone(CLEAN_ZERO_STATE);
   }
 
   public static saveState(state: FinovaState): void {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(FinovaStorage.scopedKey(), JSON.stringify(state));
     } catch (e) {
       console.error('FinovaStorage save error', e);
     }
@@ -355,6 +398,7 @@ export class FinovaStorage {
       goals: DEMO_GOALS,
       commitments: DEMO_COMMITMENTS,
       recurring: [],
+      readNotificationIds: [],
       settings: DEMO_SETTINGS,
     };
     this.saveState(demo);
@@ -380,21 +424,33 @@ export class FinovaStorage {
     const catMap = new Map(categories.map((c) => [c.id, c.name]));
     const accMap = new Map(accounts.map((a) => [a.id, a.name]));
 
+    // RFC-4180 cell: quote when needed, double any embedded quotes.
+    // Previously category/account names were quoted WITHOUT escaping, so a
+    // name containing a quote or comma corrupted the whole row.
+    // Formula-injection guard: a leading = + - @ (or tab/CR) turns a cell
+    // into a formula when the CSV is opened in Excel/Sheets. Neutralize it
+    // with a leading apostrophe so user-entered names/notes can't execute.
+    const cell = (value: string | number): string => {
+      let s = String(value ?? '');
+      if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+      return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+
     const headers = ['ID', 'Date', 'Time', 'Type', 'Amount', 'Currency', 'Category', 'Account', 'Destination Account', 'Merchant', 'Subtitle', 'Note', 'Status'];
     const rows = transactions.map((t) => [
-      t.id,
-      t.date,
-      t.time || '',
-      t.type,
-      (t.amount / 100).toFixed(2),
-      t.currency,
-      `"${catMap.get(t.categoryId) || t.categoryId}"`,
-      `"${accMap.get(t.accountId) || t.accountId}"`,
-      `"${t.destinationAccountId ? accMap.get(t.destinationAccountId) || t.destinationAccountId : ''}"`,
-      `"${(t.merchant || '').replace(/"/g, '""')}"`,
-      `"${(t.subtitle || '').replace(/"/g, '""')}"`,
-      `"${(t.note || '').replace(/"/g, '""')}"`,
-      t.status,
+      cell(t.id),
+      cell(t.date),
+      cell(t.time || ''),
+      cell(t.type),
+      cell((t.amount / 100).toFixed(2)),
+      cell(t.currency),
+      cell(catMap.get(t.categoryId) || t.categoryId),
+      cell(accMap.get(t.accountId) || t.accountId),
+      cell(t.destinationAccountId ? accMap.get(t.destinationAccountId) || t.destinationAccountId : ''),
+      cell(t.merchant || ''),
+      cell(t.subtitle || ''),
+      cell(t.note || ''),
+      cell(t.status),
     ]);
 
     return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');

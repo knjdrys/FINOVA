@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { AuthService, AuthUserProfile } from '../services/supabase/authService';
+import { t } from '../i18n/core';
+import { notice } from '../components/ui/dialog';
 import {
-  Eye,
-  EyeOff,
   Mail,
   Lock,
   User,
@@ -401,7 +401,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                   </label>
                   <button
                     type="button"
-                    onClick={() => alert('Please check your email to reset your password or sign in with Google.')}
+                    onClick={() => notice(t('dialog.resetPassword'))}
                     className="text-xs font-bold text-[#1a3a2e] hover:underline"
                   >
                     Forgot password?

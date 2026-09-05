@@ -1,6 +1,7 @@
-import { Account, Transaction, TransactionType } from '../../types';
+import { Account, SplitPart, Transaction, TransactionType } from '../../types';
 import { MoneyValue } from '../money/MoneyValue';
 import { DateUtils } from '../date/DateUtils';
+import { t } from '../../i18n/core';
 
 export interface TransactionFilterOptions {
   searchQuery?: string;
@@ -15,6 +16,47 @@ export interface TransactionFilterOptions {
 }
 
 export class TransactionEngine {
+  /**
+   * Single source of truth for category attribution.
+   * A split expense contributes to each of its categories by the allocated amount;
+   * a normal expense contributes its full amount to its single category.
+   * Budgets, Insights, and any future consumer MUST use this instead of reading
+   * tx.categoryId directly, so split money is never double-counted or lost.
+   */
+  public static getCategoryAllocations(tx: Transaction): Map<string, number> {
+    const map = new Map<string, number>();
+    if (tx.type !== 'EXPENSE') return map;
+    if (tx.splitParts && tx.splitParts.length > 0) {
+      for (const part of tx.splitParts) {
+        if (part.amount > 0) {
+          map.set(part.categoryId, (map.get(part.categoryId) || 0) + part.amount);
+        }
+      }
+    } else if (tx.amount > 0) {
+      map.set(tx.categoryId, tx.amount);
+    }
+    return map;
+  }
+
+  /**
+   * Validates split allocations against the parent amount.
+   * Returns null when valid (or when not a split), or a human-readable reason.
+   */
+  public static validateSplitParts(amount: number, splitParts: SplitPart[] | undefined): string | null {
+    if (!splitParts || splitParts.length === 0) return null;
+    if (splitParts.length < 2) return t('engine.splitMinTwo');
+    if (splitParts.some((p) => !p.categoryId)) return t('engine.splitCategory');
+    if (splitParts.some((p) => p.amount <= 0)) return t('engine.splitZero');
+    const sum = splitParts.reduce((s, p) => s + p.amount, 0);
+    if (sum !== amount) {
+      const diff = Math.abs(amount - sum) / 100;
+      return sum < amount
+        ? t('engine.splitUnassigned', { amount: diff.toFixed(2) })
+        : t('engine.splitExceed', { amount: diff.toFixed(2) });
+    }
+    return null;
+  }
+
   /**
    * Applies the financial mutation of a newly created transaction to accounts.
    * Atomic and immutable: returns a new accounts array.
@@ -83,6 +125,41 @@ export class TransactionEngine {
   }
 
   /**
+   * Pre-flight validation for a prospective transaction mutation.
+   * Guards the financial core:
+   *  - EXPENSE/TRANSFER must not drive the source account below zero (no negative balances).
+   *  - TRANSFER source and destination must share the same currency (no silent FX drift).
+   * Returns null when valid, or a human-readable reason when rejected.
+   */
+  public static validateTransaction(
+    tx: Pick<Transaction, 'type' | 'amount' | 'currency' | 'accountId' | 'destinationAccountId'>,
+    accounts: Account[]
+  ): string | null {
+    if (tx.amount <= 0) return t('engine.amountPositive');
+
+    const source = accounts.find((a) => a.id === tx.accountId);
+    if (!source) return t('engine.sourceMissing');
+
+    if (tx.type === 'EXPENSE' || tx.type === 'TRANSFER') {
+      if (source.currentBalance - tx.amount < 0) {
+        return t('engine.overdraw');
+      }
+    }
+
+    if (tx.type === 'TRANSFER') {
+      if (!tx.destinationAccountId) return t('engine.destRequired');
+      if (tx.destinationAccountId === tx.accountId) return t('engine.destSame');
+      const dest = accounts.find((a) => a.id === tx.destinationAccountId);
+      if (!dest) return t('engine.destMissing');
+      if (dest.currency !== source.currency) {
+        return t('engine.crossCurrency');
+      }
+    }
+
+    return null;
+  }
+
+  /**
    * Aggregates total income, total expense, and net cash flow for a date period.
    * Transfer transactions are strictly excluded from income and expense aggregates (FINOVA Invariant #4 & #10).
    */
@@ -140,9 +217,15 @@ export class TransactionEngine {
         return false;
       }
 
-      // Category filter
-      if (filters.categoryId && tx.categoryId !== filters.categoryId) {
-        return false;
+      // Category filter — expenses match via allocations (a split matches when any part does);
+      // income/transfers fall back to their single category.
+      if (filters.categoryId) {
+        const allocations = this.getCategoryAllocations(tx);
+        if (allocations.size > 0) {
+          if (!allocations.has(filters.categoryId)) return false;
+        } else if (tx.categoryId !== filters.categoryId) {
+          return false;
+        }
       }
 
       // Account filter (matches either source or destination)
