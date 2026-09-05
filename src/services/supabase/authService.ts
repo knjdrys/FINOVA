@@ -184,6 +184,31 @@ export class AuthService {
   }
 
   /**
+   * Resend the signup confirmation email (e.g. user never received / lost it).
+   */
+  public static async resendConfirmationEmail(email: string): Promise<{ error: Error | null; message?: string }> {
+    if (!isSupabaseConfigured) {
+      return { error: new Error('Offline mode — nothing to confirm.') };
+    }
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email.trim(),
+        options: { emailRedirectTo: window.location.origin },
+      });
+      if (error) {
+        if (error.message.toLowerCase().includes('rate limit')) {
+          return { error: new Error('Email provider limit reached — please wait about an hour and try again.') };
+        }
+        return { error };
+      }
+      return { error: null, message: `Confirmation link re-sent to ${email.trim()}. Check your inbox (and spam folder).` };
+    } catch (err: any) {
+      return { error: err };
+    }
+  }
+
+  /**
    * Sign Up with Email and Password
    */
   public static async signUpWithEmail(
@@ -226,6 +251,12 @@ export class AuthService {
       });
 
       if (error) {
+        if (error.message.toLowerCase().includes('rate limit')) {
+          return {
+            user: null,
+            error: new Error('Too many confirmation emails sent right now — the email provider caps us for about an hour. Please try signing up again a bit later.'),
+          };
+        }
         if (error.message.toLowerCase().includes('already registered')) {
           return {
             user: null,
@@ -252,7 +283,7 @@ export class AuthService {
           error: null,
           message: isSessionActive
             ? 'Account created and signed in successfully!'
-            : `Account created for ${cleanEmail}! Please check your email inbox to confirm your account, or log in if confirmation is turned off.`,
+            : `Account created! We sent a confirmation link to ${cleanEmail}. Open it to activate your account, then sign in here.`,
         };
       }
 

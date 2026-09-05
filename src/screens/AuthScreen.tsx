@@ -28,6 +28,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [needsConfirm, setNeedsConfirm] = useState(false);
+  const [resending, setResending] = useState(false);
 
   // Handle Google OAuth Sign In
   const handleGoogleSignIn = async () => {
@@ -64,6 +66,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
       if (mode === 'SIGN_IN') {
         const { user, error } = await AuthService.signInWithEmail(email, password);
         if (error) {
+          setNeedsConfirm(/confirm your email/i.test(error.message));
           setErrorMessage(error.message || 'Sign in failed. Check your credentials.');
         } else if (user) {
           onAuthenticated(user);
@@ -324,6 +327,23 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                 <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
                 <span className="font-semibold">{successMessage}</span>
               </div>
+            )}
+
+            {needsConfirm && (
+              <button
+                type="button"
+                disabled={resending || isLoading}
+                onClick={async () => {
+                  setResending(true);
+                  const { error, message } = await AuthService.resendConfirmationEmail(email);
+                  setResending(false);
+                  if (error) { setErrorMessage(error.message); }
+                  else { setErrorMessage(null); setNeedsConfirm(false); setSuccessMessage(message || 'Confirmation email re-sent!'); }
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-slate-200 bg-white text-[#1a3a2e] font-bold text-xs hover:bg-slate-50 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+              >
+                {resending ? 'Re-sending…' : "Didn't get the email? Resend confirmation link"}
+              </button>
             )}
 
             {/* Email / Password Form */}
