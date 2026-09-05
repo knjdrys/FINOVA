@@ -31,3 +31,6 @@ dist-ssr
 # TS build info + smoke artifacts
 tsconfig.app.tsbuildinfo
 smoke.png
+
+# Supabase CLI cache
+supabase/.temp/
