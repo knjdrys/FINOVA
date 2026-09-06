@@ -139,7 +139,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     comparisonDir = 'neutral';
   }
 
-  const periodTotals = TransactionEngine.calculatePeriodTotals(transactions, periodStart, periodEnd);
+  const periodTotals = TransactionEngine.calculatePeriodTotals(transactions, periodStart, periodEnd, currency, currency);
   const totalBudgetMinor = budgets.reduce((sum, b) => sum + (b.amount || 0), 0);
   const totalBudgetMoney = MoneyValue.fromMinorUnits(
     totalBudgetMinor > 0 ? totalBudgetMinor : 0,

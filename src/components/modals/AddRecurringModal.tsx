@@ -31,6 +31,10 @@ export const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
   const [startDate, setStartDate] = useState('');
   const [accountId, setAccountId] = useState('');
   const [categoryId, setCategoryId] = useState('cat-bills');
+  const [endDate, setEndDate] = useState('');
+  const [autoPost, setAutoPost] = useState(true);
+  // Edit-only: moving the next occurrence is how a rule is rescheduled.
+  const [nextOccurrence, setNextOccurrence] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -42,6 +46,9 @@ export const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
       setStartDate(editingRecurring?.startDate || DateUtils.getTodayISO());
       setAccountId(editingRecurring?.accountId || accounts[0]?.id || '');
       setCategoryId(editingRecurring?.categoryId || 'cat-bills');
+      setEndDate(editingRecurring?.endDate || '');
+      setAutoPost(editingRecurring?.autoPostEnabled ?? editingRecurring?.reminderEnabled ?? true);
+      setNextOccurrence(editingRecurring?.nextOccurrence || '');
       setError(null);
     }
   }, [isOpen, editingRecurring, accounts, currency]);
@@ -51,6 +58,9 @@ export const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
     if (!title.trim()) { setError(t('tx.errors.titleRequired')); return; }
     if (amount <= 0) { setError(t('tx.errors.amountPositive')); return; }
     if (!accountId) { setError(t('tx.errors.accountRequired')); return; }
+    if (!startDate) { setError(t('tx.errors.dateRequired')); return; }
+    if (endDate && endDate < startDate) { setError(t('modal.errEndBeforeStart')); return; }
+    if (editingRecurring && nextOccurrence && nextOccurrence < startDate) { setError(t('modal.errNextBeforeStart')); return; }
     setError(null);
 
     onSave({
@@ -63,9 +73,11 @@ export const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
       accountId,
       frequency,
       startDate,
-      nextOccurrence: startDate,
-      isActive: true,
-      reminderEnabled: true,
+      nextOccurrence: editingRecurring ? (nextOccurrence || editingRecurring.nextOccurrence) : startDate,
+      endDate: endDate || undefined,
+      isActive: editingRecurring ? editingRecurring.isActive : true,
+      reminderEnabled: editingRecurring ? editingRecurring.reminderEnabled : true,
+      autoPostEnabled: autoPost,
     });
   };
 
@@ -100,6 +112,34 @@ export const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
         <Field label={t('modal.startDate')}>
           <input value={startDate} onChange={(e) => setStartDate(e.target.value)} type="date" className={inputCls} />
         </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t('modal.recEndOptional')}>
+            <input value={endDate} onChange={(e) => setEndDate(e.target.value)} type="date" className={inputCls} aria-label={t('modal.recEndOptional')} />
+          </Field>
+          {editingRecurring ? (
+            <Field label={t('modal.recNext')}>
+              <input value={nextOccurrence} onChange={(e) => setNextOccurrence(e.target.value)} type="date" className={inputCls} aria-label={t('modal.recNext')} />
+            </Field>
+          ) : (
+            <Field label={t('modal.recFirstCharge')}>
+              <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-600">
+                {startDate || '—'}
+              </div>
+            </Field>
+          )}
+        </div>
+        <label className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={autoPost}
+            onChange={(e) => setAutoPost(e.target.checked)}
+            className="mt-0.5 h-4 w-4 accent-emerald-700"
+          />
+          <span>
+            <span className="block text-xs font-bold text-slate-700">{t('modal.autoPostTitle')}</span>
+            <span className="block text-[10px] font-medium text-slate-400">{t('modal.autoPostRecurHint')}</span>
+          </span>
+        </label>
         <Field label={t('common.account')}>
           <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className={inputCls}>
             {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}

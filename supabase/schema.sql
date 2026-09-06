@@ -329,12 +329,26 @@ ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS receipt_data_url TEXT;
 -- recurring_transactions: RLS + owner policies
 ALTER TABLE public.recurring_transactions ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Users can read own recurring" ON public.recurring_transactions
+-- recurring lifecycle: explicit auto-post consent (legacy rows fall back to reminder_enabled in-app)
+ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS auto_post_enabled BOOLEAN;
+
+-- money_commitments: auto-post + provenance for the recurring lifecycle
+ALTER TABLE public.money_commitments ADD COLUMN IF NOT EXISTS auto_post_enabled BOOLEAN DEFAULT false;
+ALTER TABLE public.money_commitments ADD COLUMN IF NOT EXISTS last_auto_posted_at TIMESTAMPTZ;
+ALTER TABLE public.money_commitments ADD COLUMN IF NOT EXISTS related_recurring_transaction_id UUID;
+ALTER TABLE public.money_commitments ADD COLUMN IF NOT EXISTS goal_id UUID;
+ALTER TABLE public.money_commitments ADD COLUMN IF NOT EXISTS notes TEXT;
+
+DROP POLICY IF EXISTS "Users can read own recurring" ON public.recurring_transactions;
+CREATE POLICY "Users can read own recurring" ON public.recurring_transactions
     FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can insert own recurring" ON public.recurring_transactions
+DROP POLICY IF EXISTS "Users can insert own recurring" ON public.recurring_transactions;
+CREATE POLICY "Users can insert own recurring" ON public.recurring_transactions
     FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can update own recurring" ON public.recurring_transactions
+DROP POLICY IF EXISTS "Users can update own recurring" ON public.recurring_transactions;
+CREATE POLICY "Users can update own recurring" ON public.recurring_transactions
     FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY IF NOT EXISTS "Users can delete own recurring" ON public.recurring_transactions
+DROP POLICY IF EXISTS "Users can delete own recurring" ON public.recurring_transactions;
+CREATE POLICY "Users can delete own recurring" ON public.recurring_transactions
     FOR DELETE USING (auth.uid() = user_id);
 

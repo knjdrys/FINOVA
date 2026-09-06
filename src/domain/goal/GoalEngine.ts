@@ -64,6 +64,16 @@ export class GoalEngine {
   }
 
   /**
+   * How much of a requested contribution can actually be accepted: clamped to
+   * the remaining need so over-funding can never deduct money the goal drops.
+   * Callers must move exactly this amount (or refuse when it is zero).
+   */
+  public static fundableAmount(goal: SavingsGoal, amount: number): number {
+    if (amount <= 0) return 0;
+    return Math.min(amount, Math.max(0, goal.targetAmount - goal.currentAmount));
+  }
+
+  /**
    * Pure contribution logic: returns the next goal state after adding `amount`,
    * clamped at target, with status flipped to COMPLETED when fully funded.
    * No side effects — the caller applies it to app state.

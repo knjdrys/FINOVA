@@ -17,6 +17,7 @@ import { MoneyValue } from '../domain/money/MoneyValue';
 import { GoalEngine } from '../domain/goal/GoalEngine';
 import { BudgetEngine } from '../domain/budget/BudgetEngine';
 import { TimelineEngine } from '../domain/timeline/TimelineEngine';
+import { t } from '../i18n/core';
 import {
   Shield,
   Calendar,
@@ -26,6 +27,7 @@ import {
   Trash2,
   Wallet,
   Repeat,
+  MoreHorizontal,
 } from 'lucide-react';
 
 interface PlansScreenProps {
@@ -38,7 +40,9 @@ interface PlansScreenProps {
   recurring: RecurringTransaction[];
   settings: UserSettings;
   onOpenAddGoal: () => void;
+  onOpenAddEmergencyFund: () => void;
   onOpenAddCommitment: () => void;
+  onOpenAddPayday: () => void;
   onOpenAddBudget: () => void;
   onOpenAddRecurring: () => void;
   onEditBudget: (b: Budget) => void;
@@ -46,9 +50,14 @@ interface PlansScreenProps {
   onEditCommitment: (c: MoneyCommitment) => void;
   onEditRecurring: (r: RecurringTransaction) => void;
   onDeleteBudget: (id: string) => void;
+  onRestoreBudget: (id: string) => void;
   onDeleteGoal: (id: string) => void;
   onDeleteCommitment: (id: string) => void;
   onDeleteRecurring: (id: string) => void;
+  onToggleRecurringActive: (id: string) => void;
+  onSkipRecurring: (id: string) => void;
+  onRescheduleRecurring: (id: string, newDate: string) => void;
+  onCancelRecurring: (id: string) => void;
   onToggleCommitmentStatus: (id: string) => void;
   onCancelCommitment: (id: string) => void;
   onRescheduleCommitment: (id: string, newDueDate: string) => void;
@@ -71,7 +80,9 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({
   recurring,
   settings,
   onOpenAddGoal,
+  onOpenAddEmergencyFund,
   onOpenAddCommitment,
+  onOpenAddPayday,
   onOpenAddBudget,
   onOpenAddRecurring,
   onEditBudget,
@@ -79,9 +90,14 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({
   onEditCommitment,
   onEditRecurring,
   onDeleteBudget,
+  onRestoreBudget,
   onDeleteGoal,
   onDeleteCommitment,
   onDeleteRecurring,
+  onToggleRecurringActive,
+  onSkipRecurring,
+  onRescheduleRecurring,
+  onCancelRecurring,
   onToggleCommitmentStatus,
   onCancelCommitment,
   onRescheduleCommitment,
@@ -127,6 +143,7 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({
           onOpenAdd={onOpenAddBudget}
           onEdit={onEditBudget}
           onDelete={onDeleteBudget}
+          onRestore={onRestoreBudget}
           currency={currency}
         />
       )}
@@ -135,6 +152,7 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({
         <GoalsView
           goals={goals}
           onOpenAdd={onOpenAddGoal}
+          onOpenEmergencyFund={onOpenAddEmergencyFund}
           onEdit={onEditGoal}
           onDelete={onDeleteGoal}
           onFund={onFundGoal}
@@ -147,6 +165,7 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({
         <BillsView
           commitments={commitments}
           onOpenAdd={onOpenAddCommitment}
+          onOpenPayday={onOpenAddPayday}
           onEdit={onEditCommitment}
           onDelete={onDeleteCommitment}
           onToggle={onToggleCommitmentStatus}
@@ -161,6 +180,10 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({
           onOpenAdd={onOpenAddRecurring}
           onEdit={onEditRecurring}
           onDelete={onDeleteRecurring}
+          onToggleActive={onToggleRecurringActive}
+          onSkip={onSkipRecurring}
+          onReschedule={onRescheduleRecurring}
+          onCancel={onCancelRecurring}
           currency={currency}
         />
       )}
@@ -190,6 +213,9 @@ const TimelineView: React.FC<{ timeline: TimelineDay[]; settings: UserSettings; 
       <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">30-Day Cash Flow Projection</span>
       <span className="text-[11px] font-semibold text-emerald-800">Running Projected Balances</span>
     </div>
+    <p className="px-1 text-[10px] font-medium text-slate-400">
+      {t('plans.timelineLegend')}
+    </p>
     <div className="space-y-3">
       {timeline.slice(0, 12).map((day) => {
         const hasEvents = day.events.length > 0;
@@ -258,9 +284,13 @@ const BudgetsView: React.FC<{
   onOpenAdd: () => void;
   onEdit: (b: Budget) => void;
   onDelete: (id: string) => void;
+  onRestore: (id: string) => void;
   currency: CurrencyCode;
-}> = ({ budgets, transactions, onOpenAdd, onEdit, onDelete, currency }) => {
+}> = ({ budgets, transactions, onOpenAdd, onEdit, onDelete, onRestore, currency }) => {
   const todayISO = DateUtils.getTodayISO();
+  const activeBudgets = budgets.filter((b) => b.isActive);
+  const archivedBudgets = budgets.filter((b) => !b.isActive);
+  const [showArchived, setShowArchived] = useState(false);
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between px-1">
@@ -271,7 +301,7 @@ const BudgetsView: React.FC<{
       </div>
       {budgets.length === 0 && <EmptyHint text="No budgets yet. Tap + to set a spending limit." />}
       <div className="space-y-3">
-        {budgets.map((b) => {
+        {activeBudgets.map((b) => {
           const f = BudgetEngine.calculateBudgetForecast(b, transactions, todayISO);
           const spentMoney = MoneyValue.fromMinorUnits(f.actualSpent, currency);
           const budgetMoney = MoneyValue.fromMinorUnits(f.budgetAmount, currency);
@@ -297,6 +327,34 @@ const BudgetsView: React.FC<{
           );
         })}
       </div>
+      {archivedBudgets.length > 0 && (
+        <div className="pt-1">
+          <button
+            type="button"
+            onClick={() => setShowArchived((v) => !v)}
+            aria-expanded={showArchived}
+            className="w-full rounded-xl border border-slate-200 bg-white py-2 text-[11px] font-bold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+          >
+            {showArchived ? t('plans.archivedHide') : t('plans.archivedShow', { count: archivedBudgets.length })}
+          </button>
+          {showArchived && (
+            <div className="mt-2 space-y-2">
+              {archivedBudgets.map((b) => (
+                <div key={b.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                  <span className="text-xs font-bold text-slate-500">{b.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => onRestore(b.id)}
+                    className="rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+                  >
+                    {t('plans.restoreBtn')}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -304,18 +362,20 @@ const BudgetsView: React.FC<{
 const GoalsView: React.FC<{
   goals: SavingsGoal[];
   onOpenAdd: () => void;
+  onOpenEmergencyFund: () => void;
   onEdit: (g: SavingsGoal) => void;
   onDelete: (id: string) => void;
   onFund: (goalId: string, amount: number, fromAccountId: string) => void;
   accounts: Account[];
   currency: CurrencyCode;
-}> = ({ goals, onOpenAdd, onEdit, onDelete, onFund, accounts, currency }) => {
+}> = ({ goals, onOpenAdd, onOpenEmergencyFund, onEdit, onDelete, onFund, accounts, currency }) => {
   const todayISO = DateUtils.getTodayISO();
   const [fundingId, setFundingId] = useState<string | null>(null);
   const [fundAmount, setFundAmount] = useState('');
   const [fundSource, setFundSource] = useState('');
 
   const activeGoals = goals.filter((g) => !g.isArchived);
+  const hasEmergencyFund = activeGoals.some((g) => /emergency/i.test(g.name));
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between px-1">
@@ -324,7 +384,33 @@ const GoalsView: React.FC<{
           <Plus className="h-3.5 w-3.5" /> <span>New Goal</span>
         </button>
       </div>
-      {activeGoals.length === 0 && <EmptyHint text="No goals yet. Tap + to start saving toward something." />}
+      {activeGoals.length === 0 && (
+        <div className="space-y-2">
+          <EmptyHint text="No goals yet. Tap + to start saving toward something." />
+          <button
+            type="button"
+            onClick={onOpenEmergencyFund}
+            className="flex w-full items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-left hover:bg-emerald-100/70 transition-colors cursor-pointer"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white">
+              <Shield className="h-5 w-5" />
+            </span>
+            <span>
+              <span className="block text-sm font-bold text-slate-900">{t('plans.efStart')}</span>
+              <span className="block text-[11px] font-medium text-slate-500">{t('plans.efHint')}</span>
+            </span>
+          </button>
+        </div>
+      )}
+      {!hasEmergencyFund && activeGoals.length > 0 && (
+        <button
+          type="button"
+          onClick={onOpenEmergencyFund}
+          className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 bg-white py-2 text-[11px] font-bold text-slate-500 hover:border-emerald-300 hover:text-emerald-700 transition-colors cursor-pointer"
+        >
+          <Plus className="h-3.5 w-3.5" /> {t('plans.efStart')}
+        </button>
+      )}
       <div className="space-y-3">
         {activeGoals.map((goal) => {
           const progress = GoalEngine.calculateGoalProgress(goal, todayISO);
@@ -341,6 +427,11 @@ const GoalsView: React.FC<{
                   <div>
                     <h4 className="text-sm font-bold text-slate-900">{goal.name}</h4>
                     <p className="text-[11px] font-medium text-slate-500">Target: {DateUtils.formatDisplayDate(goal.targetDate, { fullYear: true })}</p>
+                    {goal.accountId && (
+                      <p className="text-[10px] font-bold text-emerald-700">
+                        {t('plans.savingInto', { name: accounts.find((a) => a.id === goal.accountId)?.name || 'linked account' })}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <RowActions onEdit={() => onEdit(goal)} onDelete={() => onDelete(goal.id)} />
@@ -395,7 +486,15 @@ const GoalsView: React.FC<{
                   </div>
                 </div>
               ) : (
-                <button type="button" onClick={() => setFundingId(goal.id)} className="w-full rounded-xl border border-emerald-200 bg-emerald-50 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100">
+                <button type="button" onClick={() => {
+                  setFundingId(goal.id);
+                  // Pre-select a source so Fund never silently no-ops: the goal's
+                  // linked account first, else the first same-currency account.
+                  const goalCurrency = goal.currency || currency;
+                  const linked = accounts.find((a) => a.id === goal.accountId && a.currency === goalCurrency && !a.isArchived);
+                  const fallback = accounts.find((a) => a.currency === goalCurrency && !a.isArchived);
+                  setFundSource(linked?.id || fallback?.id || '');
+                }} className="w-full rounded-xl border border-emerald-200 bg-emerald-50 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100">
                   Fund this goal
                 </button>
               )}
@@ -410,24 +509,54 @@ const GoalsView: React.FC<{
 const BillsView: React.FC<{
   commitments: MoneyCommitment[];
   onOpenAdd: () => void;
+  onOpenPayday: () => void;
   onEdit: (c: MoneyCommitment) => void;
   onDelete: (id: string) => void;
   onToggle: (id: string) => void;
   onCancel: (id: string) => void;
   onReschedule: (id: string, newDueDate: string) => void;
-}> = ({ commitments, onOpenAdd, onEdit, onDelete, onToggle, onCancel, onReschedule }) => {
+}> = ({ commitments, onOpenAdd, onOpenPayday, onEdit, onDelete, onToggle, onCancel, onReschedule }) => {
   const [reschedId, setReschedId] = useState<string | null>(null);
   const [reschedDate, setReschedDate] = useState('');
+  const [menuId, setMenuId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'ALL' | 'OUT' | 'PLANNED' | 'IN'>('ALL');
 
-  const sorted = [...commitments].sort((a, b) => (a.dueDate < b.dueDate ? -1 : 1));
+  const visible = commitments.filter((c) => {
+    if (filter === 'OUT') return c.direction === 'OUTFLOW' && c.type !== 'PLANNED_EXPENSE';
+    if (filter === 'PLANNED') return c.type === 'PLANNED_EXPENSE';
+    if (filter === 'IN') return c.direction === 'INFLOW';
+    return true;
+  });
+  const sorted = [...visible].sort((a, b) => (a.dueDate < b.dueDate ? -1 : 1));
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between px-1">
         <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Upcoming Bills & Liabilities</span>
-        <button type="button" onClick={onOpenAdd} className="flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-emerald-950">
-          <Plus className="h-3.5 w-3.5" /> <span>Add Bill</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={onOpenPayday} className="flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-emerald-700 transition-colors cursor-pointer">
+            <Plus className="h-3.5 w-3.5" /> <span>{t('plans.paydayBtn')}</span>
+          </button>
+          <button type="button" onClick={onOpenAdd} className="flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-emerald-950">
+            <Plus className="h-3.5 w-3.5" /> <span>Add Bill</span>
+          </button>
+        </div>
+      </div>
+      <div className="flex gap-1.5 px-1" role="tablist" aria-label="Filter commitments">
+        {([['ALL', t('plans.billFilterAll')], ['OUT', t('plans.billFilterBills')], ['PLANNED', t('plans.billFilterPlanned')], ['IN', t('plans.billFilterIncome')]] as const).map(([v, label]) => (
+          <button
+            key={v}
+            type="button"
+            role="tab"
+            aria-selected={filter === v}
+            onClick={() => setFilter(v)}
+            className={`rounded-full px-2.5 py-1 text-[10px] font-bold transition-colors cursor-pointer ${
+              filter === v ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
       {sorted.length === 0 && <EmptyHint text="No bills yet. Tap + to add a recurring obligation." />}
       <div className="space-y-2">
@@ -451,7 +580,7 @@ const BillsView: React.FC<{
                     onClick={() => onToggle(comm.id)}
                     disabled={isCancelled}
                     className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors ${isCompleted ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-300 hover:border-emerald-600 disabled:opacity-40'}`}
-                    aria-label="Mark paid"
+                    aria-label={comm.direction === 'INFLOW' ? 'Mark received' : 'Mark paid'}
                   >
                     {isCompleted && <CheckCircle2 className="h-4 w-4" />}
                   </button>
@@ -463,17 +592,28 @@ const BillsView: React.FC<{
                     <p className="text-[11px] font-medium text-slate-500">Due: {DateUtils.formatDisplayDate(comm.dueDate, { fullYear: true })} • {comm.priority}{comm.autoPostEnabled ? ' • auto' : ''}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-1 shrink-0">
                   <span className="text-xs font-extrabold text-slate-900">{MoneyValue.fromMinorUnits(comm.amount, comm.currency).format()}</span>
-                  <RowActions onEdit={() => onEdit(comm)} onDelete={() => onDelete(comm.id)} />
+                  <button type="button" onClick={() => onEdit(comm)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100" aria-label="Edit">
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <RowMenu
+                    id={comm.id}
+                    openId={menuId}
+                    onOpen={setMenuId}
+                    label={t('common.moreActions')}
+                    items={[
+                      ...(!isCancelled && !isCompleted
+                        ? [{ label: t('plans.rescheduleBtn'), onSelect: () => { setReschedId(comm.id); setReschedDate(comm.dueDate); } }]
+                        : []),
+                      ...(!isCancelled && !isCompleted
+                        ? [{ label: t('common.cancel'), onSelect: () => onCancel(comm.id) }]
+                        : []),
+                      { label: t('common.delete'), onSelect: () => onDelete(comm.id), danger: true },
+                    ]}
+                  />
                 </div>
               </div>
-              {!isCancelled && !isCompleted && (
-                <div className="mt-2 flex items-center gap-2">
-                  <button type="button" onClick={() => onCancel(comm.id)} className="rounded-lg border border-slate-200 px-2 py-1 text-[10px] font-bold text-slate-600 hover:bg-slate-100">Cancel</button>
-                  <button type="button" onClick={() => { setReschedId(comm.id); setReschedDate(comm.dueDate); }} className="rounded-lg border border-slate-200 px-2 py-1 text-[10px] font-bold text-slate-600 hover:bg-slate-100">Reschedule</button>
-                </div>
-              )}
               {reschedId === comm.id && (
                 <div className="mt-2 flex items-center gap-2 rounded-xl bg-amber-50/60 p-2 border border-amber-100">
                   <input
@@ -503,8 +643,17 @@ const RecurringView: React.FC<{
   onOpenAdd: () => void;
   onEdit: (r: RecurringTransaction) => void;
   onDelete: (id: string) => void;
+  onToggleActive: (id: string) => void;
+  onSkip: (id: string) => void;
+  onReschedule: (id: string, newDate: string) => void;
+  onCancel: (id: string) => void;
   currency: CurrencyCode;
-}> = ({ recurring, onOpenAdd, onEdit, onDelete, currency }) => (
+}> = ({ recurring, onOpenAdd, onEdit, onDelete, onToggleActive, onSkip, onReschedule, onCancel, currency }) => {
+  const [reschedId, setReschedId] = useState<string | null>(null);
+  const [reschedDate, setReschedDate] = useState('');
+  const [menuId, setMenuId] = useState<string | null>(null);
+  const todayISO = DateUtils.getTodayISO();
+  return (
   <div className="space-y-3">
     <div className="flex items-center justify-between px-1">
       <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Recurring Transactions</span>
@@ -516,27 +665,84 @@ const RecurringView: React.FC<{
     <div className="space-y-2">
       {recurring.map((r) => {
         const rMoney = MoneyValue.fromMinorUnits(r.amount, r.currency || currency);
+        const ended = Boolean(r.endDate && r.endDate < todayISO);
+        const auto = (r.autoPostEnabled ?? r.reminderEnabled) === true;
+        const badge = !r.isActive
+          ? ended
+            ? { text: t('plans.stEnded'), cls: 'bg-slate-200 text-slate-500' }
+            : { text: t('plans.stPaused'), cls: 'bg-slate-200 text-slate-500' }
+          : { text: t('plans.stActive'), cls: 'bg-emerald-100 text-emerald-800' };
         return (
-          <div key={r.id} className="flex items-center justify-between rounded-2xl p-4 border border-slate-100 shadow-sm bg-white">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-                <Repeat className="h-4 w-4" />
+          <div key={r.id} className={`rounded-2xl p-4 border transition-all ${r.isActive ? 'bg-white border-slate-100 shadow-sm' : 'bg-slate-50/70 border-slate-200/60'}`}>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                  <Repeat className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs font-bold text-slate-900 truncate">{r.title}</h4>
+                    <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold ${badge.cls}`}>{badge.text}</span>
+                  </div>
+                  <p className="text-[11px] font-medium text-slate-500">{r.frequency} • {r.type} • Next: {DateUtils.formatDisplayDate(r.nextOccurrence, { fullYear: true })}{auto && r.isActive ? ` • ${t('plans.autoBadge')}` : ''}</p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <h4 className="text-xs font-bold text-slate-900 truncate">{r.title}</h4>
-                <p className="text-[11px] font-medium text-slate-500">{r.frequency} • {r.type} • Next: {DateUtils.formatDisplayDate(r.nextOccurrence, { fullYear: true })}</p>
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-xs font-extrabold text-slate-900">{rMoney.format()}</span>
+                <button
+                  type="button"
+                  onClick={() => onToggleActive(r.id)}
+                  aria-label={r.isActive ? t('plans.pauseBtn') : t('plans.resumeBtn')}
+                  className="rounded-lg border border-slate-200 px-2 py-1 text-[10px] font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  {r.isActive ? t('plans.pauseBtn') : t('plans.resumeBtn')}
+                </button>
+                <button type="button" onClick={() => onEdit(r)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100" aria-label="Edit">
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <RowMenu
+                  id={r.id}
+                  openId={menuId}
+                  onOpen={setMenuId}
+                  label={t('common.moreActions')}
+                  items={[
+                    ...(r.isActive
+                      ? [
+                          { label: t('plans.skipNextBtn'), onSelect: () => onSkip(r.id) },
+                          { label: t('plans.rescheduleBtn'), onSelect: () => { setReschedId(r.id); setReschedDate(r.nextOccurrence); } },
+                          { label: t('common.cancel'), onSelect: () => onCancel(r.id) },
+                        ]
+                      : []),
+                    { label: t('common.delete'), onSelect: () => onDelete(r.id), danger: true },
+                  ]}
+                />
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="shrink-0 text-xs font-extrabold text-slate-900">{rMoney.format()}</span>
-              <RowActions onEdit={() => onEdit(r)} onDelete={() => onDelete(r.id)} />
-            </div>
+            {reschedId === r.id && (
+              <div className="mt-2 flex items-center gap-2 rounded-xl bg-amber-50/60 p-2 border border-amber-100">
+                <input
+                  type="date"
+                  value={reschedDate}
+                  onChange={(e) => setReschedDate(e.target.value)}
+                  aria-label="New next-occurrence date"
+                  className="rounded-lg border border-slate-200 px-2 py-1 text-xs"
+                />
+                <button
+                  type="button"
+                  onClick={() => { if (reschedDate) { onReschedule(r.id, reschedDate); setReschedId(null); } }}
+                  className="rounded-lg bg-amber-600 px-2 py-1 text-[10px] font-bold text-white"
+                >
+                  {t('plans.moveBtn')}
+                </button>
+              </div>
+            )}
           </div>
         );
       })}
     </div>
   </div>
-);
+  );
+};
 
 const RowActions: React.FC<{ onEdit: () => void; onDelete: () => void }> = ({ onEdit, onDelete }) => (
   <div className="flex items-center gap-1 shrink-0">
@@ -548,6 +754,59 @@ const RowActions: React.FC<{ onEdit: () => void; onDelete: () => void }> = ({ on
     </button>
   </div>
 );
+
+/**
+ * Overflow menu for secondary row actions. Primary state changes
+ * (paid toggle, pause switch) and Edit stay visible; everything else
+ * (reschedule, skip, cancel, delete) lives behind one "•••" button so
+ * rows stay scannable as capability grows.
+ */
+const RowMenu: React.FC<{
+  id: string;
+  openId: string | null;
+  onOpen: (id: string | null) => void;
+  label: string;
+  items: Array<{ label: string; onSelect: () => void; danger?: boolean }>;
+}> = ({ id, openId, onOpen, label, items }) => {
+  const open = openId === id;
+  return (
+    <div className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => onOpen(open ? null : id)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={label}
+        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </button>
+      {open && (
+        <>
+          <button type="button" aria-hidden tabIndex={-1} onClick={() => onOpen(null)} className="fixed inset-0 z-10 cursor-default" />
+          <div role="menu" className="absolute right-0 z-20 mt-1 w-40 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+            {items.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onOpen(null);
+                  item.onSelect();
+                }}
+                className={`flex w-full items-center rounded-lg px-3 py-2 text-left text-xs font-bold transition-colors cursor-pointer ${
+                  item.danger ? 'text-rose-600 hover:bg-rose-50' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
 
 const EmptyHint: React.FC<{ text: string }> = ({ text }) => (
   <div className="rounded-2xl bg-white p-6 text-center border border-slate-200/80 shadow-xs">

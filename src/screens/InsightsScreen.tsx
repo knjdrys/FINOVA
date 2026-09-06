@@ -80,6 +80,8 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
   let totalExpenseMinor = 0;
   for (const tx of transactions) {
     if (tx.type !== 'EXPENSE' || tx.status === 'PENDING') continue;
+    if (tx.currency !== currency) continue; // never mix currencies
+    if (TransactionEngine.isGoalFunding(tx)) continue; // reservations are not spending
     if (DateUtils.isDateInRange(tx.date, currentMonthStart, currentMonthEnd)) {
       // Split-aware: a split expense contributes per allocated category.
       const allocations = TransactionEngine.getCategoryAllocations(tx);

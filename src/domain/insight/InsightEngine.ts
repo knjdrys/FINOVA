@@ -12,6 +12,7 @@ import { DateUtils } from '../date/DateUtils';
 import { MoneyValue } from '../money/MoneyValue';
 import { BudgetEngine } from '../budget/BudgetEngine';
 import { SafeToSpendEngine } from '../safe-to-spend/SafeToSpendEngine';
+import { TransactionEngine } from '../transaction/TransactionEngine';
 import { GoalEngine } from '../goal/GoalEngine';
 import { t, categoryName } from '../../i18n/core';
 
@@ -48,13 +49,18 @@ export class InsightEngine {
 
     for (const tx of transactions) {
       if (tx.type !== 'EXPENSE' || tx.status === 'PENDING') continue;
+      if (tx.currency !== currency) continue; // never mix currencies
+      // Split-aware single source of truth (also excludes goal-fund reservations).
+      const allocations = TransactionEngine.getCategoryAllocations(tx);
 
       if (DateUtils.isDateInRange(tx.date, currentMonthStart, currentMonthEnd)) {
-        const curr = currentCategoryExpenses.get(tx.categoryId) || 0;
-        currentCategoryExpenses.set(tx.categoryId, curr + tx.amount);
+        for (const [catId, amt] of allocations) {
+          currentCategoryExpenses.set(catId, (currentCategoryExpenses.get(catId) || 0) + amt);
+        }
       } else if (DateUtils.isDateInRange(tx.date, prevMonthStart, prevMonthEnd)) {
-        const prev = prevCategoryExpenses.get(tx.categoryId) || 0;
-        prevCategoryExpenses.set(tx.categoryId, prev + tx.amount);
+        for (const [catId, amt] of allocations) {
+          prevCategoryExpenses.set(catId, (prevCategoryExpenses.get(catId) || 0) + amt);
+        }
       }
     }
 

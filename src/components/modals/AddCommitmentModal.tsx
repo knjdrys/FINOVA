@@ -13,6 +13,8 @@ interface AddCommitmentModalProps {
   categories: Category[];
   currency: CurrencyCode;
   editingCommitment?: MoneyCommitment | null;
+  /** Quick-start preset (e.g. payday): pre-fills type + title for a new commitment. */
+  preset?: { type: CommitmentType; title?: string } | null;
 }
 
 export const AddCommitmentModal: React.FC<AddCommitmentModalProps> = ({
@@ -23,6 +25,7 @@ export const AddCommitmentModal: React.FC<AddCommitmentModalProps> = ({
   categories,
   currency,
   editingCommitment,
+  preset,
 }) => {
   const [title, setTitle] = useState('');
   const [amountStr, setAmountStr] = useState('');
@@ -31,20 +34,25 @@ export const AddCommitmentModal: React.FC<AddCommitmentModalProps> = ({
   const [priority, setPriority] = useState<CommitmentPriority>('ESSENTIAL');
   const [accountId, setAccountId] = useState('');
   const [categoryId, setCategoryId] = useState('cat-bills');
+  const [autoPost, setAutoPost] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      setTitle(editingCommitment?.title || '');
+      setTitle(editingCommitment?.title || preset?.title || '');
       setAmountStr(editingCommitment ? MoneyValue.fromMinorUnits(editingCommitment.amount, editingCommitment.currency).format({ includeSymbol: false }) : '');
       setDueDate(editingCommitment?.dueDate || DateUtils.addDaysISO(DateUtils.getTodayISO(), 7));
-      setType(editingCommitment?.type || 'BILL');
+      setType(editingCommitment?.type || preset?.type || 'BILL');
       setPriority(editingCommitment?.priority || 'ESSENTIAL');
       setAccountId(editingCommitment?.accountId || accounts[0]?.id || '');
-      setCategoryId(editingCommitment?.categoryId || 'cat-bills');
+      setCategoryId(
+        editingCommitment?.categoryId ||
+          (preset?.type === 'EXPECTED_INCOME' || preset?.type === 'RECURRING_INCOME' ? 'cat-salary' : 'cat-bills')
+      );
+      setAutoPost(editingCommitment?.autoPostEnabled ?? false);
       setError(null);
     }
-  }, [isOpen, editingCommitment, accounts]);
+  }, [isOpen, editingCommitment, preset, accounts]);
 
   const save = () => {
     const amount = MoneyValue.parse(amountStr || '0', currency).getMinorUnits();
@@ -66,6 +74,7 @@ export const AddCommitmentModal: React.FC<AddCommitmentModalProps> = ({
       accountId,
       categoryId,
       priority,
+      autoPostEnabled: autoPost,
     });
   };
 
@@ -113,6 +122,18 @@ export const AddCommitmentModal: React.FC<AddCommitmentModalProps> = ({
             <option value="OPTIONAL">{t('modal.optionalPriority')}</option>
           </select>
         </Field>
+        <label className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={autoPost}
+            onChange={(e) => setAutoPost(e.target.checked)}
+            className="mt-0.5 h-4 w-4 accent-emerald-700"
+          />
+          <span>
+            <span className="block text-xs font-bold text-slate-700">{t('modal.autoPostTitle')}</span>
+            <span className="block text-[10px] font-medium text-slate-400">{t('modal.autoPostBillHint')}</span>
+          </span>
+        </label>
 
         {error ? (
           <p className="rounded-xl bg-rose-50 border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700" role="alert">

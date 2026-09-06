@@ -52,6 +52,9 @@ export const Modal: React.FC<ModalProps> = ({
       />
 
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         className={`relative z-10 w-full ${maxWidthClass} bg-white rounded-t-[32px] sm:rounded-[28px] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in slide-in-from-bottom duration-250`}
       >
         {/* Mobile Drag Handle */}
@@ -67,6 +70,7 @@ export const Modal: React.FC<ModalProps> = ({
           <button
             type="button"
             onClick={onClose}
+            aria-label="Close dialog"
             className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors"
           >
             <X className="h-4 w-4" />

@@ -1,4 +1,4 @@
-import { Account, SplitPart, Transaction, TransactionType } from '../../types';
+import { Account, CurrencyCode, SplitPart, Transaction, TransactionType } from '../../types';
 import { MoneyValue } from '../money/MoneyValue';
 import { DateUtils } from '../date/DateUtils';
 import { t } from '../../i18n/core';
@@ -17,15 +17,27 @@ export interface TransactionFilterOptions {
 
 export class TransactionEngine {
   /**
+   * Goal-funding marker. A contribution is a reservation (account → goal
+   * progress), never spending: it must not inflate period totals, budget
+   * spend, or category analytics — even though unlinked goals record it as
+   * an EXPENSE row (linked goals use a true TRANSFER instead).
+   */
+  public static isGoalFunding(tx: Pick<Transaction, 'tags'>): boolean {
+    return Boolean(tx.tags && tx.tags.includes('goal-fund'));
+  }
+
+  /**
    * Single source of truth for category attribution.
    * A split expense contributes to each of its categories by the allocated amount;
    * a normal expense contributes its full amount to its single category.
+   * Goal-funding reservations contribute to NO category (they are not spending).
    * Budgets, Insights, and any future consumer MUST use this instead of reading
    * tx.categoryId directly, so split money is never double-counted or lost.
    */
   public static getCategoryAllocations(tx: Transaction): Map<string, number> {
     const map = new Map<string, number>();
     if (tx.type !== 'EXPENSE') return map;
+    if (this.isGoalFunding(tx)) return map;
     if (tx.splitParts && tx.splitParts.length > 0) {
       for (const part of tx.splitParts) {
         if (part.amount > 0) {
@@ -46,6 +58,7 @@ export class TransactionEngine {
     if (!splitParts || splitParts.length === 0) return null;
     if (splitParts.length < 2) return t('engine.splitMinTwo');
     if (splitParts.some((p) => !p.categoryId)) return t('engine.splitCategory');
+    if (splitParts.some((p) => !Number.isFinite(p.amount) || !Number.isInteger(p.amount))) return t('engine.splitZero');
     if (splitParts.some((p) => p.amount <= 0)) return t('engine.splitZero');
     const sum = splitParts.reduce((s, p) => s + p.amount, 0);
     if (sum !== amount) {
@@ -166,7 +179,9 @@ export class TransactionEngine {
   public static calculatePeriodTotals(
     transactions: Transaction[],
     startDate: string,
-    endDate: string
+    endDate: string,
+    currencyFallback: CurrencyCode = 'PHP',
+    currencyFilter?: CurrencyCode
   ): {
     totalIncome: MoneyValue;
     totalExpense: MoneyValue;
@@ -176,10 +191,14 @@ export class TransactionEngine {
     let incomeSum = 0;
     let expenseSum = 0;
     let count = 0;
-    const currency = transactions[0]?.currency || 'PKR';
+    // Never guess from row zero: an empty period must still format in the
+    // user's currency (previously fell back to PKR for everyone).
+    const currency = transactions[0]?.currency || currencyFallback;
 
     for (const tx of transactions) {
       if (tx.status === 'PENDING') continue;
+      if (TransactionEngine.isGoalFunding(tx)) continue; // reservations are not spending
+      if (currencyFilter && tx.currency !== currencyFilter) continue; // never mix currencies
       if (!DateUtils.isDateInRange(tx.date, startDate, endDate)) continue;
 
       if (tx.type === 'INCOME') {

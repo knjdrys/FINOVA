@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal } from '../ui/Modal';
-import { Account, Category, CurrencyCode, SplitPart, Transaction, TransactionType } from '../../types';
+import { Account, Category, CurrencyCode, MoneyCommitment, RecurringTransaction, SplitPart, Transaction, TransactionType } from '../../types';
 import { DateUtils } from '../../domain/date/DateUtils';
 import { MoneyValue } from '../../domain/money/MoneyValue';
 import { TransactionEngine } from '../../domain/transaction/TransactionEngine';
-import { ReceiptService } from '../../services/receipt/ReceiptService';
+import { UnifiedEntry, EntryMode, RepeatOption } from '../../domain/entry/UnifiedEntry';
+import { t } from '../../i18n/core';
+import { ReceiptService, ReceiptSuggestion } from '../../services/receipt/ReceiptService';
 import {
   Utensils,
   ShoppingCart,
@@ -32,6 +34,10 @@ interface AddTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (tx: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  /** Planned mode: creates a PROJECTED commitment, moves no money. */
+  onSaveCommitment?: (c: Omit<MoneyCommitment, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  /** Repeat switch: creates a recurring rule alongside the immediate transaction. */
+  onSaveRecurring?: (r: Omit<RecurringTransaction, 'id' | 'createdAt' | 'updatedAt'>) => void;
   accounts: Account[];
   categories: Category[];
   currency: CurrencyCode;
@@ -64,12 +70,14 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   isOpen,
   onClose,
   onSave,
+  onSaveCommitment,
+  onSaveRecurring,
   accounts,
   categories,
   currency = 'PHP',
   editingTx = null,
 }) => {
-  const [type, setType] = useState<TransactionType>('EXPENSE');
+  const [type, setType] = useState<EntryMode>('EXPENSE');
   const [amountStr, setAmountStr] = useState('');
   const [categoryId, setCategoryId] = useState(categories[0]?.id || 'cat-food');
   const [accountId, setAccountId] = useState(accounts[0]?.id || '');
@@ -87,10 +95,21 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   // Receipt state
   const [receiptDataUrl, setReceiptDataUrl] = useState<string | undefined>(undefined);
   const [receiptBusy, setReceiptBusy] = useState(false);
+  // Filename-hint review: suggestions are NEVER applied silently — the user
+  // must press "Use these" (prefill) and then still press Save Transaction.
+  const [receiptSuggestion, setReceiptSuggestion] = useState<ReceiptSuggestion | null>(null);
+  const [receiptReviewDone, setReceiptReviewDone] = useState(false);
+  // Repeat switch (create-only, Expense/Income): also creates a recurring rule.
+  const [repeat, setRepeat] = useState<RepeatOption>('OFF');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const currencySymbol = MoneyValue.zero(currency).getCurrencySymbol();
-  const filteredCategories = categories.filter((c) => !c.isArchived && (type === 'TRANSFER' || c.type === type));
+  const filteredCategories = categories.filter(
+    (c) =>
+      !c.isArchived &&
+      c.id !== 'cat-transfer' && // internal booking category — never hand-pickable
+      (type === 'TRANSFER' || type === 'PLANNED' ? c.type === 'EXPENSE' : c.type === type)
+  );
 
   // Hydrate on open (create = clean slate, edit = copy of the transaction)
   useEffect(() => {
@@ -114,6 +133,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         }))
       );
       setReceiptDataUrl(editingTx.receiptDataUrl);
+      setReceiptSuggestion(null);
+      setReceiptReviewDone(false);
     } else {
       setType('EXPENSE');
       setAmountStr('');
@@ -127,6 +148,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       setSplitMode(false);
       setSplitRows([]);
       setReceiptDataUrl(undefined);
+      setReceiptSuggestion(null);
+      setReceiptReviewDone(false);
+      setRepeat('OFF');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, editingTx]);
@@ -188,6 +212,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     if (!file) return;
     setReceiptBusy(true);
     setError(null);
+    // Hints come from the file name only — compress first, then suggest.
+    // Nothing is ever written to the form until the user presses "Use these".
+    const hint = ReceiptService.suggestFromFileName(file.name, file.lastModified);
     const result = await ReceiptService.compress(file);
     setReceiptBusy(false);
     if (result.error) {
@@ -195,6 +222,24 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       return;
     }
     setReceiptDataUrl(result.dataUrl);
+    setReceiptSuggestion(ReceiptService.hasHints(hint) ? hint : null);
+    setReceiptReviewDone(false);
+  };
+
+  const applyReceiptHints = () => {
+    if (!receiptSuggestion) return;
+    if (receiptSuggestion.merchant && !merchant.trim()) setMerchant(receiptSuggestion.merchant);
+    if (receiptSuggestion.amountMajor !== undefined && !amountStr.trim()) {
+      setAmountStr(String(receiptSuggestion.amountMajor));
+    }
+    if (receiptSuggestion.dateISO) setDate(receiptSuggestion.dateISO);
+    setReceiptReviewDone(true);
+    setError(null);
+  };
+
+  const dismissReceiptHints = () => {
+    setReceiptSuggestion(null);
+    setReceiptReviewDone(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -210,13 +255,51 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       return;
     }
 
+    const fallbackTitle =
+      merchant.trim() || categories.find((c) => c.id === categoryId)?.name || 'Planned expense';
+
+    // PLANNED never moves money — it creates a PROJECTED commitment that the
+    // Bills lifecycle (reschedule / mark paid / cancel) owns from here on.
+    if (type === 'PLANNED') {
+      if (!onSaveCommitment) {
+        setError('Planning is unavailable right now. Please try again.');
+        return;
+      }
+      const plannedError = UnifiedEntry.validatePlanned({
+        title: fallbackTitle,
+        amount: amountMinor,
+        currency,
+        categoryId,
+        accountId,
+        dueDate: date,
+      });
+      if (plannedError) {
+        setError(plannedError);
+        return;
+      }
+      onSaveCommitment(
+        UnifiedEntry.buildPlannedPayload({
+          title: fallbackTitle,
+          amount: amountMinor,
+          currency,
+          categoryId,
+          accountId,
+          dueDate: date,
+        })
+      );
+      onClose();
+      return;
+    }
+
+    const txType = type as TransactionType;
+
     const tags = tagsStr
       .split(',')
       .map((t) => t.trim())
       .filter(Boolean);
 
     const splitParts: SplitPart[] | undefined =
-      type === 'EXPENSE' && splitMode
+      txType === 'EXPENSE' && splitMode
         ? splitRows.map((r) => ({
             categoryId: r.categoryId,
             amount: MoneyValue.parse(r.amountStr || '0', currency).getMinorUnits(),
@@ -232,7 +315,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     }
 
     const validationError = TransactionEngine.validateTransaction(
-      { type, amount: amountMinor, currency, accountId, destinationAccountId: type === 'TRANSFER' ? destinationAccountId : undefined },
+      { type: txType, amount: amountMinor, currency, accountId, destinationAccountId: txType === 'TRANSFER' ? destinationAccountId : undefined },
       // When editing, the old effect is still baked into the balance — validate against
       // the post-reversal balance so raising an edited expense isn't falsely rejected.
       editingTx ? TransactionEngine.reverseTransactionFromAccounts(editingTx, accounts) : accounts
@@ -242,14 +325,17 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       return;
     }
 
+    const resolvedCategoryId =
+      txType === 'TRANSFER' ? 'cat-transfer' : splitParts ? splitParts[0].categoryId : categoryId;
+
     onSave({
       userId: editingTx?.userId || 'user-1',
-      type,
+      type: txType,
       amount: amountMinor,
       currency,
-      categoryId: type === 'TRANSFER' ? 'cat-transfer' : splitParts ? splitParts[0].categoryId : categoryId,
+      categoryId: resolvedCategoryId,
       accountId,
-      destinationAccountId: type === 'TRANSFER' ? destinationAccountId : undefined,
+      destinationAccountId: txType === 'TRANSFER' ? destinationAccountId : undefined,
       merchant: merchant.trim() || undefined,
       note: note.trim() || undefined,
       date,
@@ -260,6 +346,38 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       splitParts,
       receiptDataUrl,
     });
+
+    // Repeat switch (create-only): the saved transaction covers NOW; the rule
+    // covers every future occurrence via generated commitments + timeline.
+    if (!editingTx && repeat !== 'OFF' && onSaveRecurring && (txType === 'EXPENSE' || txType === 'INCOME')) {
+      const repeatError = UnifiedEntry.validateRepeat(
+        {
+          title: fallbackTitle,
+          amount: amountMinor,
+          currency,
+          type: txType,
+          categoryId: resolvedCategoryId,
+          accountId,
+          startDate: date,
+          repeat,
+        },
+        accounts
+      );
+      if (!repeatError) {
+        onSaveRecurring(
+          UnifiedEntry.buildRecurringPayload({
+            title: fallbackTitle,
+            amount: amountMinor,
+            currency,
+            type: txType,
+            categoryId: resolvedCategoryId,
+            accountId,
+            startDate: date,
+            repeat,
+          })
+        );
+      }
+    }
     onClose();
   };
 
@@ -267,37 +385,46 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 cursor-pointer';
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editingTx ? 'Edit Transaction' : 'Add Transaction'}>
+    <Modal isOpen={isOpen} onClose={onClose} title={editingTx ? 'Edit Transaction' : type === 'PLANNED' ? t('modal.planExpenseTitle') : 'Add Transaction'}>
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Transaction Type Segmented Toggle */}
         <div className="flex rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Transaction type">
-          {(['EXPENSE', 'INCOME', 'TRANSFER'] as const).map((t) => (
+          {(['EXPENSE', 'INCOME', 'TRANSFER', 'PLANNED'] as const).filter((m) => m !== 'PLANNED' || !editingTx).map((m) => (
             <button
-              key={t}
+              key={m}
               type="button"
               role="tab"
-              aria-selected={type === t}
+              aria-selected={type === m}
               onClick={() => {
-                setType(t);
-                if (t !== 'EXPENSE') setSplitMode(false);
-                if (t === 'EXPENSE') setCategoryId('cat-food');
-                if (t === 'INCOME') setCategoryId('cat-salary');
-                if (t === 'TRANSFER') setCategoryId('cat-transfer');
+                setType(m);
+                if (m !== 'EXPENSE') setSplitMode(false);
+                if (m === 'EXPENSE' || m === 'PLANNED') setCategoryId('cat-food');
+                if (m === 'INCOME') setCategoryId('cat-salary');
+                if (m === 'TRANSFER') setCategoryId('cat-transfer');
+                if (m === 'TRANSFER' || m === 'PLANNED') setRepeat('OFF');
               }}
               className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                type === t
-                  ? t === 'INCOME'
+                type === m
+                  ? m === 'INCOME'
                     ? 'bg-white text-emerald-700 shadow-sm'
-                    : t === 'TRANSFER'
+                    : m === 'TRANSFER'
                     ? 'bg-white text-blue-700 shadow-sm'
+                    : m === 'PLANNED'
+                    ? 'bg-white text-amber-700 shadow-sm'
                     : 'bg-white text-slate-900 shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              {t === 'EXPENSE' ? 'Expense' : t === 'INCOME' ? 'Income' : 'Transfer'}
+              {m === 'EXPENSE' ? 'Expense' : m === 'INCOME' ? 'Income' : m === 'TRANSFER' ? 'Transfer' : t('modal.typePlannedShort')}
             </button>
           ))}
         </div>
+        {/* Planned mode explains itself: no money moves until it is completed. */}
+        {type === 'PLANNED' && !editingTx && (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800" role="note">
+            {t('modal.plannedNote')}
+          </p>
+        )}
 
         {/* Large Amount Input */}
         <div className="rounded-2xl bg-slate-50 p-4 text-center border border-slate-200/70 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
@@ -389,9 +516,37 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               </select>
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">Date</label>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={selectCls} aria-label="Date" />
+              <label className="text-xs font-bold text-slate-700 block mb-1.5">{type === 'PLANNED' ? t('modal.plannedDate') : 'Date'}</label>
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={selectCls} aria-label={type === 'PLANNED' ? t('modal.plannedDate') : 'Date'} />
             </div>
+          </div>
+        )}
+
+        {/* Repeat switch (create-only, Expense/Income): one tap creates the rule. */}
+        {(type === 'EXPENSE' || type === 'INCOME') && !editingTx && onSaveRecurring && (
+          <div>
+            <label className="text-xs font-bold text-slate-700 block mb-1.5">{t('modal.repeatLabel')}</label>
+            <div className="flex rounded-xl bg-slate-100 p-1" role="radiogroup" aria-label={t('modal.repeatLabel')}>
+              {(['OFF', 'WEEKLY', 'BIWEEKLY', 'MONTHLY', 'YEARLY'] as const).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  role="radio"
+                  aria-checked={repeat === r}
+                  onClick={() => setRepeat(r)}
+                  className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                    repeat === r ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  {r === 'OFF' ? t('modal.repeatOnce') : r === 'WEEKLY' ? t('modal.repeatWeekly') : r === 'BIWEEKLY' ? t('modal.repeatBiweekly') : r === 'MONTHLY' ? t('modal.repeatMonthly') : t('modal.repeatYearly')}
+                </button>
+              ))}
+            </div>
+            {repeat !== 'OFF' && (
+              <p className="mt-1.5 text-[10px] font-medium text-slate-500" role="note">
+                {t('modal.repeatHint')}
+              </p>
+            )}
           </div>
         )}
 
@@ -403,11 +558,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </div>
         )}
 
-        {/* Category Picker / Split Editor (Expense only) */}
-        {type === 'EXPENSE' && (
+        {/* Category Picker / Split Editor (Expense + Planned; split is Expense-only) */}
+        {(type === 'EXPENSE' || type === 'PLANNED') && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-700">Category</label>
+              {type === 'EXPENSE' && (
               <button
                 type="button"
                 onClick={() => (splitMode ? setSplitMode(false) : enableSplit())}
@@ -421,6 +577,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 <Scissors className="h-3 w-3" />
                 {splitMode ? 'Splitting on' : 'Split by category'}
               </button>
+              )}
             </div>
 
             {!splitMode ? (
@@ -531,6 +688,13 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </div>
         )}
 
+        {/* Optional details — collapsed so the fast path is amount → category → account → save. */}
+        {type !== 'TRANSFER' && (
+        <details className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+          <summary className="cursor-pointer text-xs font-bold text-slate-500 hover:text-slate-800 select-none">
+            {t('modal.detailsSummary')} <span className="font-medium text-slate-400">{t('modal.detailsHint')}</span>
+          </summary>
+          <div className="space-y-3 pt-3">
         {/* Merchant & Notes */}
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -566,8 +730,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             className={selectCls}
           />
         </div>
+          </div>
+        </details>
+        )}
 
-        {/* Receipt attachment (expenses & income — proof of a transfer is rarely needed) */}
+        {/* Receipt attachment (actuals only — a planned purchase has no receipt yet) */}
+        {type !== 'PLANNED' && (
         <div>
           <label className="text-xs font-bold text-slate-700 block mb-1.5">Receipt</label>
           {receiptDataUrl ? (
@@ -581,7 +749,11 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => setReceiptDataUrl(undefined)}
+                onClick={() => {
+                  setReceiptDataUrl(undefined);
+                  setReceiptSuggestion(null);
+                  setReceiptReviewDone(false);
+                }}
                 aria-label="Remove receipt"
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
               >
@@ -610,7 +782,60 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               e.target.value = '';
             }}
           />
+          {receiptDataUrl && receiptSuggestion && !receiptReviewDone && (
+            <div
+              className="mt-2 rounded-xl border border-amber-300/70 bg-amber-50 p-3"
+              role="region"
+              aria-label="Review receipt hints"
+            >
+              <p className="text-[11px] font-black uppercase tracking-wider text-amber-800">
+                {t('modal.receiptReviewTitle')}
+              </p>
+              <p className="mt-1 text-[11px] font-medium leading-relaxed text-amber-900">
+                {t('modal.receiptReviewBody')}
+              </p>
+              <dl className="mt-2 space-y-1 text-xs">
+                {receiptSuggestion.merchant && (
+                  <div className="flex justify-between gap-2">
+                    <dt className="font-medium text-amber-700">{t('modal.receiptHintMerchant')}</dt>
+                    <dd className="font-bold text-slate-800 text-right">{receiptSuggestion.merchant}</dd>
+                  </div>
+                )}
+                {receiptSuggestion.amountMajor !== undefined && (
+                  <div className="flex justify-between gap-2">
+                    <dt className="font-medium text-amber-700">{t('modal.receiptHintAmount')}</dt>
+                    <dd className="font-bold text-slate-800 text-right">
+                      {currencySymbol} {receiptSuggestion.amountMajor.toFixed(2)}
+                    </dd>
+                  </div>
+                )}
+                {receiptSuggestion.dateISO && (
+                  <div className="flex justify-between gap-2">
+                    <dt className="font-medium text-amber-700">{t('modal.receiptHintDate')}</dt>
+                    <dd className="font-bold text-slate-800 text-right">{receiptSuggestion.dateISO}</dd>
+                  </div>
+                )}
+              </dl>
+              <div className="mt-2.5 flex gap-2">
+                <button
+                  type="button"
+                  onClick={applyReceiptHints}
+                  className="flex-1 rounded-xl bg-[#122A1E] py-2 text-[11px] font-bold text-[#D4F63D] hover:bg-[#183625] transition-colors cursor-pointer"
+                >
+                  {t('modal.receiptUse')}
+                </button>
+                <button
+                  type="button"
+                  onClick={dismissReceiptHints}
+                  className="flex-1 rounded-xl border border-slate-200 bg-white py-2 text-[11px] font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  {t('modal.receiptIgnore')}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
+        )}
 
         {error ? (
           <p className="rounded-xl bg-rose-50 border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700" role="alert">
@@ -624,7 +849,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#122A1E] py-3.5 text-sm font-bold text-[#D4F63D] shadow-lg shadow-emerald-950/20 transition-transform active:scale-[0.98] hover:bg-[#183625] cursor-pointer"
         >
           <Check className="h-4 w-4 stroke-[3]" />
-          <span>{editingTx ? 'Save Changes' : 'Save Transaction'}</span>
+          <span>{editingTx ? 'Save Changes' : type === 'PLANNED' ? t('modal.savePlanned') : 'Save Transaction'}</span>
         </button>
       </form>
     </Modal>

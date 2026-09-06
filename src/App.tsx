@@ -6,6 +6,7 @@ import { AppLockGuard } from './components/security/AppLockGuard';
 import {
   Account,
   Budget,
+  CommitmentType,
   CurrencyCode,
   MoneyCommitment,
   RecurringTransaction,
@@ -78,7 +79,9 @@ export function App() {
   const [isAddRecurringOpen, setIsAddRecurringOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
   const [editingGoal, setEditingGoal] = useState<SavingsGoal | null>(null);
+  const [goalPreset, setGoalPreset] = useState<{ name: string } | null>(null);
   const [editingCommitment, setEditingCommitment] = useState<MoneyCommitment | null>(null);
+  const [commitmentPreset, setCommitmentPreset] = useState<{ type: CommitmentType; title?: string } | null>(null);
   const [editingRecurring, setEditingRecurring] = useState<RecurringTransaction | null>(null);
   const [selectedTxForDetail, setSelectedTxForDetail] = useState<Transaction | null>(null);
 
@@ -481,7 +484,11 @@ export function App() {
   };
   const handleDeleteBudget = async (id: string) => {
     if (!(await confirmDialog({ title: t('dialog.deleteBudget'), message: t('dialog.deleteBudgetHint'), danger: true, confirmLabel: t('common.delete') }))) return;
-    mutatePlans({ budgets: state.budgets.filter((b) => b.id !== id) });
+    // Archive, not hard-delete: history stays explainable and the budget can be restored.
+    mutatePlans({ budgets: state.budgets.map((b) => (b.id === id ? { ...b, isActive: false, updatedAt: new Date().toISOString() } : b)) });
+  };
+  const handleRestoreBudget = (id: string) => {
+    mutatePlans({ budgets: state.budgets.map((b) => (b.id === id ? { ...b, isActive: true, updatedAt: new Date().toISOString() } : b)) });
   };
 
   // Goal CRUD + fund
@@ -495,33 +502,71 @@ export function App() {
     if (!(await confirmDialog({ title: t('dialog.deleteGoal'), message: t('dialog.deleteGoalHint'), danger: true, confirmLabel: t('common.delete') }))) return;
     mutatePlans({ goals: state.goals.map((g) => (g.id === id ? { ...g, isArchived: true, updatedAt: new Date().toISOString() } : g)) });
   };
+  /**
+   * Fund a goal — one coherent interpretation, never double-counted.
+   * - Goal with a usable linked account (same currency): a true TRANSFER
+   *   source → linked account. Both balances move; income/expense aggregates
+   *   ignore it by invariant; goal progress increases.
+   * - Goal without one: a reservation — the source balance drops and goal
+   *   progress increases, recorded as a `goal-fund` EXPENSE row that every
+   *   spend aggregate (period totals, budgets, category analytics) excludes.
+   * Either way: account delta + goal delta == amount, spend delta == 0.
+   */
   const handleFundGoal = (goalId: string, amount: number, fromAccountId: string) => {
     const goal = state.goals.find((g) => g.id === goalId);
     if (!goal) return;
     if (amount <= 0) { notice(t('tx.errors.amountPositive')); return; }
+    // Clamp to the remaining need: without this, over-funding deducts the full
+    // amount from the account while the goal clamps at target — money vanishes.
+    const fundable = GoalEngine.fundableAmount(goal, amount);
+    if (fundable <= 0) { notice(amount <= 0 ? t('tx.errors.amountPositive') : t('plans.fundCapHint')); return; }
     const source = state.accounts.find((a) => a.id === fromAccountId);
     if (!source) { notice(t('tx.errors.accountRequired')); return; }
     if (source.currency !== (goal.currency || currency)) { notice(t('dialog.currencyMismatch')); return; }
-    if (source.currentBalance - amount < 0) { notice(t('tx.errors.overdraw')); return; }
-    const fundTx: Transaction = {
-      id: `tx-${Date.now()}`,
-      userId: 'user-1',
-      type: 'EXPENSE',
-      amount,
-      currency: goal.currency || currency,
-      categoryId: 'cat-transfer',
-      accountId: fromAccountId,
-      merchant: `Fund: ${goal.name}`,
-      note: `Goal contribution to ${goal.name}`,
-      date: todayISO,
-      time: DateUtils.getCurrentTimeString(),
-      tags: ['goal-fund'],
-      status: 'CONFIRMED',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    if (source.currentBalance - fundable < 0) { notice(t('tx.errors.overdraw')); return; }
+    const linked = state.accounts.find((a) => a.id === goal.accountId);
+    const useTransfer = Boolean(
+      linked && !linked.isArchived && linked.id !== source.id && linked.currency === source.currency
+    );
+    if (useTransfer && !linked) return;
+    const fundTx: Transaction = useTransfer
+      ? {
+          id: `tx-${Date.now()}`,
+          userId: 'user-1',
+          type: 'TRANSFER',
+          amount: fundable,
+          currency: goal.currency || currency,
+          categoryId: 'cat-transfer',
+          accountId: fromAccountId,
+          destinationAccountId: (linked as Account).id,
+          merchant: `Fund: ${goal.name}`,
+          note: `Moved to ${(linked as Account).name} for ${goal.name}`,
+          date: todayISO,
+          time: DateUtils.getCurrentTimeString(),
+          tags: ['goal-fund'],
+          status: 'CONFIRMED',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+      : {
+          id: `tx-${Date.now()}`,
+          userId: 'user-1',
+          type: 'EXPENSE',
+          amount: fundable,
+          currency: goal.currency || currency,
+          categoryId: 'cat-transfer',
+          accountId: fromAccountId,
+          merchant: `Fund: ${goal.name}`,
+          note: `Set aside for ${goal.name} — tracked as savings progress, not spending`,
+          date: todayISO,
+          time: DateUtils.getCurrentTimeString(),
+          tags: ['goal-fund'],
+          status: 'CONFIRMED',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
     const updatedAccounts = TransactionEngine.applyTransactionToAccounts(fundTx, state.accounts);
-    const updatedGoals = state.goals.map((g) => (g.id === goalId ? GoalEngine.contribute(g, amount) : g));
+    const updatedGoals = state.goals.map((g) => (g.id === goalId ? GoalEngine.contribute(g, fundable) : g));
     mutatePlans({ accounts: updatedAccounts, goals: updatedGoals, transactions: [fundTx, ...state.transactions] });
   };
 
@@ -555,7 +600,12 @@ export function App() {
     if (!(await confirmDialog({ title: t('dialog.deleteBill'), message: t('dialog.deleteBillHint'), danger: true, confirmLabel: t('common.delete') }))) return;
     mutatePlans({ commitments: state.commitments.filter((c) => c.id !== id) });
   };
-  // Mark a bill paid: flips status and posts a real expense transaction (financial effect)
+  // Mark a bill paid: flips status and posts the real money movement.
+  // Direction-aware: OUTFLOW posts an EXPENSE (overdraft-guarded), INFLOW
+  // posts INCOME and credits the account (expected paydays must never post
+  // as expenses). Either way exactly one transaction is created per call —
+  // toggling back to PROJECTED never deletes the posted transaction, and
+  // re-completing is blocked by the completed-status check below.
   const handleToggleCommitmentStatus = (commitmentId: string) => {
     const comm = state.commitments.find((c) => c.id === commitmentId);
     if (!comm) return;
@@ -566,23 +616,19 @@ export function App() {
     let nextAccounts = state.accounts;
     let nextTransactions = state.transactions;
     if (willBePaid) {
+      const isInflow = comm.direction === 'INFLOW';
       const source = state.accounts.find((a) => a.id === comm.accountId);
-      if (source && source.currency === comm.currency && source.currentBalance - comm.amount >= 0) {
+      const alreadyPosted = state.transactions.some((t) => t.sourceCommitmentId === commitmentId);
+      const canSettle =
+        source &&
+        source.currency === comm.currency &&
+        (isInflow || source.currentBalance - comm.amount >= 0);
+      if (alreadyPosted) {
+        // Idempotent re-complete: flip the status, never post a second transaction.
+      } else if (canSettle && source) {
         const payTx: Transaction = {
+          ...FutureFinanceEngine.buildSettlementTransaction(comm, todayISO, DateUtils.getCurrentTimeString()),
           id: `tx-${Date.now()}`,
-          userId: 'user-1',
-          type: 'EXPENSE',
-          amount: comm.amount,
-          currency: comm.currency,
-          categoryId: comm.categoryId || 'cat-bills',
-          accountId: comm.accountId,
-          merchant: comm.title,
-          note: `Bill paid: ${comm.title}`,
-          date: todayISO,
-          time: DateUtils.getCurrentTimeString(),
-          tags: ['bill-paid'],
-          status: 'CONFIRMED',
-          sourceCommitmentId: commitmentId,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
@@ -637,6 +683,55 @@ export function App() {
   const handleDeleteRecurring = async (id: string) => {
     if (!(await confirmDialog({ title: t('dialog.deleteRecurring'), message: t('dialog.deleteRecurringHint'), danger: true, confirmLabel: t('common.delete') }))) return;
     mutatePlans({ recurring: state.recurring.filter((r) => r.id !== id) });
+  };
+
+  // Pause / resume a rule. Resume rolls nextOccurrence forward so a paused
+  // rule never dumps a backlog of overdue occurrences, and clears a past end
+  // date so the rule can produce again.
+  const handleToggleRecurringActive = (id: string) => {
+    mutatePlans({
+      recurring: state.recurring.map((r) => {
+        if (r.id !== id) return r;
+        if (r.isActive) return { ...r, isActive: false, updatedAt: new Date().toISOString() };
+        const rolled = FutureFinanceEngine.rollForwardNextOccurrence(r, todayISO);
+        return {
+          ...r,
+          isActive: true,
+          nextOccurrence: rolled,
+          endDate: r.endDate && r.endDate < todayISO ? undefined : r.endDate,
+          updatedAt: new Date().toISOString(),
+        };
+      }),
+    });
+  };
+
+  // Skip one occurrence: move to the next without creating anything.
+  const handleSkipRecurring = (id: string) => {
+    mutatePlans({
+      recurring: state.recurring.map((r) =>
+        r.id === id
+          ? { ...r, nextOccurrence: FutureFinanceEngine.advanceOccurrence(r.nextOccurrence, r.frequency), updatedAt: new Date().toISOString() }
+          : r
+      ),
+    });
+  };
+
+  // Reschedule a rule: move its next occurrence to a chosen date.
+  const handleRescheduleRecurring = (id: string, newDate: string) => {
+    mutatePlans({
+      recurring: state.recurring.map((r) => (r.id === id ? { ...r, nextOccurrence: newDate, updatedAt: new Date().toISOString() } : r)),
+    });
+  };
+
+  // Cancel a rule: terminal stop (kept for history, produces nothing more).
+  // Distinct from pause (temporary) and delete (removes the rule entirely).
+  const handleCancelRecurring = async (id: string) => {
+    if (!(await confirmDialog({ title: t('dialog.cancelRecurring'), message: t('dialog.cancelRecurringHint'), danger: true, confirmLabel: t('common.confirm') }))) return;
+    mutatePlans({
+      recurring: state.recurring.map((r) =>
+        r.id === id ? { ...r, isActive: false, endDate: todayISO, updatedAt: new Date().toISOString() } : r
+      ),
+    });
   };
 
   // Handler: Reset to Clean 0 Slate (For Real Life)
@@ -825,8 +920,10 @@ export function App() {
               commitments={resolvedCommitments}
               recurring={state.recurring}
               settings={settings}
-              onOpenAddGoal={() => { setEditingGoal(null); setIsAddGoalOpen(true); }}
-              onOpenAddCommitment={() => { setEditingCommitment(null); setIsAddCommitmentOpen(true); }}
+              onOpenAddGoal={() => { setEditingGoal(null); setGoalPreset(null); setIsAddGoalOpen(true); }}
+              onOpenAddEmergencyFund={() => { setEditingGoal(null); setGoalPreset({ name: 'Emergency Fund' }); setIsAddGoalOpen(true); }}
+              onOpenAddCommitment={() => { setEditingCommitment(null); setCommitmentPreset(null); setIsAddCommitmentOpen(true); }}
+              onOpenAddPayday={() => { setEditingCommitment(null); setCommitmentPreset({ type: 'EXPECTED_INCOME', title: 'Payday' }); setIsAddCommitmentOpen(true); }}
               onOpenAddBudget={() => { setEditingBudget(null); setIsAddBudgetOpen(true); }}
               onOpenAddRecurring={() => { setEditingRecurring(null); setIsAddRecurringOpen(true); }}
               onEditBudget={(b) => { setEditingBudget(b); setIsAddBudgetOpen(true); }}
@@ -834,9 +931,14 @@ export function App() {
               onEditCommitment={(c) => { setEditingCommitment(c); setIsAddCommitmentOpen(true); }}
               onEditRecurring={(r) => { setEditingRecurring(r); setIsAddRecurringOpen(true); }}
               onDeleteBudget={handleDeleteBudget}
+              onRestoreBudget={handleRestoreBudget}
               onDeleteGoal={handleDeleteGoal}
               onDeleteCommitment={handleDeleteCommitment}
               onDeleteRecurring={handleDeleteRecurring}
+              onToggleRecurringActive={handleToggleRecurringActive}
+              onSkipRecurring={handleSkipRecurring}
+              onRescheduleRecurring={handleRescheduleRecurring}
+              onCancelRecurring={handleCancelRecurring}
               onToggleCommitmentStatus={handleToggleCommitmentStatus}
               onCancelCommitment={handleCancelCommitment}
               onRescheduleCommitment={handleRescheduleCommitment}
@@ -902,6 +1004,8 @@ export function App() {
         isOpen={isAddTxOpen}
         onClose={() => { setIsAddTxOpen(false); setEditingTx(null); }}
         onSave={handleSaveTransaction}
+        onSaveCommitment={handleAddCommitment}
+        onSaveRecurring={handleAddRecurring}
         accounts={accounts}
         categories={categories}
         currency={currency}
@@ -945,27 +1049,30 @@ export function App() {
       />
       <AddGoalModal
         isOpen={isAddGoalOpen}
-        onClose={() => { setIsAddGoalOpen(false); setEditingGoal(null); }}
+        onClose={() => { setIsAddGoalOpen(false); setEditingGoal(null); setGoalPreset(null); }}
         onSave={(data) => {
           if (editingGoal) handleUpdateGoal(editingGoal.id, data);
           else handleAddGoal(data);
-          setIsAddGoalOpen(false); setEditingGoal(null);
+          setIsAddGoalOpen(false); setEditingGoal(null); setGoalPreset(null);
         }}
         currency={currency}
+        accounts={accounts}
         editingGoal={editingGoal}
+        preset={goalPreset}
       />
       <AddCommitmentModal
         isOpen={isAddCommitmentOpen}
-        onClose={() => { setIsAddCommitmentOpen(false); setEditingCommitment(null); }}
+        onClose={() => { setIsAddCommitmentOpen(false); setEditingCommitment(null); setCommitmentPreset(null); }}
         onSave={(data) => {
           if (editingCommitment) handleUpdateCommitment(editingCommitment.id, data);
           else handleAddCommitment(data);
-          setIsAddCommitmentOpen(false); setEditingCommitment(null);
+          setIsAddCommitmentOpen(false); setEditingCommitment(null); setCommitmentPreset(null);
         }}
         accounts={accounts}
         categories={categories}
         currency={currency}
         editingCommitment={editingCommitment}
+        preset={commitmentPreset}
       />
       <AddRecurringModal
         isOpen={isAddRecurringOpen}

@@ -52,7 +52,15 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
         {/* Amount header */}
         <div className="rounded-2xl bg-slate-50 p-4 text-center border border-slate-100">
           <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
-            {isTransfer ? 'Transfer' : tx.type === 'INCOME' ? 'Income' : isSplit ? 'Split expense' : 'Expense'}
+            {TransactionEngine.isGoalFunding(tx)
+              ? 'Savings set aside'
+              : isTransfer
+              ? 'Transfer'
+              : tx.type === 'INCOME'
+              ? 'Income'
+              : isSplit
+              ? 'Split expense'
+              : 'Expense'}
           </span>
           <p className="text-3xl font-black text-slate-900">{money.format()}</p>
           <p className="text-xs font-bold text-slate-700 mt-1">{tx.merchant || 'Personal Entry'}</p>

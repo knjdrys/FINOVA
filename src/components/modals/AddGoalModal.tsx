@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SavingsGoal, CurrencyCode, GoalPriority } from '../../types';
+import { Account, SavingsGoal, CurrencyCode, GoalPriority } from '../../types';
 import { Modal } from '../ui/Modal';
 import { MoneyValue } from '../../domain/money/MoneyValue';
 import { DateUtils } from '../../domain/date/DateUtils';
@@ -10,31 +10,38 @@ interface AddGoalModalProps {
   onClose: () => void;
   onSave: (data: Omit<SavingsGoal, 'id' | 'createdAt' | 'updatedAt'>) => void;
   currency: CurrencyCode;
+  accounts: Account[];
   editingGoal?: SavingsGoal | null;
+  /** Quick-start preset (e.g. Emergency Fund): pre-fills the name for a new goal. */
+  preset?: { name: string } | null;
 }
 
 const COLORS = ['#059669', '#0D9488', '#7C3AED', '#DB2777', '#2563EB', '#D97706', '#DC2626', '#4F46E5'];
 
-export const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onSave, currency, editingGoal }) => {
+export const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onSave, currency, accounts, editingGoal, preset }) => {
   const [name, setName] = useState('');
   const [targetStr, setTargetStr] = useState('');
   const [currentStr, setCurrentStr] = useState('');
   const [targetDate, setTargetDate] = useState('');
   const [priority, setPriority] = useState<GoalPriority>('ESSENTIAL');
+  const [accountId, setAccountId] = useState('');
   const [color, setColor] = useState(COLORS[0]);
   const [error, setError] = useState<string | null>(null);
 
+  const sameCurrencyAccounts = accounts.filter((a) => !a.isArchived && a.currency === currency);
+
   useEffect(() => {
     if (isOpen) {
-      setName(editingGoal?.name || '');
+      setName(editingGoal?.name || preset?.name || '');
       setTargetStr(editingGoal ? MoneyValue.fromMinorUnits(editingGoal.targetAmount, currency).format({ includeSymbol: false }) : '');
       setCurrentStr(editingGoal ? MoneyValue.fromMinorUnits(editingGoal.currentAmount, currency).format({ includeSymbol: false }) : '0');
       setTargetDate(editingGoal?.targetDate || DateUtils.addDaysISO(DateUtils.getTodayISO(), 180));
       setPriority(editingGoal?.priority || 'ESSENTIAL');
+      setAccountId(editingGoal?.accountId || '');
       setColor(editingGoal?.color || COLORS[0]);
       setError(null);
     }
-  }, [isOpen, editingGoal, currency]);
+  }, [isOpen, editingGoal, preset, currency]);
 
   const save = () => {
     const target = MoneyValue.parse(targetStr || '0', currency).getMinorUnits();
@@ -52,6 +59,7 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onS
       currentAmount: current,
       currency,
       targetDate,
+      accountId: accountId || undefined,
       priority,
       status: current >= target ? 'COMPLETED' : 'ON_TRACK',
       icon: 'Target',
@@ -85,6 +93,19 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onS
             <option value="IMPORTANT">{t('modal.important')}</option>
             <option value="OPTIONAL">{t('modal.optionalPriority')}</option>
           </select>
+        </Field>
+        <Field label={t('modal.goalAccountLabel')}>
+          <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className={inputCls} aria-label={t('modal.goalAccountLabel')}>
+            <option value="">{t('modal.goalAccountNone')}</option>
+            {sameCurrencyAccounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name} · {MoneyValue.fromMinorUnits(a.currentBalance, a.currency).format()}
+              </option>
+            ))}
+          </select>
+          <p className="text-[10px] font-medium text-slate-400">
+            {t('modal.goalAccountHint')}
+          </p>
         </Field>
         <Field label={t('modal.color')}>
           <div className="flex gap-2">

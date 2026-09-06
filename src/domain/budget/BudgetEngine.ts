@@ -32,12 +32,14 @@ export class BudgetEngine {
     referenceDateISO?: string
   ): BudgetForecast {
     const todayISO = referenceDateISO || DateUtils.getTodayISO();
-    const currency = transactions[0]?.currency || 'PKR';
+    // Prefer the budget's own currency; never guess from row zero.
+    const currency = budget.currency || transactions[0]?.currency || 'PHP';
 
     // Sum actual expenses within budget date range and matching category filter
     let actualSpent = 0;
     for (const tx of transactions) {
       if (tx.type !== 'EXPENSE' || tx.status === 'PENDING') continue;
+      if (TransactionEngine.isGoalFunding(tx)) continue; // reservations are not budget spend
       if (!DateUtils.isDateInRange(tx.date, budget.startDate, budget.endDate)) continue;
 
       const attributed = this.attributedAmount(tx, budget);
@@ -162,7 +164,7 @@ export class BudgetEngine {
   } {
     const activeBudgets = budgets.filter((b) => b.isActive);
     const forecasts = activeBudgets.map((b) => this.calculateBudgetForecast(b, transactions, referenceDateISO));
-    const currency = transactions[0]?.currency || 'PKR';
+    const currency = activeBudgets[0]?.currency || transactions[0]?.currency || 'PHP';
 
     const totalBudgetedMinor = forecasts.reduce((sum, f) => sum + f.budgetAmount, 0);
     const totalActualSpentMinor = forecasts.reduce((sum, f) => sum + f.actualSpent, 0);

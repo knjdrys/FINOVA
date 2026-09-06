@@ -303,6 +303,12 @@ export interface RecurringTransaction {
   endDate?: string;
   isActive: boolean;
   reminderEnabled: boolean;
+  /**
+   * Explicit consent to auto-post due occurrences as real transactions.
+   * Undefined = legacy behavior (falls back to reminderEnabled) so rules
+   * created before this flag existed keep working unchanged.
+   */
+  autoPostEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
 }
