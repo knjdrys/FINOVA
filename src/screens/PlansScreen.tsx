@@ -209,7 +209,7 @@ const TimelineView: React.FC<{ timeline: TimelineDay[]; settings: UserSettings; 
   settings,
   currency,
 }) => {
-  const window = timeline.slice(0, 12);
+  const window = timeline.slice(0, 30);
   const hasAnyEvents = window.some((d) => d.events.length > 0);
   return (
   <div className="space-y-3">

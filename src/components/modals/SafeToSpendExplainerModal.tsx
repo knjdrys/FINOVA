@@ -48,7 +48,8 @@ export const SafeToSpendExplainerModal: React.FC<SafeToSpendExplainerModalProps>
             How We Calculate Your Limit
           </h4>
           <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-            {safeToSpend.explanation.steps.map((step, idx) => {
+            {/* Zero-amount steps (beyond the opening balance) add noise, not signal. */}
+            {safeToSpend.explanation.steps.filter((step, idx) => idx === 0 || step.amount !== 0).map((step, idx) => {
               const stepMoney = MoneyValue.fromMinorUnits(step.amount, currency);
               return (
                 <div key={idx} className="p-3.5 flex items-start justify-between gap-3">

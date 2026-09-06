@@ -221,8 +221,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       {/* Safe-to-Spend Informational Bar — turns rose in deficit, never green-lights overspending */}
       <div
         data-tour="safe-to-spend"
+        role="button"
+        tabIndex={0}
+        aria-label={t('home.stsDetailsLabel')}
         onClick={onOpenSafeToSpendExplainer}
-        className={`group flex items-center justify-between rounded-2xl bg-white p-3.5 sm:p-4 shadow-xs border transition-all cursor-pointer ${
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onOpenSafeToSpendExplainer();
+          }
+        }}
+        className={`group flex items-center justify-between rounded-2xl bg-white p-3.5 sm:p-4 shadow-xs border transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 ${
           safeToSpend.isDeficit ? 'border-rose-200 hover:border-rose-300' : 'border-emerald-100 hover:border-emerald-300'
         }`}
       >

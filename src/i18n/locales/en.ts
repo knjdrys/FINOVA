@@ -78,6 +78,7 @@ export const en = {
     perDayRemaining: '/day ({days} days remaining)',
     stsPreview: '{bills} upcoming bills · {goals} goals reserved',
     overCommitted: 'Over committed',
+    stsDetailsLabel: 'Safe-to-Spend details',
     needsAttention: 'Needs attention',
     budgetsAndGoals: 'Budgets & Goals',
     readyToTrack: 'Ready to Track Real Money',

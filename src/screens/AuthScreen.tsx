@@ -105,7 +105,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
       {/* ---------------------------------------------------- */}
       {/* LEFT: BRAND AUTHORITY PANEL (GEOMETRIC IDENTITY)     */}
       {/* ---------------------------------------------------- */}
-      <section className="relative w-full lg:w-1/2 bg-[#1a3a2e] p-8 md:p-12 lg:p-20 flex flex-col justify-between text-white overflow-hidden lg:min-h-screen">
+      <section className="relative w-full lg:w-1/2 bg-[#1a3a2e] px-6 pt-6 pb-4 md:p-12 lg:p-20 flex flex-col justify-between text-white overflow-hidden lg:min-h-screen">
         {/* Dot Grid Pattern Layer */}
         <div
           className="absolute inset-0 pointer-events-none opacity-30"
@@ -144,7 +144,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
         </div>
 
         {/* Middle Content: Hero & Value Props */}
-        <div className="relative z-10 my-8 lg:my-0">
+        <div className="relative z-10 my-5 lg:my-0">
           {mode === 'SIGN_IN' ? (
             <div>
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black leading-[1.08] text-white mb-6 tracking-tight">
@@ -173,8 +173,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
             </div>
           )}
 
-          {/* Value Props Grid */}
-          <div className="space-y-4 sm:space-y-6 max-w-md">
+          {/* Value Props Grid — desktop only; on mobile the form comes first */}
+          <div className="hidden lg:block space-y-4 sm:space-y-6 max-w-md">
             <div className="flex items-start gap-3.5">
               <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-[#c4f042]/15 flex items-center justify-center text-[#c4f042] shadow-xs">
                 <Zap className="h-5 w-5 stroke-[2.5]" />

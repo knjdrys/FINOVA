@@ -87,6 +87,7 @@ export const fil = {
     perDayRemaining: '/araw ({days} araw pa)',
     stsPreview: '{bills} paparating na bayarin · {goals} nakalaan para sa goals',
     overCommitted: 'Kulang ang budget',
+    stsDetailsLabel: 'Mga detalye ng Safe-to-Spend',
     needsAttention: 'Kailangan ng atensyon',
     budgetsAndGoals: 'Mga Budget at Layunin',
     readyToTrack: 'Handa Nang Subaybayan ang Tunay na Pera',
