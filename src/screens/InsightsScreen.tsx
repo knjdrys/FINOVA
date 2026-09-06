@@ -186,7 +186,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
                     <span className="font-black text-slate-900">
                       {MoneyValue.fromMinorUnits(item.amount, currency).format()}
                     </span>
-                    <span className="text-slate-400 font-semibold">({item.percentage}%)</span>
+                    <span className="text-slate-500 font-semibold">({item.percentage}%)</span>
                   </div>
                 </div>
               ))}
@@ -207,7 +207,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
         </div>
 
         {insights.length === 0 ? (
-          <div className="rounded-[22px] sm:rounded-[26px] bg-white p-5 shadow-xs border border-slate-100 flex flex-col items-center gap-1.5 text-center">
+          <div className="rounded-[24px] sm:rounded-[28px] bg-white p-5 shadow-xs border border-slate-100 flex flex-col items-center gap-1.5 text-center">
             <Sparkles className="h-6 w-6 text-slate-300" aria-hidden="true" />
             <p className="text-xs sm:text-sm text-slate-500 max-w-sm">{t('analytics.noTips')}</p>
           </div>
@@ -228,7 +228,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
               return (
                 <div
                   key={insight.id}
-                  className="rounded-[22px] sm:rounded-[26px] bg-white p-4 sm:p-5 shadow-xs border border-slate-100 space-y-2.5"
+                  className="rounded-[24px] sm:rounded-[28px] bg-white p-4 sm:p-5 shadow-xs border border-slate-100 space-y-2.5"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3">
@@ -236,7 +236,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
                         <IconComp className="h-4 w-4 sm:h-5 sm:w-5" />
                       </div>
                       <div>
-                        <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-slate-400 block">
+                        <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-slate-500 block">
                           {t(`insightCat.${insight.category}`)}
                         </span>
                         <h4 className="text-xs sm:text-sm font-extrabold text-slate-900">{insight.title}</h4>

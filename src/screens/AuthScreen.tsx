@@ -308,7 +308,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
             {/* Divider */}
             <div className="relative flex items-center my-2">
               <div className="flex-grow border-t border-slate-200"></div>
-              <span className="flex-shrink mx-3 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
+              <span className="flex-shrink mx-3 text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">
                 or with email
               </span>
               <div className="flex-grow border-t border-slate-200"></div>
@@ -354,14 +354,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                     Your Full Name
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 h-4 w-4" />
                     <input
                       type="text"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="Juan Dela Cruz"
                       required
-                      className="w-full pl-10 pr-3.5 py-3 border border-slate-200 rounded-xl bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#c4f042] focus:ring-4 focus:ring-[#c4f042]/20 transition-all font-semibold"
+                      className="w-full pl-10 pr-3.5 py-3 border border-slate-200 rounded-xl bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-500 outline-none focus:border-[#c4f042] focus:ring-4 focus:ring-[#c4f042]/20 transition-all font-semibold"
                     />
                   </div>
                 </div>
@@ -372,14 +372,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 h-4 w-4" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
                     required
-                    className="w-full pl-10 pr-3.5 py-3 border border-slate-200 rounded-xl bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#c4f042] focus:ring-4 focus:ring-[#c4f042]/20 transition-all font-semibold"
+                    className="w-full pl-10 pr-3.5 py-3 border border-slate-200 rounded-xl bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-500 outline-none focus:border-[#c4f042] focus:ring-4 focus:ring-[#c4f042]/20 transition-all font-semibold"
                   />
                 </div>
               </div>
@@ -389,14 +389,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 h-4 w-4" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     required
-                    className="w-full pl-10 pr-14 py-3 border border-slate-200 rounded-xl bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-[#c4f042] focus:ring-4 focus:ring-[#c4f042]/20 transition-all font-semibold"
+                    className="w-full pl-10 pr-14 py-3 border border-slate-200 rounded-xl bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-500 outline-none focus:border-[#c4f042] focus:ring-4 focus:ring-[#c4f042]/20 transition-all font-semibold"
                   />
                   <button
                     type="button"
@@ -458,7 +458,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
             </div>
 
             {/* Footnote */}
-            <p className="text-[10px] text-slate-400 text-center leading-relaxed max-w-[320px] mx-auto pt-2">
+            <p className="text-[10px] text-slate-500 text-center leading-relaxed max-w-[320px] mx-auto pt-2">
               Protected by FINOVA Zero Math Drift engine. By continuing, you agree to our Terms of Service and Privacy Policy.
             </p>
           </div>

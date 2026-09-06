@@ -551,5 +551,7 @@ export interface UserSettings {
   budgetWarningThreshold: number;
   autoGenerateCommitmentsFromRecurring: boolean;
   hasCompletedOnboarding?: boolean;
+  /** First-run checklist dismissed (device-local guidance, not cloud-synced). */
+  hasDismissedChecklist?: boolean;
   lastBackupDate?: string;
 }

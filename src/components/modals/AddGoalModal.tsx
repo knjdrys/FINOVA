@@ -103,15 +103,26 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onS
               </option>
             ))}
           </select>
-          <p className="text-[10px] font-medium text-slate-400">
+          <p className="text-[10px] font-medium text-slate-500">
             {t('modal.goalAccountHint')}
           </p>
         </Field>
         <Field label={t('modal.color')}>
-          <div className="flex gap-2">
-            {COLORS.map((c) => (
-              <button key={c} type="button" onClick={() => setColor(c)} aria-label={t('modal.color')} className={`h-7 w-7 rounded-full ${color === c ? 'ring-2 ring-offset-2 ring-slate-400' : ''}`} style={{ backgroundColor: c }} />
-            ))}
+          <div className="flex flex-wrap gap-2">
+            {COLORS.map((c) => {
+              const selected = color === c;
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  aria-label={`${t('modal.color')}: ${c}${selected ? ' (selected)' : ''}`}
+                  aria-pressed={selected}
+                  className={`h-10 w-10 rounded-full ${selected ? 'ring-2 ring-offset-2 ring-slate-500' : ''}`}
+                  style={{ backgroundColor: c }}
+                />
+              );
+            })}
           </div>
         </Field>
 

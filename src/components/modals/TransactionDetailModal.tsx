@@ -51,7 +51,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
       <div className="space-y-4">
         {/* Amount header */}
         <div className="rounded-2xl bg-slate-50 p-4 text-center border border-slate-100">
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
             {TransactionEngine.isGoalFunding(tx)
               ? 'Savings set aside'
               : isTransfer
@@ -63,7 +63,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
               : 'Expense'}
           </span>
           <p className="text-3xl font-black text-slate-900">{money.format()}</p>
-          <p className="text-xs font-bold text-slate-700 mt-1">{tx.merchant || 'Personal Entry'}</p>
+          <p className="text-xs font-bold text-slate-700 mt-1">{tx.merchant || categoryName(categories, tx.categoryId)}</p>
           {tx.sourceCommitmentId && (
             <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
               <ShieldCheck className="h-3 w-3" /> Auto-posted from a plan
@@ -162,7 +162,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
               <span className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
                 <Paperclip className="h-3.5 w-3.5" /> Receipt attached
               </span>
-              <span className="block text-[10px] font-medium text-slate-400">Tap to view full size</span>
+              <span className="block text-[10px] font-medium text-slate-500">Tap to view full size</span>
             </span>
           </button>
         )}

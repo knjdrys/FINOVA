@@ -10,6 +10,7 @@ import {
   Transaction,
   UserSettings,
   CurrencyCode,
+  CURRENCY_CONFIGS,
   PlansSection,
 } from '../types';
 import { DateUtils } from '../domain/date/DateUtils';
@@ -207,19 +208,46 @@ const TimelineView: React.FC<{ timeline: TimelineDay[]; settings: UserSettings; 
   timeline,
   settings,
   currency,
-}) => (
+}) => {
+  const window = timeline.slice(0, 12);
+  const hasAnyEvents = window.some((d) => d.events.length > 0);
+  return (
   <div className="space-y-3">
     <div className="flex items-center justify-between px-1">
       <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">30-Day Cash Flow Projection</span>
       <span className="text-[11px] font-semibold text-emerald-800">Running Projected Balances</span>
     </div>
-    <p className="px-1 text-[10px] font-medium text-slate-400">
+    <p className="px-1 text-[10px] font-medium text-slate-500">
       {t('plans.timelineLegend')}
     </p>
+    {!hasAnyEvents && (
+      <div className="rounded-2xl bg-white p-6 text-center border border-slate-200/80 shadow-xs space-y-2">
+        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+          <Calendar className="h-5 w-5" />
+        </div>
+        <p className="text-xs font-bold text-slate-800">{t('plans.timelineEmpty')}</p>
+        <p className="text-[11px] font-medium text-slate-500 max-w-xs mx-auto">{t('plans.timelineEmptyHint')}</p>
+      </div>
+    )}
     <div className="space-y-3">
-      {timeline.slice(0, 12).map((day) => {
+      {hasAnyEvents ? window.map((day) => {
         const hasEvents = day.events.length > 0;
         const projMoney = MoneyValue.fromMinorUnits(day.projectedEndOfDayBalance, currency);
+        // Quiet days collapse to a one-line balance row — the projection stays
+        // visible without a wall of "nothing scheduled" cards.
+        if (!hasEvents && !day.isToday) {
+          return (
+            <div
+              key={day.date}
+              className="flex items-center justify-between rounded-xl border border-slate-100 bg-white px-4 py-2 shadow-xs"
+            >
+              <span className="text-[11px] font-semibold text-slate-500">{day.dayLabel}</span>
+              <span className={`text-[11px] font-extrabold ${day.projectedEndOfDayBalance < settings.minimumReserve ? 'text-rose-600' : 'text-slate-700'}`}>
+                {projMoney.format()}
+              </span>
+            </div>
+          );
+        }
         return (
           <div
             key={day.date}
@@ -229,11 +257,11 @@ const TimelineView: React.FC<{ timeline: TimelineDay[]; settings: UserSettings; 
           >
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <div className="flex items-center gap-2">
-                <Calendar className={`h-4 w-4 ${day.isToday ? 'text-emerald-700' : 'text-slate-400'}`} />
+                <Calendar className={`h-4 w-4 ${day.isToday ? 'text-emerald-700' : 'text-slate-500'}`} />
                 <span className="text-xs font-bold text-slate-800">{day.dayLabel}</span>
               </div>
               <div className="text-right">
-                <span className="text-[10px] text-slate-400 font-semibold block">Projected Balance</span>
+                <span className="text-[10px] text-slate-500 font-semibold block">Projected Balance</span>
                 <span className={`text-xs font-extrabold ${day.projectedEndOfDayBalance < settings.minimumReserve ? 'text-rose-600' : 'text-slate-900'}`}>
                   {projMoney.format()}
                 </span>
@@ -248,7 +276,7 @@ const TimelineView: React.FC<{ timeline: TimelineDay[]; settings: UserSettings; 
                     <div key={ev.id} className="flex items-center justify-between text-xs font-medium py-1">
                       <div className="flex items-center gap-2 min-w-0">
                         <span
-                          className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold ${
+                          className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${
                             ev.status === 'ACTUAL'
                               ? 'bg-slate-100 text-slate-700'
                               : ev.status === 'OVERDUE'
@@ -269,14 +297,15 @@ const TimelineView: React.FC<{ timeline: TimelineDay[]; settings: UserSettings; 
                 })}
               </div>
             ) : (
-              <p className="mt-2 text-[11px] text-slate-400 italic">No scheduled transactions or bills.</p>
+              <p className="mt-2 text-[11px] text-slate-500 italic">No scheduled transactions or bills.</p>
             )}
           </div>
         );
-      })}
+      }) : null}
     </div>
   </div>
-);
+  );
+};
 
 const BudgetsView: React.FC<{
   budgets: Budget[];
@@ -299,19 +328,35 @@ const BudgetsView: React.FC<{
           <Plus className="h-3.5 w-3.5" /> <span>New Budget</span>
         </button>
       </div>
-      {budgets.length === 0 && <EmptyHint text="No budgets yet. Tap + to set a spending limit." />}
+      {budgets.length === 0 && <EmptyHint text="No budgets yet. Tap New Budget above to set a spending limit." />}
       <div className="space-y-3">
         {activeBudgets.map((b) => {
-          const f = BudgetEngine.calculateBudgetForecast(b, transactions, todayISO);
+          const insight = BudgetEngine.getBudgetInsight(b, transactions, todayISO);
+          const f = insight.forecast;
           const spentMoney = MoneyValue.fromMinorUnits(f.actualSpent, currency);
           const budgetMoney = MoneyValue.fromMinorUnits(f.budgetAmount, currency);
+          const remainingMoney = MoneyValue.fromMinorUnits(Math.max(0, f.effectiveRemaining ?? f.remainingAmount), currency);
+          const projectedMoney = MoneyValue.fromMinorUnits(f.projectedMonthEndSpent, currency);
           const pct = Math.min(100, f.percentageUsed);
           const barColor = f.status === 'OVER_BUDGET' ? '#E11D48' : f.status === 'AT_RISK' || f.status === 'NEAR_LIMIT' ? '#F59E0B' : '#059669';
+          const riskBadge =
+            insight.risk === 'HIGH'
+              ? { text: t('plans.riskHIGH'), cls: 'bg-rose-100 text-rose-800' }
+              : insight.risk === 'MEDIUM'
+              ? { text: t('plans.riskMEDIUM'), cls: 'bg-amber-100 text-amber-800' }
+              : insight.risk === 'LOW'
+              ? { text: t('plans.riskLOW'), cls: 'bg-slate-200 text-slate-600' }
+              : null;
           return (
             <div key={b.id} className="rounded-2xl bg-white p-4 shadow-sm border border-slate-100 space-y-2">
               <div className="flex items-start justify-between">
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900">{b.name}</h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-bold text-slate-900">{b.name}</h4>
+                    {riskBadge && (
+                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${riskBadge.cls}`}>{riskBadge.text}</span>
+                    )}
+                  </div>
                   <p className="text-[11px] font-medium text-slate-500">
                     {spentMoney.format()} / {budgetMoney.format()}
                     {b.rolloverUnused ? ' · rollover' : ''}
@@ -322,7 +367,15 @@ const BudgetsView: React.FC<{
               <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
                 <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: barColor }} />
               </div>
-              <p className="text-[11px] font-medium text-slate-500">{f.explanation}</p>
+              <p className="text-[11px] font-medium text-slate-500">
+                {t('plans.budgetLeftOver', { remaining: remainingMoney.format(), projected: projectedMoney.format() })}
+                {insight.isOverBudget && (
+                  <span className="font-bold text-rose-600"> · {t('plans.budgetOverBy', { amount: MoneyValue.fromMinorUnits(insight.projectedOverspend, currency).format() })}</span>
+                )}
+                {!insight.isOverBudget && insight.risk !== 'NONE' && insight.dailyAllowanceRemaining > 0 && (
+                  <span className="font-bold text-amber-700"> · {t('plans.budgetDaily', { amount: MoneyValue.fromMinorUnits(insight.dailyAllowanceRemaining, currency).format() })}</span>
+                )}
+              </p>
             </div>
           );
         })}
@@ -386,7 +439,7 @@ const GoalsView: React.FC<{
       </div>
       {activeGoals.length === 0 && (
         <div className="space-y-2">
-          <EmptyHint text="No goals yet. Tap + to start saving toward something." />
+          <EmptyHint text="No goals yet. Tap New Goal above to start saving toward something." />
           <button
             type="button"
             onClick={onOpenEmergencyFund}
@@ -414,9 +467,20 @@ const GoalsView: React.FC<{
       <div className="space-y-3">
         {activeGoals.map((goal) => {
           const progress = GoalEngine.calculateGoalProgress(goal, todayISO);
+          const insight = GoalEngine.getGoalInsight(goal, todayISO);
           const targetMoney = MoneyValue.fromMinorUnits(goal.targetAmount, currency);
           const currMoney = MoneyValue.fromMinorUnits(goal.currentAmount, currency);
           const monthlyRequired = MoneyValue.fromMinorUnits(progress.requiredMonthlySaving, currency);
+          const remaining = Math.max(0, goal.targetAmount - goal.currentAmount);
+          const suggested = Math.min(progress.requiredMonthlySaving, remaining);
+          const riskBadge =
+            insight.risk === 'HIGH'
+              ? { text: t('plans.riskHIGH'), cls: 'bg-rose-100 text-rose-800' }
+              : insight.risk === 'MEDIUM'
+              ? { text: t('plans.riskMEDIUM'), cls: 'bg-amber-100 text-amber-800' }
+              : insight.risk === 'LOW'
+              ? { text: t('plans.riskLOW'), cls: 'bg-slate-200 text-slate-600' }
+              : null;
           return (
             <div key={goal.id} className="rounded-2xl bg-white p-4 shadow-sm border border-slate-100 space-y-3">
               <div className="flex items-start justify-between">
@@ -425,7 +489,12 @@ const GoalsView: React.FC<{
                     <Shield className="h-5 w-5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-slate-900">{goal.name}</h4>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-bold text-slate-900">{goal.name}</h4>
+                      {riskBadge && (
+                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${riskBadge.cls}`}>{riskBadge.text}</span>
+                      )}
+                    </div>
                     <p className="text-[11px] font-medium text-slate-500">Target: {DateUtils.formatDisplayDate(goal.targetDate, { fullYear: true })}</p>
                     {goal.accountId && (
                       <p className="text-[10px] font-bold text-emerald-700">
@@ -439,7 +508,7 @@ const GoalsView: React.FC<{
               <div>
                 <div className="flex justify-between text-xs font-bold mb-1">
                   <span className="text-slate-800">{currMoney.format()}</span>
-                  <span className="text-slate-400">{targetMoney.format()}</span>
+                  <span className="text-slate-500">{targetMoney.format()}</span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
                   <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress.progressPercentage}%`, backgroundColor: goal.color }} />
@@ -449,8 +518,25 @@ const GoalsView: React.FC<{
                 <span>Required Velocity:</span>
                 <span className="font-bold text-slate-900">{monthlyRequired.format()}/mo</span>
               </div>
+              {insight.variance < 0 && remaining > 0 && (
+                <p className="text-[11px] font-semibold text-amber-700">
+                  {t('plans.goalBehind', { amount: MoneyValue.fromMinorUnits(-insight.variance, currency).format() })}
+                </p>
+              )}
               {fundingId === goal.id ? (
                 <div className="space-y-2 rounded-xl bg-emerald-50/60 p-3 border border-emerald-100">
+                  {suggested > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const mult = CURRENCY_CONFIGS[currency]?.minorUnitMultiplier ?? 100;
+                        setFundAmount(String(suggested / mult));
+                      }}
+                      className="rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+                    >
+                      {t('plans.fundSuggested', { amount: MoneyValue.fromMinorUnits(suggested, currency).format() })}
+                    </button>
+                  )}
                   <input
                     type="number"
                     value={fundAmount}
@@ -558,7 +644,7 @@ const BillsView: React.FC<{
           </button>
         ))}
       </div>
-      {sorted.length === 0 && <EmptyHint text="No bills yet. Tap + to add a recurring obligation." />}
+      {sorted.length === 0 && <EmptyHint text="No bills yet. Tap + Add Bill above to add a recurring obligation." />}
       <div className="space-y-2">
         {sorted.map((comm) => {
           const isCompleted = comm.status === 'COMPLETED' || comm.status === 'AUTO_POSTED';
@@ -587,14 +673,14 @@ const BillsView: React.FC<{
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <h4 className={`text-xs font-bold text-slate-900 truncate ${isCompleted || isCancelled ? 'line-through' : ''}`}>{comm.title}</h4>
-                      <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold ${statusBadge.cls}`}>{statusBadge.text}</span>
+                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${statusBadge.cls}`}>{statusBadge.text}</span>
                     </div>
                     <p className="text-[11px] font-medium text-slate-500">Due: {DateUtils.formatDisplayDate(comm.dueDate, { fullYear: true })} • {comm.priority}{comm.autoPostEnabled ? ' • auto' : ''}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <span className="text-xs font-extrabold text-slate-900">{MoneyValue.fromMinorUnits(comm.amount, comm.currency).format()}</span>
-                  <button type="button" onClick={() => onEdit(comm)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100" aria-label="Edit">
+                  <button type="button" onClick={() => onEdit(comm)} className="p-1.5 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100" aria-label="Edit">
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
                   <RowMenu
@@ -661,7 +747,7 @@ const RecurringView: React.FC<{
         <Plus className="h-3.5 w-3.5" /> <span>Add Recurring</span>
       </button>
     </div>
-    {recurring.length === 0 && <EmptyHint text="No recurring items. Tap + to automate a bill or income." />}
+    {recurring.length === 0 && <EmptyHint text="No recurring items. Tap + Add Recurring above to automate a bill or income." />}
     <div className="space-y-2">
       {recurring.map((r) => {
         const rMoney = MoneyValue.fromMinorUnits(r.amount, r.currency || currency);
@@ -682,7 +768,7 @@ const RecurringView: React.FC<{
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <h4 className="text-xs font-bold text-slate-900 truncate">{r.title}</h4>
-                    <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold ${badge.cls}`}>{badge.text}</span>
+                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${badge.cls}`}>{badge.text}</span>
                   </div>
                   <p className="text-[11px] font-medium text-slate-500">{r.frequency} • {r.type} • Next: {DateUtils.formatDisplayDate(r.nextOccurrence, { fullYear: true })}{auto && r.isActive ? ` • ${t('plans.autoBadge')}` : ''}</p>
                 </div>
@@ -697,7 +783,7 @@ const RecurringView: React.FC<{
                 >
                   {r.isActive ? t('plans.pauseBtn') : t('plans.resumeBtn')}
                 </button>
-                <button type="button" onClick={() => onEdit(r)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100" aria-label="Edit">
+                <button type="button" onClick={() => onEdit(r)} className="p-1.5 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100" aria-label="Edit">
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
                 <RowMenu
@@ -746,10 +832,10 @@ const RecurringView: React.FC<{
 
 const RowActions: React.FC<{ onEdit: () => void; onDelete: () => void }> = ({ onEdit, onDelete }) => (
   <div className="flex items-center gap-1 shrink-0">
-    <button type="button" onClick={onEdit} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100" aria-label="Edit">
+    <button type="button" onClick={onEdit} className="p-1.5 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100" aria-label="Edit">
       <Pencil className="h-3.5 w-3.5" />
     </button>
-    <button type="button" onClick={onDelete} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50" aria-label="Delete">
+    <button type="button" onClick={onDelete} className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50" aria-label="Delete">
       <Trash2 className="h-3.5 w-3.5" />
     </button>
   </div>
@@ -777,14 +863,18 @@ const RowMenu: React.FC<{
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={label}
-        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+        className="p-1.5 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
       >
         <MoreHorizontal className="h-4 w-4" />
       </button>
       {open && (
         <>
           <button type="button" aria-hidden tabIndex={-1} onClick={() => onOpen(null)} className="fixed inset-0 z-10 cursor-default" />
-          <div role="menu" className="absolute right-0 z-20 mt-1 w-40 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+          <div
+            role="menu"
+            onKeyDown={(e) => { if (e.key === 'Escape') onOpen(null); }}
+            className="absolute right-0 z-20 mt-1 w-40 rounded-xl border border-slate-200 bg-white p-1 shadow-lg"
+          >
             {items.map((item) => (
               <button
                 key={item.label}
@@ -810,7 +900,7 @@ const RowMenu: React.FC<{
 
 const EmptyHint: React.FC<{ text: string }> = ({ text }) => (
   <div className="rounded-2xl bg-white p-6 text-center border border-slate-200/80 shadow-xs">
-    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
+    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-500">
       <Wallet className="h-5 w-5" />
     </div>
     <p className="text-xs text-slate-500 mt-2 font-medium max-w-xs mx-auto">{text}</p>

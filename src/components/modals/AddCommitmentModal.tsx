@@ -131,7 +131,7 @@ export const AddCommitmentModal: React.FC<AddCommitmentModalProps> = ({
           />
           <span>
             <span className="block text-xs font-bold text-slate-700">{t('modal.autoPostTitle')}</span>
-            <span className="block text-[10px] font-medium text-slate-400">{t('modal.autoPostBillHint')}</span>
+            <span className="block text-[10px] font-medium text-slate-500">{t('modal.autoPostBillHint')}</span>
           </span>
         </label>
 

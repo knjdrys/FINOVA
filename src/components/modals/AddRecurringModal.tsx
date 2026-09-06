@@ -112,22 +112,27 @@ export const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
         <Field label={t('modal.startDate')}>
           <input value={startDate} onChange={(e) => setStartDate(e.target.value)} type="date" className={inputCls} />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label={t('modal.recEndOptional')}>
-            <input value={endDate} onChange={(e) => setEndDate(e.target.value)} type="date" className={inputCls} aria-label={t('modal.recEndOptional')} />
-          </Field>
-          {editingRecurring ? (
-            <Field label={t('modal.recNext')}>
-              <input value={nextOccurrence} onChange={(e) => setNextOccurrence(e.target.value)} type="date" className={inputCls} aria-label={t('modal.recNext')} />
+        <details className="rounded-xl border border-slate-200 bg-white px-3 py-2" open={Boolean(editingRecurring || endDate)}>
+          <summary className="cursor-pointer text-xs font-bold text-slate-500 hover:text-slate-800 select-none">
+            {t('modal.scheduleDetails')}
+          </summary>
+          <div className="grid grid-cols-2 gap-3 pt-3">
+            <Field label={t('modal.recEndOptional')}>
+              <input value={endDate} onChange={(e) => setEndDate(e.target.value)} type="date" className={inputCls} aria-label={t('modal.recEndOptional')} />
             </Field>
-          ) : (
-            <Field label={t('modal.recFirstCharge')}>
-              <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-600">
-                {startDate || '—'}
-              </div>
-            </Field>
-          )}
-        </div>
+            {editingRecurring ? (
+              <Field label={t('modal.recNext')}>
+                <input value={nextOccurrence} onChange={(e) => setNextOccurrence(e.target.value)} type="date" className={inputCls} aria-label={t('modal.recNext')} />
+              </Field>
+            ) : (
+              <Field label={t('modal.recFirstCharge')}>
+                <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-600">
+                  {startDate || '—'}
+                </div>
+              </Field>
+            )}
+          </div>
+        </details>
         <label className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 cursor-pointer">
           <input
             type="checkbox"
@@ -137,7 +142,7 @@ export const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
           />
           <span>
             <span className="block text-xs font-bold text-slate-700">{t('modal.autoPostTitle')}</span>
-            <span className="block text-[10px] font-medium text-slate-400">{t('modal.autoPostRecurHint')}</span>
+            <span className="block text-[10px] font-medium text-slate-500">{t('modal.autoPostRecurHint')}</span>
           </span>
         </label>
         <Field label={t('common.account')}>

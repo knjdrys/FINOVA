@@ -20,6 +20,7 @@ import { SafeToSpendEngine } from './domain/safe-to-spend/SafeToSpendEngine';
 import { RiskEngine } from './domain/risk/RiskEngine';
 import { TimelineEngine } from './domain/timeline/TimelineEngine';
 import { TransactionEngine } from './domain/transaction/TransactionEngine';
+import type { EntryMode } from './domain/entry/UnifiedEntry';
 import { GoalEngine } from './domain/goal/GoalEngine';
 import { FutureFinanceEngine } from './domain/future-finance/FutureFinanceEngine';
 import { NotificationEngine } from './domain/notification/NotificationEngine';
@@ -69,6 +70,7 @@ export function App() {
 
   // Modal & Tour Visibility States
   const [isAddTxOpen, setIsAddTxOpen] = useState(false);
+  const [quickAddMode, setQuickAddMode] = useState<EntryMode>('EXPENSE');
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [isSafeToSpendOpen, setIsSafeToSpendOpen] = useState(false);
   const [isWhatIfOpen, setIsWhatIfOpen] = useState(false);
@@ -89,6 +91,19 @@ export function App() {
   // Latest state snapshot for the queue flush (avoids stale closures).
   const stateRef = useRef(state);
   stateRef.current = state;
+  // Identity adoption: every auth transition (boot restore, guest entry, email/
+  // OAuth sign-in) must re-scope device storage to that user AND load their
+  // namespace. Setting identity without re-scoping silently writes the user's
+  // data into the boot ('none') namespace, which then "disappears" on reload.
+  const scopedAuthIdRef = useRef<string | null>(null);
+  const adoptAuthUser = (user: AuthUserProfile | null) => {
+    if (user?.id !== scopedAuthIdRef.current) {
+      scopedAuthIdRef.current = user?.id ?? null;
+      FinovaStorage.setScopeForUser(user);
+      setState(FinovaStorage.loadState());
+    }
+    setAuthUser(user);
+  };
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [canInstall, setCanInstall] = useState(false);
   const [updateReady, setUpdateReady] = useState(false);
@@ -102,16 +117,14 @@ export function App() {
     let isMounted = true;
     AuthService.getInitialSession().then(({ user }) => {
       if (isMounted) {
-        FinovaStorage.setScopeForUser(user);
-        setState(FinovaStorage.loadState());
-        setAuthUser(user);
+        adoptAuthUser(user);
         setIsAuthLoading(false);
       }
     });
 
     const { data } = AuthService.onAuthStateChange((_event, _session, user) => {
       if (isMounted) {
-        setAuthUser(user);
+        adoptAuthUser(user);
       }
     });
 
@@ -470,9 +483,19 @@ export function App() {
   };
 
   // ---- Plans handlers: atomic state mutations for budgets / goals / commitments / recurring ----
-
   const mutatePlans = (next: Partial<FinovaState>) => {
     setState((prev) => ({ ...prev, ...next }));
+  };
+
+  // Unified entry point for the ADD sheet (FAB, Home CTA, first-run checklist).
+  const openQuickAdd = (mode: EntryMode = 'EXPENSE') => {
+    setEditingTx(null);
+    setQuickAddMode(mode);
+    setIsAddTxOpen(true);
+  };
+
+  const dismissChecklist = () => {
+    setState((prev) => ({ ...prev, settings: { ...prev.settings, hasDismissedChecklist: true } }));
   };
 
   // Budget CRUD
@@ -757,9 +780,7 @@ export function App() {
     if (previousUser && !previousUser.isGuest) {
       FinovaStorage.wipeForUser(previousUser.id);
     }
-    FinovaStorage.setScopeForUser(null);
-    setState(FinovaStorage.loadState());
-    setAuthUser(null);
+    adoptAuthUser(null);
   };
 
   // Handler: Onboarding Completion
@@ -828,7 +849,7 @@ export function App() {
     return (
       <I18nProvider lang={settings.language || 'en'}>
         <DialogProvider>
-          <AuthScreen onAuthenticated={(user) => setAuthUser(user)} />
+          <AuthScreen onAuthenticated={(user) => adoptAuthUser(user)} />
         </DialogProvider>
       </I18nProvider>
     );
@@ -879,10 +900,14 @@ export function App() {
                 setCurrentTab('PLANS');
               }}
               onOpenSafeToSpendExplainer={() => setIsSafeToSpendOpen(true)}
-              onOpenQuickAdd={() => setIsAddTxOpen(true)}
+              onOpenQuickAdd={() => openQuickAdd('EXPENSE')}
               onSelectTransaction={(tx) => setSelectedTxForDetail(tx)}
               onMarkNotificationRead={handleMarkNotificationRead}
               onFundGoal={handleFundGoalFromHome}
+              onAddIncome={() => openQuickAdd('INCOME')}
+              onAddBudget={() => { setEditingBudget(null); setIsAddBudgetOpen(true); }}
+              onAddEmergencyFund={() => { setEditingGoal(null); setGoalPreset({ name: 'Emergency Fund' }); setIsAddGoalOpen(true); }}
+              onDismissChecklist={dismissChecklist}
             />
           )}
 
@@ -979,7 +1004,7 @@ export function App() {
       <BottomNavigation
         currentTab={currentTab}
         onSelectTab={setCurrentTab}
-        onOpenQuickAdd={() => setIsAddTxOpen(true)}
+        onOpenQuickAdd={() => openQuickAdd('EXPENSE')}
       />
 
       {/* LIVE APP TOUR OVERLAY (ANIMATED SPOTLIGHT POINTER) */}
@@ -1002,7 +1027,7 @@ export function App() {
       {/* 2. Fast Add / Edit Transaction */}
       <AddTransactionModal
         isOpen={isAddTxOpen}
-        onClose={() => { setIsAddTxOpen(false); setEditingTx(null); }}
+        onClose={() => { setIsAddTxOpen(false); setEditingTx(null); setQuickAddMode('EXPENSE'); }}
         onSave={handleSaveTransaction}
         onSaveCommitment={handleAddCommitment}
         onSaveRecurring={handleAddRecurring}
@@ -1010,6 +1035,7 @@ export function App() {
         categories={categories}
         currency={currency}
         editingTx={editingTx}
+        initialMode={quickAddMode}
       />
 
       {/* 3. Safe-to-Spend Explainer */}

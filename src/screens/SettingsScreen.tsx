@@ -207,7 +207,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                   <span>Supabase PostgreSQL Synced</span>
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 text-slate-400 font-medium">
+                <span className="inline-flex items-center gap-1 text-slate-500 font-medium">
                   <CloudOff className="h-3 w-3" />
                   <span>Local Offline Session</span>
                 </span>
@@ -472,7 +472,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                   </div>
                   <div className="min-w-0">
                     <h5 className="truncate text-xs font-black text-slate-900">{acc.name}</h5>
-                    <p className="text-[10px] font-semibold text-slate-400">
+                    <p className="text-[10px] font-semibold text-slate-500">
                       {acc.type.replace('_', ' ')} {acc.accountNumberMask ? `• ${acc.accountNumberMask}` : ''}
                     </p>
                   </div>
@@ -490,7 +490,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                           onDeleteAccount(acc.id);
                         }
                       }}
-                      className="text-[11px] font-bold text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                      className="text-[11px] font-bold text-slate-500 hover:text-rose-600 transition-colors cursor-pointer"
                     >
                       Delete
                     </button>
@@ -641,7 +641,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 <span>{t('notifSet.os')}</span>
                 {notifPrefs.osNotifications ? <Check className="h-3.5 w-3.5 text-emerald-700 shrink-0" /> : <span className="h-3.5 w-3.5 shrink-0" />}
               </button>
-              <p className="text-[10px] sm:text-[11px] leading-snug text-slate-400">
+              <p className="text-[10px] sm:text-[11px] leading-snug text-slate-500">
                 {!osNotifySupported()
                   ? t('notifSet.osUnsupported')
                   : osPerm === 'denied'
@@ -750,7 +750,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 <option value={300000}>{t('security.autoLock5m')}</option>
               </select>
             </label>
-            <p className="text-[10px] sm:text-[11px] leading-snug text-slate-400">{t('security.honestNote')}</p>
+            <p className="text-[10px] sm:text-[11px] leading-snug text-slate-500">{t('security.honestNote')}</p>
           </>
         )}
       </div>
@@ -833,7 +833,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         </div>
 
         <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 focus-within:border-emerald-600">
-          <span className="text-xs font-bold text-slate-400">{currentSymbol}</span>
+          <span className="text-xs font-bold text-slate-500">{currentSymbol}</span>
           <input
             type="number"
             min="0"

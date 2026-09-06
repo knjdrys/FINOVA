@@ -157,7 +157,7 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">Current Balance</label>
             <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 focus-within:border-emerald-600">
-              <span className="text-xs font-bold text-slate-400">{currencySymbol}</span>
+              <span className="text-xs font-bold text-slate-500">{currencySymbol}</span>
               <input
                 type="number"
                 step="any"

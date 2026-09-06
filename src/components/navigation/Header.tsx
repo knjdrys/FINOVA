@@ -207,7 +207,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-extrabold text-slate-800 shadow-xs border border-slate-200/80 hover:bg-slate-50 transition-colors">
               <Globe className="h-3.5 w-3.5 text-emerald-700 shrink-0" />
               <span>{settings.currency}</span>
-              <ChevronDown className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              <ChevronDown className="h-3.5 w-3.5 text-slate-500 shrink-0" />
             </div>
           </div>
 
@@ -229,7 +229,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-800 shadow-xs border border-slate-200/80 hover:bg-slate-50 transition-colors">
               <UserIcon className="h-3.5 w-3.5 text-slate-600 shrink-0" />
               <span className="truncate max-w-[90px] sm:max-w-[140px]">{accountLabel}</span>
-              <ChevronDown className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              <ChevronDown className="h-3.5 w-3.5 text-slate-500 shrink-0" />
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Account, Category, Transaction, TransactionType, UserSettings } from '../types';
 import { WaveCard } from '../components/ui/WaveCard';
 import { FilterChips } from '../components/ui/FilterChips';
@@ -52,6 +52,8 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
   const [maxStr, setMaxStr] = useState('');
   const [sortBy, setSortBy] = useState<SortFilter>('NEWEST');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  // Long-list guard: render day groups up to this many rows, then offer more.
+  const [visibleLimit, setVisibleLimit] = useState(120);
 
   const categoryMap = new Map(categories.map((c) => [c.id, c]));
   const accountMap = new Map(accounts.map((a) => [a.id, a]));
@@ -106,7 +108,9 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
   };
 
   // Adaptive summary — honest about what the current view contains.
-  const expenseMinor = filtered.filter((t) => t.type === 'EXPENSE').reduce((s, t) => s + t.amount, 0);
+  // Goal-funding reservations are excluded: they are savings, not spending.
+  const isSpend = (t: Transaction) => t.type === 'EXPENSE' && !TransactionEngine.isGoalFunding(t);
+  const expenseMinor = filtered.filter(isSpend).reduce((s, t) => s + t.amount, 0);
   const incomeMinor = filtered.filter((t) => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0);
   const transferMinor = filtered.filter((t) => t.type === 'TRANSFER').reduce((s, t) => s + t.amount, 0);
   const summary =
@@ -120,11 +124,12 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
   const summaryMoney = MoneyValue.fromMinorUnits(Math.abs(summary.amount), currency);
 
   // Group filtered transactions by date (day header shows the day's net flow).
+  // Funding reservations don't move the net: they are savings, not spending.
   const groupedDatesMap = new Map<string, { transactions: Transaction[]; net: number }>();
   for (const tx of filtered) {
     const existing = groupedDatesMap.get(tx.date) || { transactions: [], net: 0 };
     existing.transactions.push(tx);
-    if (tx.type === 'EXPENSE') existing.net -= tx.amount;
+    if (tx.type === 'EXPENSE' && !TransactionEngine.isGoalFunding(tx)) existing.net -= tx.amount;
     if (tx.type === 'INCOME') existing.net += tx.amount;
     groupedDatesMap.set(tx.date, existing);
   }
@@ -132,6 +137,19 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
     sortBy === 'NEWEST' || sortBy === 'OLDEST'
       ? Array.from(groupedDatesMap.keys()).sort((a, b) => (sortBy === 'NEWEST' ? b.localeCompare(a) : a.localeCompare(b)))
       : Array.from(groupedDatesMap.keys());
+
+  // Reset the render cap whenever the result set changes.
+  useEffect(() => {
+    setVisibleLimit(120);
+  }, [searchQuery, typeFilter, period, selectedCategoryId, accountId, minStr, maxStr, sortBy, customStart, customEnd, transactions.length]);
+
+  let renderedRows = 0;
+  const visibleDates = sortedDates.filter((dateStr) => {
+    if (renderedRows >= visibleLimit) return false;
+    renderedRows += groupedDatesMap.get(dateStr)!.transactions.length;
+    return true;
+  });
+  const hiddenRows = filtered.length - Math.min(filtered.length, renderedRows);
 
   const handleExport = () => {
     if (filtered.length === 0) {
@@ -258,7 +276,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
           <SlidersHorizontal className="h-3.5 w-3.5" />
           {t('tx.filters')}
           {activeFilterCount > 0 && (
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-700 text-[9px] font-black text-white">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-700 text-[10px] font-black text-white">
               {activeFilterCount}
             </span>
           )}
@@ -270,7 +288,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
         <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs">
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">{t('tx.filterAccount')}</label>
+              <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">{t('tx.filterAccount')}</label>
               <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className={selectCls + ' w-full'} aria-label={t('tx.filterAccount')}>
                 <option value="ALL">{t('tx.allAccounts')}</option>
                 {accounts.map((a) => (
@@ -279,7 +297,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
               </select>
             </div>
             <div>
-              <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">{t('tx.amount')}</label>
+              <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">{t('tx.amount')}</label>
               <div className="flex items-center gap-1.5">
                 <input
                   type="number" min="0" placeholder={`${t('tx.filterMin')} ${currencySymbol}`} value={minStr}
@@ -297,11 +315,11 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
           {period === 'CUSTOM' && (
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">{t('tx.filterFrom')}</label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">{t('tx.filterFrom')}</label>
                 <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className={selectCls + ' w-full'} aria-label={t('tx.filterFrom')} />
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">{t('tx.filterTo')}</label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">{t('tx.filterTo')}</label>
                 <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className={selectCls + ' w-full'} aria-label={t('tx.filterTo')} />
               </div>
             </div>
@@ -329,14 +347,14 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
 
       {/* Search Input */}
       <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
         <input
           type="text"
           placeholder={t('tx.searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           aria-label={t('tx.searchPlaceholder')}
-          className="w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-800 placeholder:text-slate-400 outline-none focus:border-emerald-600 shadow-xs"
+          className="w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-800 placeholder:text-slate-500 outline-none focus:border-emerald-600 shadow-xs"
         />
       </div>
 
@@ -344,7 +362,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
       <div className="space-y-4 pt-1">
         {filtered.length === 0 ? (
           <div className="rounded-[28px] bg-white p-6 text-center border border-slate-200/80 shadow-xs space-y-2">
-            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
               <Search className="h-5 w-5" />
             </div>
             <h4 className="text-xs sm:text-sm font-black text-slate-900">
@@ -366,7 +384,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
             )}
           </div>
         ) : (
-          sortedDates.map((dateStr) => {
+          visibleDates.map((dateStr) => {
             const group = groupedDatesMap.get(dateStr)!;
             const dayAbbr = DateUtils.getDayAbbreviation(dateStr);
             const dateDisplay = DateUtils.formatDisplayDate(dateStr, { fullYear: true });
@@ -386,7 +404,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
                   </div>
                   <span
                     className={`text-xs sm:text-sm font-black ${
-                      group.net > 0 ? 'text-emerald-700' : group.net < 0 ? 'text-slate-900' : 'text-slate-400'
+                      group.net > 0 ? 'text-emerald-700' : group.net < 0 ? 'text-slate-900' : 'text-slate-500'
                     }`}
                   >
                     {group.net > 0 ? `+${dayNetMoney.format()}` : group.net < 0 ? `-${dayNetMoney.format()}` : dayNetMoney.format()}
@@ -412,6 +430,15 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
               </div>
             );
           })
+        )}
+        {hiddenRows > 0 && (
+          <button
+            type="button"
+            onClick={() => setVisibleLimit((v) => v + 200)}
+            className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-slate-600 hover:border-emerald-300 hover:text-emerald-700 transition-colors cursor-pointer"
+          >
+            {t('tx.showMore', { count: hiddenRows })}
+          </button>
         )}
       </div>
     </div>

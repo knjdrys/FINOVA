@@ -43,6 +43,8 @@ interface AddTransactionModalProps {
   currency: CurrencyCode;
   /** When set, the modal edits this transaction instead of creating one. */
   editingTx?: Transaction | null;
+  /** Opening mode for creates (FAB defaults to EXPENSE; checklist can open Income). */
+  initialMode?: EntryMode;
 }
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -76,6 +78,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   categories,
   currency = 'PHP',
   editingTx = null,
+  initialMode = 'EXPENSE',
 }) => {
   const [type, setType] = useState<EntryMode>('EXPENSE');
   const [amountStr, setAmountStr] = useState('');
@@ -136,9 +139,15 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       setReceiptSuggestion(null);
       setReceiptReviewDone(false);
     } else {
-      setType('EXPENSE');
+      // Creates only here (edits hydrate above): open in the requested mode.
+      const openMode = initialMode;
+      setType(openMode);
       setAmountStr('');
-      setCategoryId(categories[0]?.id || 'cat-food');
+      setCategoryId(
+        openMode === 'INCOME'
+          ? categories.find((c) => c.id === 'cat-salary')?.id || categories[0]?.id || 'cat-food'
+          : categories[0]?.id || 'cat-food'
+      );
       setAccountId(accounts[0]?.id || '');
       setDestinationAccountId(accounts[1]?.id || accounts[0]?.id || '');
       setMerchant('');
@@ -499,7 +508,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 </select>
               </div>
             </div>
-            <p className="text-[10px] font-medium text-slate-400">
+            <p className="text-[10px] font-medium text-slate-500">
               Transfers move money between accounts — they never count as income or expense.
             </p>
           </div>
@@ -558,8 +567,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           </div>
         )}
 
-        {/* Category Picker / Split Editor (Expense + Planned; split is Expense-only) */}
-        {(type === 'EXPENSE' || type === 'PLANNED') && (
+        {/* Category Picker / Split Editor (Expense + Planned + Income; split is Expense-only) */}
+        {(type === 'EXPENSE' || type === 'PLANNED' || type === 'INCOME') && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-700">Category</label>
@@ -628,7 +637,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                       ))}
                     </select>
                     <div className="flex w-28 items-center gap-1 rounded-xl border border-slate-200 bg-white px-2">
-                      <span className="text-[11px] font-bold text-slate-400">{currencySymbol}</span>
+                      <span className="text-[11px] font-bold text-slate-500">{currencySymbol}</span>
                       <input
                         type="number"
                         step="any"
@@ -645,7 +654,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                       onClick={() => removeRow(idx)}
                       disabled={splitRows.length <= 2}
                       aria-label={`Remove split ${idx + 1}`}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -689,10 +698,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         )}
 
         {/* Optional details — collapsed so the fast path is amount → category → account → save. */}
-        {type !== 'TRANSFER' && (
         <details className="rounded-xl border border-slate-200 bg-white px-3 py-2">
           <summary className="cursor-pointer text-xs font-bold text-slate-500 hover:text-slate-800 select-none">
-            {t('modal.detailsSummary')} <span className="font-medium text-slate-400">{t('modal.detailsHint')}</span>
+            {t('modal.detailsSummary')} <span className="font-medium text-slate-500">{t('modal.detailsHint')}</span>
           </summary>
           <div className="space-y-3 pt-3">
         {/* Merchant & Notes */}
@@ -732,7 +740,6 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         </div>
           </div>
         </details>
-        )}
 
         {/* Receipt attachment (actuals only — a planned purchase has no receipt yet) */}
         {type !== 'PLANNED' && (
@@ -743,7 +750,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               <img src={receiptDataUrl} alt="Attached receipt" className="h-14 w-14 rounded-lg object-cover border border-slate-200" />
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-slate-700 truncate">Receipt attached</p>
-                <p className="text-[10px] font-medium text-slate-400">
+                <p className="text-[10px] font-medium text-slate-500">
                   ~{Math.round(ReceiptService.sizeOf(receiptDataUrl) / 1024)} KB · stored with this transaction
                 </p>
               </div>
@@ -755,7 +762,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                   setReceiptReviewDone(false);
                 }}
                 aria-label="Remove receipt"
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
               >
                 <Trash2 className="h-4 w-4" />
               </button>

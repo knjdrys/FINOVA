@@ -108,7 +108,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
               <span className="text-[11px] font-black text-emerald-900 uppercase">
                 Daily Safe Limit
               </span>
-              <span className="rounded-full bg-[#D4F63D] text-[#122A1E] px-1.5 py-0.2 text-[9px] font-black">
+              <span className="rounded-full bg-[#D4F63D] text-[#122A1E] px-1.5 py-0.2 text-[10px] font-black">
                 Safe to Spend
               </span>
             </div>
@@ -148,7 +148,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
             <span className="text-[10px] font-black uppercase text-emerald-300">
               1st Pay Period (1st - 15th)
             </span>
-            <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[9px] font-black text-[#D4F63D] border border-emerald-300/30">
+            <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[10px] font-black text-[#D4F63D] border border-emerald-300/30">
               13 Days Left
             </span>
           </div>
@@ -191,7 +191,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
               </div>
               <div>
                 <span className="text-xs font-black text-slate-900 block">Guagua Rural Bank, Inc.</span>
-                <span className="text-[10px] text-slate-400 font-semibold">Bank • •••• 5678</span>
+                <span className="text-[10px] text-slate-500 font-semibold">Bank • •••• 5678</span>
               </div>
             </div>
             <span className="text-xs font-black text-slate-900">{sym}45,000.00</span>
@@ -203,7 +203,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
               </div>
               <div>
                 <span className="text-xs font-black text-slate-900 block">GCash Wallet</span>
-                <span className="text-[10px] text-slate-400 font-semibold">E-Wallet • •••• 0917</span>
+                <span className="text-[10px] text-slate-500 font-semibold">E-Wallet • •••• 0917</span>
               </div>
             </div>
             <span className="text-xs font-black text-slate-900">{sym}11,180.00</span>
@@ -269,7 +269,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
             <span className="text-[10px] font-black uppercase text-purple-800">
               Test: New Laptop ({sym}45,000)
             </span>
-            <span className="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[9px] font-black">
+            <span className="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] font-black">
               VERDICT: SAFE
             </span>
           </div>

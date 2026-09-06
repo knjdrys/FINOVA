@@ -233,6 +233,13 @@ describe('NotificationEngine — events', () => {
     expect(done.filter((n) => n.kind === 'GOAL_ALERT')).toHaveLength(0);
   });
 
+  it('goal created today gets a one-day grace period before risk alerts', () => {
+    const fresh = feed({ goals: [goal({ createdAt: TODAY })] });
+    expect(fresh.filter((n) => n.kind === 'GOAL_ALERT')).toHaveLength(0);
+    const aged = feed({ goals: [goal({ createdAt: '2026-09-04', currentAmount: 0, targetDate: '2026-09-30' })] });
+    expect(aged.some((n) => n.kind === 'GOAL_ALERT')).toBe(true);
+  });
+
   it('cash-flow risk maps CRITICAL to HIGH severity', () => {
     const out = feed({ risks: [risk()] });
     expect(out[0].kind).toBe('CASHFLOW_RISK');

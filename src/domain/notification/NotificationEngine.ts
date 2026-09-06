@@ -245,10 +245,12 @@ export class NotificationEngine {
       }
     }
 
-    // 5. Goal pace risk.
+    // 5. Goal pace risk. A goal created today gets a one-day grace period: flagging
+    // a goal "at risk" minutes after the user set it up is noise, not signal.
     if (prefs.goalRisk) {
       for (const g of goals) {
         if (g.isArchived || g.status === 'COMPLETED') continue;
+        if (g.createdAt && g.createdAt >= todayISO) continue;
         const insight = GoalEngine.getGoalInsight(g, todayISO);
         if (insight.risk === 'NONE') continue;
         const severity: NotificationSeverity = insight.risk === 'HIGH' ? 'MEDIUM' : 'LOW';

@@ -103,7 +103,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   return (
     <div
       onClick={() => onClick?.(transaction)}
-      className="group relative flex items-center justify-between rounded-[22px] bg-white p-3.5 shadow-xs border border-slate-100/80 transition-all duration-150 hover:shadow-md hover:border-emerald-200/60 active:scale-[0.99] cursor-pointer"
+      className="group relative flex items-center justify-between rounded-3xl bg-white p-3.5 shadow-xs border border-slate-100/80 transition-all duration-150 hover:shadow-md hover:border-emerald-200/60 active:scale-[0.99] cursor-pointer"
     >
       <div className="flex items-center gap-3.5 min-w-0 flex-1">
         {/* Rounded Icon Box with emoji or icon */}
@@ -125,13 +125,13 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
               {titleText}
             </h4>
             {isTransfer && (
-              <span className="shrink-0 rounded bg-blue-50 px-1 py-0.5 text-[9px] font-bold text-blue-700">
+              <span className="shrink-0 rounded bg-blue-50 px-1 py-0.5 text-[10px] font-bold text-blue-700">
                 {t('tx.transfer')}
               </span>
             )}
             {splitCount > 0 && (
               <span
-                className="shrink-0 flex items-center gap-0.5 rounded bg-violet-50 px-1 py-0.5 text-[9px] font-bold text-violet-700"
+                className="shrink-0 flex items-center gap-0.5 rounded bg-violet-50 px-1 py-0.5 text-[10px] font-bold text-violet-700"
                 title={t('tx.splitAcross', { count: splitCount })}
               >
                 <Scissors className="h-2.5 w-2.5" aria-hidden="true" />
@@ -140,17 +140,17 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
             )}
             {hasReceipt && (
               <span
-                className="shrink-0 flex items-center rounded bg-slate-100 px-1 py-0.5 text-[9px] font-bold text-slate-600"
+                className="shrink-0 flex items-center rounded bg-slate-100 px-1 py-0.5 text-[10px] font-bold text-slate-600"
                 title={t('tx.receiptAttached')}
               >
                 <Paperclip className="h-2.5 w-2.5" aria-label={t('tx.receiptAttached')} />
               </span>
             )}
           </div>
-          <p className="truncate text-xs font-semibold text-slate-400 mt-0.2">
+          <p className="truncate text-xs font-semibold text-slate-500 mt-0.2">
             {subtitleText}
           </p>
-          <p className="truncate text-[10px] font-medium text-slate-400 mt-0.5">
+          <p className="truncate text-[10px] font-medium text-slate-500 mt-0.5">
             {noteSubline}
           </p>
         </div>

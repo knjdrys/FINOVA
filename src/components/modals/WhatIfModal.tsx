@@ -117,7 +117,7 @@ export const WhatIfModal: React.FC<WhatIfModalProps> = ({
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">Cost / Amount</label>
             <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 focus-within:border-emerald-600">
-              <span className="text-xs font-bold text-slate-400">{currencySymbol}</span>
+              <span className="text-xs font-bold text-slate-500">{currencySymbol}</span>
               <input
                 type="number"
                 value={amountStr}
@@ -164,7 +164,7 @@ export const WhatIfModal: React.FC<WhatIfModalProps> = ({
           {/* Verdict Badge & Summary */}
           <div className="flex items-start justify-between gap-3">
             <div>
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
                 Result
               </span>
               <p className="text-sm font-bold text-slate-900 mt-0.5">
@@ -196,10 +196,10 @@ export const WhatIfModal: React.FC<WhatIfModalProps> = ({
                 Daily Safe Limit
               </span>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-slate-400 line-through font-semibold">
+                <span className="text-xs text-slate-500 line-through font-semibold">
                   {MoneyValue.fromMinorUnits(simulationResult.baseSafeToSpendDaily, currency).format()}
                 </span>
-                <ArrowRight className="h-3 w-3 text-slate-400" />
+                <ArrowRight className="h-3 w-3 text-slate-500" />
                 <span className="text-sm font-extrabold text-slate-900">
                   {MoneyValue.fromMinorUnits(simulationResult.simulatedSafeToSpendDaily, currency).format()}
                 </span>
@@ -212,10 +212,10 @@ export const WhatIfModal: React.FC<WhatIfModalProps> = ({
                 Estimated Money Left at Month End
               </span>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-slate-400 line-through font-semibold">
+                <span className="text-xs text-slate-500 line-through font-semibold">
                   {MoneyValue.fromMinorUnits(simulationResult.baseMonthEndProjectedBalance, currency).format()}
                 </span>
-                <ArrowRight className="h-3 w-3 text-slate-400" />
+                <ArrowRight className="h-3 w-3 text-slate-500" />
                 <span className="text-sm font-extrabold text-slate-900">
                   {MoneyValue.fromMinorUnits(simulationResult.simulatedMonthEndProjectedBalance, currency).format()}
                 </span>

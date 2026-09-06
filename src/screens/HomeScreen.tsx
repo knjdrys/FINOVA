@@ -21,7 +21,7 @@ import { MoneyValue } from '../domain/money/MoneyValue';
 import { TransactionEngine } from '../domain/transaction/TransactionEngine';
 import { PlanningService } from '../services/planning/PlanningService';
 import { BudgetProgressCard, FundGoalModal, GoalProgressCard, PlanDetailModal } from '../components/planning/PlanningWidgets';
-import { ShieldCheck, ChevronRight, Calendar, Plus, Sparkles, Bell } from 'lucide-react';
+import { ShieldCheck, ChevronRight, Calendar, Plus, Sparkles, Bell, Check, X } from 'lucide-react';
 import { useI18n } from '../i18n';
 
 interface HomeScreenProps {
@@ -38,6 +38,10 @@ interface HomeScreenProps {
   onOpenPlansSection: (section: PlansSection) => void;
   onOpenSafeToSpendExplainer: () => void;
   onOpenQuickAdd: () => void;
+  onAddIncome: () => void;
+  onAddBudget: () => void;
+  onAddEmergencyFund: () => void;
+  onDismissChecklist: () => void;
   onSelectTransaction: (tx: Transaction) => void;
   onMarkNotificationRead: (id: string) => void;
   onFundGoal: (goalId: string, amountMinor: number) => void;
@@ -59,6 +63,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenPlansSection,
   onOpenSafeToSpendExplainer,
   onOpenQuickAdd,
+  onAddIncome,
+  onAddBudget,
+  onAddEmergencyFund,
+  onDismissChecklist,
   onSelectTransaction,
   onMarkNotificationRead,
   onFundGoal,
@@ -157,6 +165,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const sortedDates = Array.from(groupedTxMap.keys()).sort((a, b) => b.localeCompare(a));
   const hasTransactions = transactions.length > 0;
 
+  // First-run checklist: three guided wins (income → budget → emergency fund).
+  // Retires itself once all are done or the user dismisses it — never nags.
+  const hasIncome = transactions.some((tx) => tx.type === 'INCOME');
+  const hasBudget = budgets.length > 0;
+  const hasGoal = goals.some((g) => !g.isArchived);
+  const showChecklist =
+    !settings.hasDismissedChecklist && !(hasIncome && hasBudget && hasGoal);
+  const checklistItems = [
+    { key: 'income', label: t('home.checkIncome'), done: hasIncome, action: onAddIncome },
+    { key: 'budget', label: t('home.checkBudget'), done: hasBudget, action: onAddBudget },
+    { key: 'ef', label: t('home.checkEmergencyFund'), done: hasGoal, action: onAddEmergencyFund },
+  ];
+
   return (
     <div className="space-y-4 sm:space-y-5 pb-6">
       {/* 1. Time Filter Segmented Control */}
@@ -197,27 +218,37 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         />
       )}
 
-      {/* Safe-to-Spend Informational Bar */}
+      {/* Safe-to-Spend Informational Bar — turns rose in deficit, never green-lights overspending */}
       <div
         data-tour="safe-to-spend"
         onClick={onOpenSafeToSpendExplainer}
-        className="group flex items-center justify-between rounded-2xl bg-white p-3.5 sm:p-4 shadow-xs border border-emerald-100 hover:border-emerald-300 transition-all cursor-pointer"
+        className={`group flex items-center justify-between rounded-2xl bg-white p-3.5 sm:p-4 shadow-xs border transition-all cursor-pointer ${
+          safeToSpend.isDeficit ? 'border-rose-200 hover:border-rose-300' : 'border-emerald-100 hover:border-emerald-300'
+        }`}
       >
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 shadow-xs">
+          <div className={`flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-2xl shadow-xs ${
+            safeToSpend.isDeficit ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'
+          }`}>
             {is15DayMode ? <Calendar className="h-5 w-5 sm:h-6 sm:w-6" /> : <ShieldCheck className="h-5 w-5 sm:h-6 sm:w-6" />}
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-emerald-800">
+              <span className={`text-[10px] sm:text-xs font-black uppercase tracking-wider ${
+                safeToSpend.isDeficit ? 'text-rose-800' : 'text-emerald-800'
+              }`}>
                 {t('home.safeToSpend')}
               </span>
-              {is15DayMode ? (
-                <span className="rounded-full bg-emerald-100 text-emerald-900 border border-emerald-200 px-1.5 py-0.2 text-[9px] font-black">
+              {safeToSpend.isDeficit ? (
+                <span className="rounded-full bg-rose-100 text-rose-900 border border-rose-200 px-1.5 py-0.2 text-[10px] font-black">
+                  {t('home.overCommitted')}
+                </span>
+              ) : is15DayMode ? (
+                <span className="rounded-full bg-emerald-100 text-emerald-900 border border-emerald-200 px-1.5 py-0.2 text-[10px] font-black">
                   {t('home.fifteenDayCycle')}
                 </span>
               ) : (
-                <span className="rounded-full bg-[#E5FA82] px-1.5 py-0.2 text-[9px] font-black text-[#122A1E]">
+                <span className="rounded-full bg-[#E5FA82] px-1.5 py-0.2 text-[10px] font-black text-[#122A1E]">
                   {t('home.protected')}
                 </span>
               )}
@@ -227,6 +258,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 {MoneyValue.fromMinorUnits(safeToSpend.dailySafeToSpend, currency).format()}
               </span>
               {t('home.perDayRemaining', { days: safeToSpend.remainingDaysInPeriod })}
+              {(safeToSpend.essentialUpcomingCommitments > 0 || safeToSpend.reservedGoalContributions > 0) && (
+                <span className="block truncate text-[10px] sm:text-[11px] font-medium text-slate-500">
+                  {t('home.stsPreview', {
+                    bills: MoneyValue.fromMinorUnits(safeToSpend.essentialUpcomingCommitments, currency).format(),
+                    goals: MoneyValue.fromMinorUnits(safeToSpend.reservedGoalContributions, currency).format(),
+                  })}
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -290,7 +329,52 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {/* 3. Transaction Timeline Section */}
       <div className="space-y-4 pt-1">
-        {!hasTransactions ? (
+        {showChecklist ? (
+          /* First-run checklist: 3 guided wins, then it retires itself. */
+          <div className="rounded-[28px] bg-white p-5 text-center border border-slate-200/80 shadow-xs space-y-3">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h4 className="text-sm sm:text-base font-black text-slate-900">
+                  {t('home.checklistTitle')}
+                </h4>
+                <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                  {t('home.checklistDone', { done: checklistItems.filter((i) => i.done).length })}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onDismissChecklist}
+                aria-label={t('home.checklistDismiss')}
+                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="space-y-2 text-left">
+              {checklistItems.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={item.action}
+                  className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-colors cursor-pointer ${
+                    item.done
+                      ? 'border-emerald-200 bg-emerald-50/60'
+                      : 'border-slate-200 bg-white hover:border-emerald-300'
+                  }`}
+                >
+                  <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
+                    item.done ? 'bg-emerald-600 text-white' : 'border border-slate-300 text-transparent'
+                  }`}>
+                    <Check className="h-3.5 w-3.5" />
+                  </span>
+                  <span className={`text-xs font-bold ${item.done ? 'text-slate-500 line-through' : 'text-slate-800'}`}>
+                    {item.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : !hasTransactions ? (
           /* Clean Zero-State Card when starting fresh */
           <div className="rounded-[28px] bg-white p-6 text-center border border-slate-200/80 shadow-xs space-y-3">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800">
@@ -323,7 +407,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <button
                 type="button"
                 onClick={() => onNavigateToTab('ALL_EXPENSES')}
-                className="text-xs sm:text-sm font-bold text-slate-400 hover:text-slate-800 transition-colors cursor-pointer"
+                className="text-xs sm:text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
               >
                 {t('home.seeAllCount', { count: transactions.length })}
               </button>
@@ -465,7 +549,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ notifications, 
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onMarkRead(n.id); }}
-                className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-slate-400 hover:bg-white/70 hover:text-slate-600 transition-colors"
+                className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-slate-500 hover:bg-white/70 hover:text-slate-600 transition-colors"
                 aria-label={t('home.markRead')}
               >
                 ✓

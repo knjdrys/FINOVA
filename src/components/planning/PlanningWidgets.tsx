@@ -130,7 +130,7 @@ export const GoalProgressCard: React.FC<{
       <ProgressBar pct={pct} tone={barTone} label={`${goal.name} saved`} />
       <div className="flex items-center justify-between gap-2 text-xs">
         <span className="truncate font-semibold text-slate-600">
-          {fmt(goal.currentAmount, currency)} <span className="text-slate-400">/ {fmt(goal.targetAmount, currency)}</span>
+          {fmt(goal.currentAmount, currency)} <span className="text-slate-500">/ {fmt(goal.targetAmount, currency)}</span>
         </span>
         <button
           type="button"
@@ -288,9 +288,9 @@ export const FundGoalModal: React.FC<{
       </div>
 
       <label className="block">
-        <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-400">{t('common.amount')}</span>
+        <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">{t('common.amount')}</span>
         <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 px-3 focus-within:border-violet-400 focus-within:ring-2 focus-within:ring-violet-100">
-          <span className="text-sm font-bold text-slate-400">{MoneyValue.fromMinorUnits(0, currency).getCurrencySymbol()}</span>
+          <span className="text-sm font-bold text-slate-500">{MoneyValue.fromMinorUnits(0, currency).getCurrencySymbol()}</span>
           <input
             type="number"
             inputMode="decimal"
@@ -339,7 +339,7 @@ export const FundGoalModal: React.FC<{
         <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
         {t('plans.addContribution')}
       </button>
-      <p className="text-center text-[11px] text-slate-400">
+      <p className="text-center text-[11px] text-slate-500">
         {t('plans.fundCapHint')}
       </p>
     </Modal>

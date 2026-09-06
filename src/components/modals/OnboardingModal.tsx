@@ -206,7 +206,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
                 {t('onboard.startingBalanceLabel')}
               </label>
               <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 focus-within:border-emerald-600">
-                <span className="text-sm font-black text-slate-400">{currencySymbol}</span>
+                <span className="text-sm font-black text-slate-500">{currencySymbol}</span>
                 <input
                   type="number"
                   step="any"

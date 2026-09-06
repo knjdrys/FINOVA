@@ -25,7 +25,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             type="button"
             onClick={() => onSelectTab('HOME')}
             className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-              currentTab === 'HOME' ? 'text-slate-900 scale-105' : 'text-slate-400 hover:text-slate-600'
+              currentTab === 'HOME' ? 'text-slate-900 scale-105' : 'text-slate-500 hover:text-slate-600'
             }`}
           >
             <Home className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
@@ -42,7 +42,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             type="button"
             onClick={() => onSelectTab('ALL_EXPENSES')}
             className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-              currentTab === 'ALL_EXPENSES' ? 'text-slate-900 scale-105' : 'text-slate-400 hover:text-slate-600'
+              currentTab === 'ALL_EXPENSES' ? 'text-slate-900 scale-105' : 'text-slate-500 hover:text-slate-600'
             }`}
           >
             <ListOrdered className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
@@ -59,7 +59,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             type="button"
             onClick={() => onSelectTab('PLANS')}
             className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-              currentTab === 'PLANS' ? 'text-slate-900 scale-105' : 'text-slate-400 hover:text-slate-600'
+              currentTab === 'PLANS' ? 'text-slate-900 scale-105' : 'text-slate-500 hover:text-slate-600'
             }`}
           >
             <CalendarDays className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
@@ -90,7 +90,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             type="button"
             onClick={() => onSelectTab('ANALYTICS')}
             className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-              currentTab === 'ANALYTICS' ? 'text-slate-900 scale-105' : 'text-slate-400 hover:text-slate-600'
+              currentTab === 'ANALYTICS' ? 'text-slate-900 scale-105' : 'text-slate-500 hover:text-slate-600'
             }`}
           >
             <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
@@ -107,7 +107,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             type="button"
             onClick={() => onSelectTab('SETTINGS')}
             className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-              currentTab === 'SETTINGS' ? 'text-slate-900 scale-105' : 'text-slate-400 hover:text-slate-600'
+              currentTab === 'SETTINGS' ? 'text-slate-900 scale-105' : 'text-slate-500 hover:text-slate-600'
             }`}
           >
             <Settings className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
