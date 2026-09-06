@@ -23,6 +23,7 @@ import { PlanningService } from '../services/planning/PlanningService';
 import { BudgetProgressCard, FundGoalModal, GoalProgressCard, PlanDetailModal } from '../components/planning/PlanningWidgets';
 import { ShieldCheck, ChevronRight, Calendar, Plus, Sparkles, Bell, Check, X } from 'lucide-react';
 import { useI18n } from '../i18n';
+import { AnimatedMoney } from '../components/motion/AnimatedMoney';
 
 interface HomeScreenProps {
   accounts: Account[];
@@ -264,7 +265,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </div>
             <p className="truncate text-xs sm:text-sm font-semibold text-(--ink-2) mt-0.5">
               <span className="text-sm sm:text-base font-black text-(--ink)">
-                {MoneyValue.fromMinorUnits(safeToSpend.dailySafeToSpend, currency).format()}
+                {/* AnimatedMoney: number tweens on success, respects reduced-motion */}
+                <AnimatedMoney minor={safeToSpend.dailySafeToSpend} currency={currency} />
               </span>
               {t('home.perDayRemaining', { days: safeToSpend.remainingDaysInPeriod })}
               {(safeToSpend.essentialUpcomingCommitments > 0 || safeToSpend.reservedGoalContributions > 0) && (
@@ -427,7 +429,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               const dateLabel = DateUtils.formatDisplayDate(dateStr);
 
               return (
-                <div key={dateStr} className="space-y-2">
+                <div key={dateStr} className="space-y-2 motion-stagger">
                   <div className="px-1">
                     <span className="text-xs sm:text-sm font-black text-(--ink) tracking-tight">
                       {dateLabel}

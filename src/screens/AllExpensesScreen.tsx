@@ -359,7 +359,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
       </div>
 
       {/* 6. Date Group Timeline List or Zero State */}
-      <div className="space-y-4 pt-1">
+      <div className="space-y-4 pt-1 motion-stagger">
         {filtered.length === 0 ? (
           <div className="rounded-[28px] bg-(--surface) p-6 text-center border border-(--line)/80 shadow-xs space-y-2">
             <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-(--surface-3) text-(--ink-3)">

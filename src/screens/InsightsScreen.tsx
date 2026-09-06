@@ -165,7 +165,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
                   key={item.catId}
                   style={{ width: `${item.percentage}%`, backgroundColor: item.color }}
                   title={`${item.name}: ${item.percentage}%`}
-                  className="h-full first:rounded-l-full last:rounded-r-full transition-all"
+                  className="h-full first:rounded-l-full last:rounded-r-full finova-chart-bar"
                 />
               ))}
             </div>
@@ -212,7 +212,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
             <p className="text-xs sm:text-sm text-(--ink-3) max-w-sm">{t('analytics.noTips')}</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-3 motion-stagger">
             {insights.map((insight) => {
               const IconComp = ICON_MAP[insight.iconName] || Sparkles;
 

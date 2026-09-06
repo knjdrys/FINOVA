@@ -39,7 +39,7 @@ const ProgressBar: React.FC<{ pct: number; tone: string; label: string }> = ({ p
     aria-label={label}
   >
     <div
-      className={`h-full rounded-full transition-all duration-500 ${tone}`}
+      className={`h-full rounded-full transition-all duration-[320ms] finova-bar ${tone}`}
       style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
     />
   </div>

@@ -212,7 +212,7 @@ const TimelineView: React.FC<{ timeline: TimelineDay[]; settings: UserSettings; 
   const window = timeline.slice(0, 30);
   const hasAnyEvents = window.some((d) => d.events.length > 0);
   return (
-  <div className="space-y-3">
+  <div className="space-y-3 motion-stagger">
     <div className="flex items-center justify-between px-1">
       <span className="text-xs font-extrabold text-(--ink) uppercase tracking-wider">30-Day Cash Flow Projection</span>
       <span className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300">Running Projected Balances</span>
@@ -365,7 +365,7 @@ const BudgetsView: React.FC<{
                 <RowActions onEdit={() => onEdit(b)} onDelete={() => onDelete(b.id)} />
               </div>
               <div className="h-2 w-full rounded-full bg-(--surface-3) overflow-hidden">
-                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: barColor }} />
+                <div className="h-full rounded-full transition-all duration-[320ms] finova-bar" style={{ width: `${pct}%`, backgroundColor: barColor }} />
               </div>
               <p className="text-[11px] font-medium text-(--ink-3)">
                 {t('plans.budgetLeftOver', { remaining: remainingMoney.format(), projected: projectedMoney.format() })}
@@ -511,7 +511,7 @@ const GoalsView: React.FC<{
                   <span className="text-(--ink-3)">{targetMoney.format()}</span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-(--surface-3) overflow-hidden">
-                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress.progressPercentage}%`, backgroundColor: goal.color }} />
+                  <div className="h-full rounded-full transition-all duration-[320ms] finova-bar" style={{ width: `${progress.progressPercentage}%`, backgroundColor: goal.color }} />
                 </div>
               </div>
               <div className="rounded-xl bg-(--surface-2) p-2.5 text-[11px] font-medium text-(--ink-2) flex items-center justify-between">

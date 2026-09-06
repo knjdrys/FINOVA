@@ -7,8 +7,6 @@
   :root {
     --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     color-scheme: light;
-    /* Semantic surfaces — neutrals across the app resolve through these so
-       .dark flips the whole product without per-component overrides. */
     --bg: #F7F7F2;
     --surface: #FFFFFF;
     --surface-2: #F8FAFC;
@@ -19,8 +17,14 @@
     --line: #E2E8F0;
     --line-soft: #F1F5F9;
     --line-2: #CBD5E1;
+    --motion-fast: 150ms;
+    --motion-standard: 220ms;
+    --motion-emphasis: 320ms;
+    --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --motion-ease-in: cubic-bezier(0.32, 0, 0.67, 0);
+    --motion-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    --motion-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   }
-
   .dark {
     color-scheme: dark;
     --bg: #0C1210;
@@ -34,51 +38,56 @@
     --line-soft: #1C2522;
     --line-2: #35443D;
   }
-
   html, body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    min-height: 100%;
-    background-color: #F7F7F2;
-    color: #0F172A;
-    font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
+    margin: 0; padding: 0; width: 100%; min-height: 100%;
+    background-color: #F7F7F2; color: #0F172A; font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility;
   }
-
-  .dark html, .dark body,
-  html.dark, html.dark body {
-    background-color: #0C1210;
-    color: #E7EDEA;
-  }
+  .dark html, .dark body, html.dark, html.dark body { background-color: #0C1210; color: #E7EDEA; }
 }
-
-/* Safe area padding for mobile notches / home indicators */
-.pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 16px);
-}
-
-.pt-safe {
-  padding-top: env(safe-area-inset-top, 0px);
-}
-
-/* Hide scrollbars cleanly */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* Respect users who ask for less motion: kill decorative animation app-wide.
-   Spinners keep a static state rather than freezing mid-frame confusion. */
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 16px); }
+.pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+@keyframes finova-in { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes finova-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes finova-slide-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes finova-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes finova-shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+@keyframes finova-check-pop { 0% { transform: scale(0.7); opacity: 0; } 50% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
+@keyframes finova-shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-3px); } 40% { transform: translateX(3px); } 60% { transform: translateX(-2px); } 80% { transform: translateX(2px); } }
+@keyframes finova-badge-pop { 0% { transform: scale(0.6); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+.motion-enter { animation: finova-in var(--motion-standard) var(--motion-ease-out) both; }
+.motion-fade { animation: finova-fade var(--motion-fast) var(--motion-ease-out) both; }
+.motion-stagger > * { animation: finova-slide-up var(--motion-standard) var(--motion-ease-out) both; }
+.motion-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.motion-stagger > *:nth-child(2) { animation-delay: 40ms; }
+.motion-stagger > *:nth-child(3) { animation-delay: 80ms; }
+.motion-stagger > *:nth-child(4) { animation-delay: 120ms; }
+.motion-stagger > *:nth-child(5) { animation-delay: 150ms; }
+.motion-stagger > *:nth-child(n+6) { animation-delay: 150ms; }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  .motion-enter, .motion-fade, .motion-stagger > * { animation: finova-fade var(--motion-fast) var(--motion-ease-out) both !important; transform: none !important; }
 }
+
+/* FINOVA premium surface entrances - subtle */
+[data-tour="wave-card"] { animation: finova-in var(--motion-emphasis) var(--motion-ease-out) both; }
+[data-tour="timeframe-filters"] { animation: finova-fade var(--motion-standard) var(--motion-ease-out) both; }
+[data-tour="safe-to-spend"] { animation: finova-slide-up var(--motion-standard) var(--motion-ease-out) both; animation-delay: 80ms; }
+[data-tour="category-chips"] { animation: finova-fade var(--motion-standard) var(--motion-ease-out) both; animation-delay: 60ms; }
+.motion-list { display: contents; }
+.motion-list > .motion-row { animation: finova-slide-up var(--motion-standard) var(--motion-ease-out) both; }
+.motion-list > .motion-row:nth-child(1) { animation-delay: 0ms; }
+.motion-list > .motion-row:nth-child(2) { animation-delay: 30ms; }
+.motion-list > .motion-row:nth-child(3) { animation-delay: 60ms; }
+.motion-list > .motion-row:nth-child(4) { animation-delay: 90ms; }
+.motion-list > .motion-row:nth-child(5) { animation-delay: 120ms; }
+.motion-list > .motion-row:nth-child(n+6) { animation-delay: 120ms; }
+.finova-bar { transform-origin: left; animation: finova-progress var(--motion-emphasis) var(--motion-ease-out) both; }
+.finova-chart-bar { transform-origin: left; animation: finova-progress var(--motion-emphasis) var(--motion-ease-out) both; }
+.finova-badge { animation: finova-badge-pop var(--motion-standard) var(--motion-spring) both; }
+.finova-check { animation: finova-check-pop var(--motion-standard) var(--motion-spring) both; }
+.finova-shake { animation: finova-shake var(--motion-standard) var(--motion-ease-out) both; }
+.finova-onboard-enter { animation: finova-in var(--motion-emphasis) var(--motion-ease-out) both; }
+.finova-confetti { animation: finova-confetti 700ms var(--motion-ease-out) forwards; pointer-events: none; }
