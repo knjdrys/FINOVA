@@ -31,7 +31,7 @@ export const RiskBadge: React.FC<{ risk: RiskLevel; className?: string }> = ({ r
 
 const ProgressBar: React.FC<{ pct: number; tone: string; label: string }> = ({ pct, tone, label }) => (
   <div
-    className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100"
+    className="h-1.5 w-full overflow-hidden rounded-full bg-(--surface-3)"
     role="progressbar"
     aria-valuenow={Math.round(pct)}
     aria-valuemin={0}
@@ -80,7 +80,7 @@ export const BudgetProgressCard: React.FC<{
     <button
       type="button"
       onClick={onOpen}
-      className="flex w-full flex-col gap-2 rounded-2xl border border-slate-100 bg-white p-3.5 text-left shadow-sm transition hover:border-slate-200 hover:shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+      className="flex w-full flex-col gap-2 rounded-2xl border border-(--line-soft) bg-(--surface) p-3.5 text-left shadow-sm transition hover:border-(--line) hover:shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
       aria-label={t('plans.budgetBarAria', { name: forecast.budgetName, status: headline })}
     >
       <div className="flex items-center justify-between gap-2">
@@ -88,13 +88,13 @@ export const BudgetProgressCard: React.FC<{
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
             <Wallet className="h-3.5 w-3.5" aria-hidden="true" />
           </span>
-          <span className="truncate text-sm font-bold text-slate-900">{forecast.budgetName}</span>
+          <span className="truncate text-sm font-bold text-(--ink)">{forecast.budgetName}</span>
         </div>
         <RiskBadge risk={risk} />
       </div>
       <ProgressBar pct={pct} tone={barTone} label={`${forecast.budgetName} used`} />
       <div className="flex items-center justify-between gap-2 text-xs">
-        <span className="truncate font-semibold text-slate-600">{headline}</span>
+        <span className="truncate font-semibold text-(--ink-2)">{headline}</span>
         <span className={`shrink-0 font-bold ${riskTone[risk].text}`}>{hint}</span>
       </div>
     </button>
@@ -117,20 +117,20 @@ export const GoalProgressCard: React.FC<{
     risk === 'HIGH' ? 'bg-rose-500' : risk === 'MEDIUM' ? 'bg-amber-500' : risk === 'LOW' ? 'bg-sky-500' : 'bg-emerald-500';
 
   return (
-    <div className="flex w-full flex-col gap-2 rounded-2xl border border-slate-100 bg-white p-3.5 shadow-sm transition hover:border-slate-200 hover:shadow">
+    <div className="flex w-full flex-col gap-2 rounded-2xl border border-(--line-soft) bg-(--surface) p-3.5 shadow-sm transition hover:border-(--line) hover:shadow">
       <button type="button" onClick={onOpen} className="flex w-full items-center justify-between gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-lg" aria-label={`Goal ${goal.name}: ${fmt(goal.currentAmount, currency)} of ${fmt(goal.targetAmount, currency)}. ${progress.explanation}`}>
         <div className="flex min-w-0 items-center gap-2">
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
             <Target className="h-3.5 w-3.5" aria-hidden="true" />
           </span>
-          <span className="truncate text-sm font-bold text-slate-900">{goal.name}</span>
+          <span className="truncate text-sm font-bold text-(--ink)">{goal.name}</span>
         </div>
         <RiskBadge risk={risk} />
       </button>
       <ProgressBar pct={pct} tone={barTone} label={`${goal.name} saved`} />
       <div className="flex items-center justify-between gap-2 text-xs">
-        <span className="truncate font-semibold text-slate-600">
-          {fmt(goal.currentAmount, currency)} <span className="text-slate-500">/ {fmt(goal.targetAmount, currency)}</span>
+        <span className="truncate font-semibold text-(--ink-2)">
+          {fmt(goal.currentAmount, currency)} <span className="text-(--ink-3)">/ {fmt(goal.targetAmount, currency)}</span>
         </span>
         <button
           type="button"
@@ -148,9 +148,9 @@ export const GoalProgressCard: React.FC<{
 /* Detail modal (contextual, for any budget/goal)                      */
 /* ------------------------------------------------------------------ */
 
-const DetailRow: React.FC<{ label: string; value: string; tone?: string }> = ({ label, value, tone = 'text-slate-900' }) => (
+const DetailRow: React.FC<{ label: string; value: string; tone?: string }> = ({ label, value, tone = 'text-(--ink)' }) => (
   <div className="flex items-center justify-between gap-3 py-1.5">
-    <span className="text-xs font-medium text-slate-500">{label}</span>
+    <span className="text-xs font-medium text-(--ink-3)">{label}</span>
     <span className={`text-sm font-bold ${tone}`}>{value}</span>
   </div>
 );
@@ -171,7 +171,7 @@ export const PlanDetailModal: React.FC<{
         <div>
           <div className="mb-3 flex items-center gap-2">
             <RiskBadge risk={budgetInsight.risk} />
-            <span className="text-xs font-semibold text-slate-500">
+            <span className="text-xs font-semibold text-(--ink-3)">
               {budgetInsight.isCurrent ? `Day ${budgetInsight.forecast.elapsedDays} of ${budgetInsight.forecast.totalDaysInPeriod}` : 'Period recap'}
             </span>
           </div>
@@ -182,13 +182,13 @@ export const PlanDetailModal: React.FC<{
               label="Budget used"
             />
           </div>
-          <div className="divide-y divide-slate-50 rounded-xl bg-slate-50/60 px-3 py-1">
+          <div className="divide-y divide-(--line-soft) rounded-xl bg-(--surface-2)/60 px-3 py-1">
             <DetailRow label="Budget" value={fmt(budgetInsight.forecast.effectiveBudget ?? budgetInsight.forecast.budgetAmount, currency)} />
             {budgetInsight.forecast.rolloverCarry ? (
               <DetailRow label="Rolled over" value={`+${fmt(budgetInsight.forecast.rolloverCarry, currency)}`} tone="text-emerald-600" />
             ) : null}
             <DetailRow label="Spent so far" value={fmt(budgetInsight.forecast.actualSpent, currency)} />
-            <DetailRow label="Remaining" value={fmt(budgetInsight.forecast.effectiveRemaining ?? budgetInsight.forecast.remainingAmount, currency)} tone={budgetInsight.isOverBudget ? 'text-rose-600' : 'text-slate-900'} />
+            <DetailRow label="Remaining" value={fmt(budgetInsight.forecast.effectiveRemaining ?? budgetInsight.forecast.remainingAmount, currency)} tone={budgetInsight.isOverBudget ? 'text-rose-600' : 'text-(--ink)'} />
             <DetailRow label="Projected period-end" value={fmt(budgetInsight.forecast.projectedMonthEndSpent, currency)} />
             <DetailRow
               label="Projected variance"
@@ -199,7 +199,7 @@ export const PlanDetailModal: React.FC<{
               <DetailRow label="Safe daily pace" value={`${fmt(budgetInsight.dailyAllowanceRemaining, currency)}/day`} tone="text-sky-700" />
             ) : null}
           </div>
-          <p className="mt-3 rounded-xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-600">{budgetInsight.forecast.explanation}</p>
+          <p className="mt-3 rounded-xl bg-(--surface-2) p-3 text-xs leading-relaxed text-(--ink-2)">{budgetInsight.forecast.explanation}</p>
         </div>
       )}
 
@@ -207,17 +207,17 @@ export const PlanDetailModal: React.FC<{
         <div>
           <div className="mb-3 flex items-center gap-2">
             <RiskBadge risk={goalInsight.risk} />
-            <span className="text-xs font-semibold text-slate-500">
+            <span className="text-xs font-semibold text-(--ink-3)">
               {goalInsight.isCompleted ? 'Fully funded' : `${goalInsight.progress.daysRemaining} days to target date`}
             </span>
           </div>
           <div className="mb-3">
             <ProgressBar pct={goalInsight.progress.progressPercentage} tone={goalInsight.risk === 'HIGH' ? 'bg-rose-500' : goalInsight.risk === 'MEDIUM' ? 'bg-amber-500' : 'bg-violet-500'} label="Goal saved" />
           </div>
-          <div className="divide-y divide-slate-50 rounded-xl bg-slate-50/60 px-3 py-1">
+          <div className="divide-y divide-(--line-soft) rounded-xl bg-(--surface-2)/60 px-3 py-1">
             <DetailRow label="Saved" value={fmt(goalInsight.goal.currentAmount, currency)} />
             <DetailRow label="Target" value={fmt(goalInsight.goal.targetAmount, currency)} />
-            <DetailRow label="Still needed" value={fmt(goalInsight.progress.remainingAmount, currency)} tone="text-slate-900" />
+            <DetailRow label="Still needed" value={fmt(goalInsight.progress.remainingAmount, currency)} tone="text-(--ink)" />
             <DetailRow label="Planned by today" value={fmt(goalInsight.expectedContributionToDate, currency)} />
             <DetailRow
               label="Ahead / behind plan"
@@ -228,7 +228,7 @@ export const PlanDetailModal: React.FC<{
               <DetailRow label="Required pace" value={`${fmt(goalInsight.requiredRate, currency)}/mo`} tone="text-sky-700" />
             ) : null}
           </div>
-          <p className="mt-3 rounded-xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-600">{goalInsight.progress.explanation}</p>
+          <p className="mt-3 rounded-xl bg-(--surface-2) p-3 text-xs leading-relaxed text-(--ink-2)">{goalInsight.progress.explanation}</p>
           {!goalInsight.isCompleted && onFundGoal ? (
             <button
               type="button"
@@ -282,15 +282,15 @@ export const FundGoalModal: React.FC<{
 
   return (
     <Modal isOpen={Boolean(goal)} onClose={onClose} title={t('plans.fundGoalTitle', { name: goal.name })} maxWidth="sm">
-      <div className="mb-1 flex items-center gap-2 text-xs font-semibold text-slate-500">
+      <div className="mb-1 flex items-center gap-2 text-xs font-semibold text-(--ink-3)">
         <TrendingDown className="h-3.5 w-3.5" aria-hidden="true" />
         {t('plans.stillNeeded', { amount: fmt(remaining, currency) })}
       </div>
 
       <label className="block">
-        <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">{t('common.amount')}</span>
-        <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 px-3 focus-within:border-violet-400 focus-within:ring-2 focus-within:ring-violet-100">
-          <span className="text-sm font-bold text-slate-500">{MoneyValue.fromMinorUnits(0, currency).getCurrencySymbol()}</span>
+        <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-(--ink-3)">{t('common.amount')}</span>
+        <div className="flex items-center rounded-xl border border-(--line) bg-(--surface-2) px-3 focus-within:border-violet-400 focus-within:ring-2 focus-within:ring-violet-100">
+          <span className="text-sm font-bold text-(--ink-3)">{MoneyValue.fromMinorUnits(0, currency).getCurrencySymbol()}</span>
           <input
             type="number"
             inputMode="decimal"
@@ -300,7 +300,7 @@ export const FundGoalModal: React.FC<{
             onChange={(e) => { setAmountStr(e.target.value); setError(null); }}
             onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
             placeholder="0.00"
-            className="w-full bg-transparent px-2 py-2.5 text-sm font-bold text-slate-900 outline-none"
+            className="w-full bg-transparent px-2 py-2.5 text-sm font-bold text-(--ink) outline-none"
             aria-label={t('plans.contributionAria')}
             autoFocus
           />
@@ -314,7 +314,7 @@ export const FundGoalModal: React.FC<{
             key={q}
             type="button"
             onClick={() => { setAmountStr(String(q / 100)); setError(null); }}
-            className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-bold text-slate-600 transition hover:border-violet-300 hover:text-violet-700"
+            className="rounded-full border border-(--line) bg-(--surface) px-3 py-1 text-xs font-bold text-(--ink-2) transition hover:border-violet-300 hover:text-violet-700"
           >
             +{fmt(q, currency)}
           </button>
@@ -339,7 +339,7 @@ export const FundGoalModal: React.FC<{
         <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
         {t('plans.addContribution')}
       </button>
-      <p className="text-center text-[11px] text-slate-500">
+      <p className="text-center text-[11px] text-(--ink-3)">
         {t('plans.fundCapHint')}
       </p>
     </Modal>

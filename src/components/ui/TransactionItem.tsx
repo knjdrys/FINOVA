@@ -103,7 +103,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   return (
     <div
       onClick={() => onClick?.(transaction)}
-      className="group relative flex items-center justify-between rounded-3xl bg-white p-3.5 shadow-xs border border-slate-100/80 transition-all duration-150 hover:shadow-md hover:border-emerald-200/60 active:scale-[0.99] cursor-pointer"
+      className="group relative flex items-center justify-between rounded-3xl bg-(--surface) p-3.5 shadow-xs border border-(--line-soft)/80 transition-all duration-150 hover:shadow-md hover:border-emerald-200/60 active:scale-[0.99] cursor-pointer"
     >
       <div className="flex items-center gap-3.5 min-w-0 flex-1">
         {/* Rounded Icon Box with emoji or icon */}
@@ -121,7 +121,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
         {/* Multi-line Details matching screenshot */}
         <div className="min-w-0 flex-1 pr-2">
           <div className="flex items-center gap-1.5">
-            <h4 className="truncate text-sm font-extrabold text-slate-900 tracking-tight">
+            <h4 className="truncate text-sm font-extrabold text-(--ink) tracking-tight">
               {titleText}
             </h4>
             {isTransfer && (
@@ -140,17 +140,17 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
             )}
             {hasReceipt && (
               <span
-                className="shrink-0 flex items-center rounded bg-slate-100 px-1 py-0.5 text-[10px] font-bold text-slate-600"
+                className="shrink-0 flex items-center rounded bg-(--surface-3) px-1 py-0.5 text-[10px] font-bold text-(--ink-2)"
                 title={t('tx.receiptAttached')}
               >
                 <Paperclip className="h-2.5 w-2.5" aria-label={t('tx.receiptAttached')} />
               </span>
             )}
           </div>
-          <p className="truncate text-xs font-semibold text-slate-500 mt-0.2">
+          <p className="truncate text-xs font-semibold text-(--ink-3) mt-0.2">
             {subtitleText}
           </p>
-          <p className="truncate text-[10px] font-medium text-slate-500 mt-0.5">
+          <p className="truncate text-[10px] font-medium text-(--ink-3) mt-0.5">
             {noteSubline}
           </p>
         </div>
@@ -158,7 +158,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
 
       {/* Amount Display */}
       <div className="shrink-0 text-right">
-        <p className="text-sm sm:text-base font-black tracking-tight text-slate-900">
+        <p className="text-sm sm:text-base font-black tracking-tight text-(--ink)">
           {isIncome ? '+' : ''}
           {money.format()}
         </p>

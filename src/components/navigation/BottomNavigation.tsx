@@ -18,14 +18,14 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   const { t } = useI18n();
   return (
     <div className="fixed bottom-0 inset-x-0 z-40 flex justify-center pointer-events-none pb-safe">
-      <nav className="pointer-events-auto w-full max-w-lg md:max-w-2xl bg-white/95 backdrop-blur-lg border-t border-slate-200/70 sm:border sm:rounded-t-[32px] sm:shadow-2xl px-4 sm:px-6 py-2">
+      <nav className="pointer-events-auto w-full max-w-lg md:max-w-2xl bg-(--surface)/95 backdrop-blur-lg border-t border-(--line)/70 sm:border sm:rounded-t-[32px] sm:shadow-2xl px-4 sm:px-6 py-2">
         <div className="flex items-center justify-between relative">
           {/* Home Tab */}
           <button
             type="button"
             onClick={() => onSelectTab('HOME')}
             className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-              currentTab === 'HOME' ? 'text-slate-900 scale-105' : 'text-slate-500 hover:text-slate-600'
+              currentTab === 'HOME' ? 'text-(--ink) scale-105' : 'text-(--ink-3) hover:text-(--ink-2)'
             }`}
           >
             <Home className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
@@ -42,7 +42,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             type="button"
             onClick={() => onSelectTab('ALL_EXPENSES')}
             className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-              currentTab === 'ALL_EXPENSES' ? 'text-slate-900 scale-105' : 'text-slate-500 hover:text-slate-600'
+              currentTab === 'ALL_EXPENSES' ? 'text-(--ink) scale-105' : 'text-(--ink-3) hover:text-(--ink-2)'
             }`}
           >
             <ListOrdered className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
@@ -59,7 +59,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             type="button"
             onClick={() => onSelectTab('PLANS')}
             className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-              currentTab === 'PLANS' ? 'text-slate-900 scale-105' : 'text-slate-500 hover:text-slate-600'
+              currentTab === 'PLANS' ? 'text-(--ink) scale-105' : 'text-(--ink-3) hover:text-(--ink-2)'
             }`}
           >
             <CalendarDays className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
@@ -90,7 +90,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             type="button"
             onClick={() => onSelectTab('ANALYTICS')}
             className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-              currentTab === 'ANALYTICS' ? 'text-slate-900 scale-105' : 'text-slate-500 hover:text-slate-600'
+              currentTab === 'ANALYTICS' ? 'text-(--ink) scale-105' : 'text-(--ink-3) hover:text-(--ink-2)'
             }`}
           >
             <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
@@ -107,7 +107,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             type="button"
             onClick={() => onSelectTab('SETTINGS')}
             className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer ${
-              currentTab === 'SETTINGS' ? 'text-slate-900 scale-105' : 'text-slate-500 hover:text-slate-600'
+              currentTab === 'SETTINGS' ? 'text-(--ink) scale-105' : 'text-(--ink-3) hover:text-(--ink-2)'
             }`}
           >
             <Settings className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />

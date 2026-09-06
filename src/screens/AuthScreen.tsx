@@ -101,7 +101,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-white font-sans text-slate-900">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-(--surface) font-sans text-(--ink)">
       {/* ---------------------------------------------------- */}
       {/* LEFT: BRAND AUTHORITY PANEL (GEOMETRIC IDENTITY)     */}
       {/* ---------------------------------------------------- */}
@@ -225,11 +225,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
       {/* ---------------------------------------------------- */}
       {/* RIGHT: AUTH FORM PANEL                               */}
       {/* ---------------------------------------------------- */}
-      <section className="w-full lg:w-1/2 bg-white flex flex-col justify-between">
+      <section className="w-full lg:w-1/2 bg-(--surface) flex flex-col justify-between">
         {/* Top-Right Contextual Mode Switcher */}
         <div className="p-6 lg:p-10 flex justify-end text-xs sm:text-sm">
           {mode === 'SIGN_IN' ? (
-            <p className="text-slate-500 font-medium">
+            <p className="text-(--ink-3) font-medium">
               New here?{' '}
               <button
                 type="button"
@@ -244,7 +244,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
               </button>
             </p>
           ) : (
-            <p className="text-slate-500 font-medium">
+            <p className="text-(--ink-3) font-medium">
               Already have an account?{' '}
               <button
                 type="button"
@@ -265,10 +265,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
         <div className="flex-1 flex items-center justify-center p-6 md:p-12 lg:p-16">
           <div className="w-full max-w-[420px] space-y-6">
             <div className="text-center lg:text-left">
-              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-black text-(--ink) tracking-tight">
                 {mode === 'SIGN_IN' ? 'Welcome back' : 'Create your account'}
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+              <p className="text-xs sm:text-sm text-(--ink-3) font-medium mt-1">
                 {mode === 'SIGN_IN'
                   ? 'Access your personal finance operating system'
                   : 'Start your journey to complete financial clarity'}
@@ -281,7 +281,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={isLoading}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-slate-200 rounded-xl text-slate-800 font-bold text-xs sm:text-sm hover:border-[#c4f042] hover:bg-slate-50/80 active:scale-[0.99] transition-all cursor-pointer shadow-2xs"
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-(--line) rounded-xl text-(--ink) font-bold text-xs sm:text-sm hover:border-[#c4f042] hover:bg-(--surface-2)/80 active:scale-[0.99] transition-all cursor-pointer shadow-2xs"
               >
                 <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
                   <path
@@ -307,11 +307,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
 
             {/* Divider */}
             <div className="relative flex items-center my-2">
-              <div className="flex-grow border-t border-slate-200"></div>
-              <span className="flex-shrink mx-3 text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">
+              <div className="flex-grow border-t border-(--line)"></div>
+              <span className="flex-shrink mx-3 text-[10px] font-extrabold text-(--ink-3) uppercase tracking-widest">
                 or with email
               </span>
-              <div className="flex-grow border-t border-slate-200"></div>
+              <div className="flex-grow border-t border-(--line)"></div>
             </div>
 
             {/* Notifications / Error Banner */}
@@ -340,7 +340,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                   if (error) { setErrorMessage(error.message); }
                   else { setErrorMessage(null); setNeedsConfirm(false); setSuccessMessage(message || 'Confirmation email re-sent!'); }
                 }}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-slate-200 bg-white text-[#1a3a2e] font-bold text-xs hover:bg-slate-50 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-(--line) bg-(--surface) text-[#1a3a2e] font-bold text-xs hover:bg-(--surface-2) active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
               >
                 {resending ? 'Re-sending…' : "Didn't get the email? Resend confirmation link"}
               </button>
@@ -350,53 +350,53 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
             <form onSubmit={handleEmailAuth} className="space-y-4">
               {mode === 'SIGN_UP' && (
                 <div>
-                  <label className="block text-xs font-bold text-slate-800 mb-1.5">
+                  <label className="block text-xs font-bold text-(--ink) mb-1.5">
                     Your Full Name
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 h-4 w-4" />
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-(--ink-3) h-4 w-4" />
                     <input
                       type="text"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="Juan Dela Cruz"
                       required
-                      className="w-full pl-10 pr-3.5 py-3 border border-slate-200 rounded-xl bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-500 outline-none focus:border-[#c4f042] focus:ring-4 focus:ring-[#c4f042]/20 transition-all font-semibold"
+                      className="w-full pl-10 pr-3.5 py-3 border border-(--line) rounded-xl bg-(--surface) text-xs sm:text-sm text-(--ink) placeholder:text-(--ink-3) outline-none focus:border-[#c4f042] focus:ring-4 focus:ring-[#c4f042]/20 transition-all font-semibold"
                     />
                   </div>
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1.5">
+                <label className="block text-xs font-bold text-(--ink) mb-1.5">
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 h-4 w-4" />
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-(--ink-3) h-4 w-4" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
                     required
-                    className="w-full pl-10 pr-3.5 py-3 border border-slate-200 rounded-xl bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-500 outline-none focus:border-[#c4f042] focus:ring-4 focus:ring-[#c4f042]/20 transition-all font-semibold"
+                    className="w-full pl-10 pr-3.5 py-3 border border-(--line) rounded-xl bg-(--surface) text-xs sm:text-sm text-(--ink) placeholder:text-(--ink-3) outline-none focus:border-[#c4f042] focus:ring-4 focus:ring-[#c4f042]/20 transition-all font-semibold"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1.5">
+                <label className="block text-xs font-bold text-(--ink) mb-1.5">
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 h-4 w-4" />
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-(--ink-3) h-4 w-4" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     required
-                    className="w-full pl-10 pr-14 py-3 border border-slate-200 rounded-xl bg-white text-xs sm:text-sm text-slate-900 placeholder:text-slate-500 outline-none focus:border-[#c4f042] focus:ring-4 focus:ring-[#c4f042]/20 transition-all font-semibold"
+                    className="w-full pl-10 pr-14 py-3 border border-(--line) rounded-xl bg-(--surface) text-xs sm:text-sm text-(--ink) placeholder:text-(--ink-3) outline-none focus:border-[#c4f042] focus:ring-4 focus:ring-[#c4f042]/20 transition-all font-semibold"
                   />
                   <button
                     type="button"
@@ -410,12 +410,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
 
               {mode === 'SIGN_IN' && (
                 <div className="flex items-center justify-between text-xs pt-1">
-                  <label className="flex items-center gap-2 cursor-pointer text-slate-600 font-medium">
+                  <label className="flex items-center gap-2 cursor-pointer text-(--ink-2) font-medium">
                     <input
                       type="checkbox"
                       checked={keepSignedIn}
                       onChange={(e) => setKeepSignedIn(e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-[#1a3a2e] focus:ring-[#c4f042]"
+                      className="h-4 w-4 rounded border-(--line-2) text-[#1a3a2e] focus:ring-[#c4f042]"
                     />
                     <span>Keep me signed in</span>
                   </label>
@@ -447,18 +447,18 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
             </form>
 
             {/* Offline Guest Mode Fallback */}
-            <div className="pt-2 border-t border-slate-100 text-center">
+            <div className="pt-2 border-t border-(--line-soft) text-center">
               <button
                 type="button"
                 onClick={handleGuestSession}
-                className="w-full py-2.5 px-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
+                className="w-full py-2.5 px-4 rounded-xl bg-(--surface-2) border border-(--line) text-(--ink-2) font-bold text-xs hover:bg-(--surface-3) hover:text-(--ink) transition-colors cursor-pointer"
               >
                 Try FINOVA as Guest (Offline Mode)
               </button>
             </div>
 
             {/* Footnote */}
-            <p className="text-[10px] text-slate-500 text-center leading-relaxed max-w-[320px] mx-auto pt-2">
+            <p className="text-[10px] text-(--ink-3) text-center leading-relaxed max-w-[320px] mx-auto pt-2">
               Protected by FINOVA Zero Math Drift engine. By continuing, you agree to our Terms of Service and Privacy Policy.
             </p>
           </div>

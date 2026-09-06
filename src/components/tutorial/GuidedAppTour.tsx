@@ -229,9 +229,9 @@ export const GuidedAppTour: React.FC<GuidedAppTourProps> = ({
           isTargetInBottomHalf ? 'top-4' : 'bottom-4'
         }`}
       >
-        <div className="rounded-[28px] bg-white p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-3.5">
+        <div className="rounded-[28px] bg-(--surface) p-5 sm:p-6 shadow-2xl border border-(--line) space-y-3.5">
           {/* Header Row */}
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <div className="flex items-center justify-between border-b border-(--line-soft) pb-2.5">
             <div className="flex items-center gap-2">
               <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#122A1E] text-[#D4F63D] shadow-xs">
                 <Sparkles className="h-3.5 w-3.5" />
@@ -244,7 +244,7 @@ export const GuidedAppTour: React.FC<GuidedAppTourProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors cursor-pointer"
+              className="flex h-6 w-6 items-center justify-center rounded-full bg-(--surface-3) text-(--ink-3) hover:bg-(--line) hover:text-(--ink) transition-colors cursor-pointer"
               title="Close Tour"
             >
               <X className="h-3.5 w-3.5" />
@@ -253,10 +253,10 @@ export const GuidedAppTour: React.FC<GuidedAppTourProps> = ({
 
           {/* Title & Description */}
           <div className="space-y-1">
-            <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+            <h3 className="text-base sm:text-lg font-black text-(--ink) tracking-tight">
               {currentStep.title}
             </h3>
-            <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed">
+            <p className="text-xs sm:text-sm text-(--ink-2) font-medium leading-relaxed">
               {currentStep.description}
             </p>
           </div>
@@ -270,7 +270,7 @@ export const GuidedAppTour: React.FC<GuidedAppTourProps> = ({
           </div>
 
           {/* Navigation Controls */}
-          <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+          <div className="flex items-center justify-between pt-1 border-t border-(--line-soft)">
             <button
               type="button"
               disabled={isFirst}
@@ -278,7 +278,7 @@ export const GuidedAppTour: React.FC<GuidedAppTourProps> = ({
               className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 isFirst
                   ? 'opacity-30 cursor-not-allowed text-slate-400'
-                  : 'text-slate-700 bg-slate-100 hover:bg-slate-200'
+                  : 'text-(--ink-2) bg-(--surface-3) hover:bg-(--line)'
               }`}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -291,7 +291,7 @@ export const GuidedAppTour: React.FC<GuidedAppTourProps> = ({
                 <span
                   key={idx}
                   className={`h-1.5 rounded-full transition-all ${
-                    idx === stepIndex ? 'w-5 bg-emerald-700' : 'w-1.5 bg-slate-200'
+                    idx === stepIndex ? 'w-5 bg-emerald-700' : 'w-1.5 bg-(--line)'
                   }`}
                 />
               ))}

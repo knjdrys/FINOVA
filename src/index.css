@@ -1,8 +1,38 @@
 @import "tailwindcss";
 
+/* Class-based dark mode: enabled by toggling .dark on <html> (see App theme effect). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
     --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color-scheme: light;
+    /* Semantic surfaces — neutrals across the app resolve through these so
+       .dark flips the whole product without per-component overrides. */
+    --bg: #F7F7F2;
+    --surface: #FFFFFF;
+    --surface-2: #F8FAFC;
+    --surface-3: #F1F5F9;
+    --ink: #0F172A;
+    --ink-2: #475569;
+    --ink-3: #64748B;
+    --line: #E2E8F0;
+    --line-soft: #F1F5F9;
+    --line-2: #CBD5E1;
+  }
+
+  .dark {
+    color-scheme: dark;
+    --bg: #0C1210;
+    --surface: #141C19;
+    --surface-2: #1A2320;
+    --surface-3: #232E2A;
+    --ink: #E7EDEA;
+    --ink-2: #A9B7B0;
+    --ink-3: #7E8C85;
+    --line: #27332E;
+    --line-soft: #1C2522;
+    --line-2: #35443D;
   }
 
   html, body {
@@ -16,6 +46,12 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+  }
+
+  .dark html, .dark body,
+  html.dark, html.dark body {
+    background-color: #0C1210;
+    color: #E7EDEA;
   }
 }
 

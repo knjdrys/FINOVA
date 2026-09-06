@@ -112,8 +112,8 @@ export const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
         <Field label={t('modal.startDate')}>
           <input value={startDate} onChange={(e) => setStartDate(e.target.value)} type="date" className={inputCls} />
         </Field>
-        <details className="rounded-xl border border-slate-200 bg-white px-3 py-2" open={Boolean(editingRecurring || endDate)}>
-          <summary className="cursor-pointer text-xs font-bold text-slate-500 hover:text-slate-800 select-none">
+        <details className="rounded-xl border border-(--line) bg-(--surface) px-3 py-2" open={Boolean(editingRecurring || endDate)}>
+          <summary className="cursor-pointer text-xs font-bold text-(--ink-3) hover:text-(--ink) select-none">
             {t('modal.scheduleDetails')}
           </summary>
           <div className="grid grid-cols-2 gap-3 pt-3">
@@ -126,14 +126,14 @@ export const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
               </Field>
             ) : (
               <Field label={t('modal.recFirstCharge')}>
-                <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-600">
+                <div className="rounded-xl bg-(--surface-2) border border-(--line) px-3 py-2.5 text-sm font-semibold text-(--ink-2)">
                   {startDate || '—'}
                 </div>
               </Field>
             )}
           </div>
         </details>
-        <label className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 cursor-pointer">
+        <label className="flex items-start gap-2.5 rounded-xl border border-(--line) bg-(--surface-2) px-3 py-2.5 cursor-pointer">
           <input
             type="checkbox"
             checked={autoPost}
@@ -141,8 +141,8 @@ export const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
             className="mt-0.5 h-4 w-4 accent-emerald-700"
           />
           <span>
-            <span className="block text-xs font-bold text-slate-700">{t('modal.autoPostTitle')}</span>
-            <span className="block text-[10px] font-medium text-slate-500">{t('modal.autoPostRecurHint')}</span>
+            <span className="block text-xs font-bold text-(--ink-2)">{t('modal.autoPostTitle')}</span>
+            <span className="block text-[10px] font-medium text-(--ink-3)">{t('modal.autoPostRecurHint')}</span>
           </span>
         </label>
         <Field label={t('common.account')}>
@@ -163,7 +163,7 @@ export const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
         ) : null}
 
         <div className="flex gap-2 pt-2">
-          <button type="button" onClick={onClose} className="flex-1 rounded-xl bg-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700">{t('common.cancel')}</button>
+          <button type="button" onClick={onClose} className="flex-1 rounded-xl bg-(--line) px-4 py-2.5 text-sm font-bold text-(--ink-2)">{t('common.cancel')}</button>
           <button type="button" onClick={save} className="flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white">{editingRecurring ? t('common.save') : t('modal.create')}</button>
         </div>
       </div>
@@ -171,10 +171,10 @@ export const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
   );
 };
 
-const inputCls = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300';
+const inputCls = 'w-full rounded-xl border border-(--line) px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300';
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <div className="space-y-1.5">
-    <span className="text-xs font-bold text-slate-600">{label}</span>
+    <span className="text-xs font-bold text-(--ink-2)">{label}</span>
     {children}
   </div>
 );

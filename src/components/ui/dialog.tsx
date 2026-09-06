@@ -86,13 +86,13 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       <Modal isOpen={!!confirmState} onClose={() => close(false)} title={confirmState?.title} maxWidth="sm">
         <div className="space-y-4">
           {confirmState?.message && (
-            <p className="text-xs sm:text-sm font-semibold text-slate-600 leading-relaxed">{confirmState.message}</p>
+            <p className="text-xs sm:text-sm font-semibold text-(--ink-2) leading-relaxed">{confirmState.message}</p>
           )}
           <div className="flex items-center justify-end gap-2 pt-1">
             <button
               type="button"
               onClick={() => close(false)}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+              className="rounded-xl border border-(--line) bg-(--surface) px-4 py-2 text-xs font-bold text-(--ink-2) hover:bg-(--surface-2) transition-colors cursor-pointer"
             >
               {confirmState?.cancelLabel ?? t('common.cancel')}
             </button>

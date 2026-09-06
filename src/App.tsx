@@ -134,6 +134,13 @@ export function App() {
     };
   }, []);
 
+  // Theme: reflect the persisted preference on <html> so the .dark variant
+  // tokens (see index.css) flip every neutral surface app-wide.
+  // (Reads state.settings: the `settings` shorthand destructures later.)
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', state.settings.darkTheme === true);
+  }, [state.settings.darkTheme]);
+
   // PWA: service worker + install prompt + sync status subscription.
   useEffect(() => {
     registerServiceWorker();
@@ -859,7 +866,7 @@ export function App() {
     <I18nProvider lang={settings.language || 'en'}>
     <DialogProvider>
     <AppLockGuard>
-    <div className="min-h-screen bg-[#F7F7F2] text-slate-900 font-sans flex flex-col items-center justify-start w-full">
+    <div className="min-h-screen bg-(--bg) text-(--ink) font-sans flex flex-col items-center justify-start w-full">
       {/* Responsive App Container */}
       <div className="w-full max-w-lg md:max-w-2xl lg:max-w-3xl px-4 sm:px-6 pt-2 sm:pt-4 pb-28 min-h-screen flex flex-col">
         {/* Header */}

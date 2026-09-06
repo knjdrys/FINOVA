@@ -68,7 +68,7 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Popular Institution Selection */}
         <div>
-          <label className="text-xs font-bold text-slate-700 block mb-1.5">
+          <label className="text-xs font-bold text-(--ink-2) block mb-1.5">
             Select Bank or E-Wallet
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
@@ -84,7 +84,7 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
                   className={`flex items-center gap-2 p-2 rounded-xl border text-left transition-all cursor-pointer ${
                     isSelected
                       ? 'border-emerald-700 bg-emerald-50/70 shadow-xs ring-1 ring-emerald-700'
-                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                      : 'border-(--line) bg-(--surface) hover:bg-(--surface-2)'
                   }`}
                 >
                   <div
@@ -101,7 +101,7 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
                       <Building2 className="h-4 w-4" />
                     )}
                   </div>
-                  <span className="truncate text-[11px] font-bold text-slate-800">
+                  <span className="truncate text-[11px] font-bold text-(--ink)">
                     {preset.name}
                   </span>
                 </button>
@@ -111,26 +111,26 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
         </div>
 
         {/* Account Details */}
-        <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+        <div className="space-y-3 bg-(--surface-2) p-4 rounded-2xl border border-(--line)/80">
           <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1">Account Name</label>
+            <label className="text-xs font-bold text-(--ink-2) block mb-1">Account Name</label>
             <input
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Guagua Rural Bank Savings"
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-emerald-600"
+              className="w-full rounded-xl border border-(--line) bg-(--surface) px-3 py-2 text-xs font-bold text-(--ink) outline-none focus:border-emerald-600"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Account Type</label>
+              <label className="text-xs font-bold text-(--ink-2) block mb-1">Account Type</label>
               <select
                 value={accountType}
                 onChange={(e) => setAccountType(e.target.value as AccountType)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-emerald-600 cursor-pointer"
+                className="w-full rounded-xl border border-(--line) bg-(--surface) px-3 py-2 text-xs font-semibold text-(--ink) outline-none focus:border-emerald-600 cursor-pointer"
               >
                 <option value="BANK">Bank Account</option>
                 <option value="E_WALLET">E-Wallet (GCash / Maya)</option>
@@ -142,29 +142,29 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Last 4 Digits (Optional)</label>
+              <label className="text-xs font-bold text-(--ink-2) block mb-1">Last 4 Digits (Optional)</label>
               <input
                 type="text"
                 value={accountNumberMask}
                 onChange={(e) => setAccountNumberMask(e.target.value)}
                 placeholder="•••• 4829"
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 outline-none focus:border-emerald-600"
+                className="w-full rounded-xl border border-(--line) bg-(--surface) px-3 py-2 text-xs font-semibold text-(--ink) outline-none focus:border-emerald-600"
               />
             </div>
           </div>
 
           {/* Initial Balance */}
           <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1">Current Balance</label>
-            <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 focus-within:border-emerald-600">
-              <span className="text-xs font-bold text-slate-500">{currencySymbol}</span>
+            <label className="text-xs font-bold text-(--ink-2) block mb-1">Current Balance</label>
+            <div className="flex items-center gap-1.5 rounded-xl border border-(--line) bg-(--surface) px-3 py-1.5 focus-within:border-emerald-600">
+              <span className="text-xs font-bold text-(--ink-3)">{currencySymbol}</span>
               <input
                 type="number"
                 step="any"
                 min="0"
                 value={initialBalanceStr}
                 onChange={(e) => setInitialBalanceStr(e.target.value)}
-                className="w-full text-sm font-bold text-slate-900 outline-none"
+                className="w-full text-sm font-bold text-(--ink) outline-none"
               />
             </div>
           </div>
@@ -172,8 +172,8 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
           {/* Include in Total Balance Toggle */}
           <div className="flex items-center justify-between pt-1">
             <div>
-              <span className="text-xs font-bold text-slate-800 block">Include in Total Balance</span>
-              <span className="text-[10px] text-slate-500">Count this money toward your daily spending limit</span>
+              <span className="text-xs font-bold text-(--ink) block">Include in Total Balance</span>
+              <span className="text-[10px] text-(--ink-3)">Count this money toward your daily spending limit</span>
             </div>
             <input
               type="checkbox"

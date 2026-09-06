@@ -93,7 +93,7 @@ export const AppLockGuard: React.FC<{ children: React.ReactNode }> = ({ children
 
         <div className="mt-6 flex h-10 items-center justify-center gap-2" role="status" aria-label={t('security.pinAria')}>
           {pin.length === 0 ? (
-            <span className="text-sm text-slate-500">{t('security.enterPin')}</span>
+            <span className="text-sm text-(--ink-3)">{t('security.enterPin')}</span>
           ) : (
             Array.from({ length: pin.length }).map((_, i) => (
               <span key={i} className="h-3 w-3 rounded-full bg-[#D4F63D]" />
@@ -122,11 +122,11 @@ export const AppLockGuard: React.FC<{ children: React.ReactNode }> = ({ children
             0
           </button>
           <button type="button" onClick={submit} disabled={pin.length < 4 || checking} aria-label={t('security.unlock')}
-            className="flex h-14 items-center justify-center rounded-2xl bg-[#D4F63D] text-slate-900 disabled:opacity-40">
+            className="flex h-14 items-center justify-center rounded-2xl bg-[#D4F63D] text-(--ink) disabled:opacity-40">
             <ShieldCheck className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
-        <p className="mt-5 text-[11px] leading-relaxed text-slate-500">{t('security.honestNote')}</p>
+        <p className="mt-5 text-[11px] leading-relaxed text-(--ink-3)">{t('security.honestNote')}</p>
       </div>
     </div>
   );

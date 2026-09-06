@@ -122,7 +122,7 @@ export const AddCommitmentModal: React.FC<AddCommitmentModalProps> = ({
             <option value="OPTIONAL">{t('modal.optionalPriority')}</option>
           </select>
         </Field>
-        <label className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 cursor-pointer">
+        <label className="flex items-start gap-2.5 rounded-xl border border-(--line) bg-(--surface-2) px-3 py-2.5 cursor-pointer">
           <input
             type="checkbox"
             checked={autoPost}
@@ -130,8 +130,8 @@ export const AddCommitmentModal: React.FC<AddCommitmentModalProps> = ({
             className="mt-0.5 h-4 w-4 accent-emerald-700"
           />
           <span>
-            <span className="block text-xs font-bold text-slate-700">{t('modal.autoPostTitle')}</span>
-            <span className="block text-[10px] font-medium text-slate-500">{t('modal.autoPostBillHint')}</span>
+            <span className="block text-xs font-bold text-(--ink-2)">{t('modal.autoPostTitle')}</span>
+            <span className="block text-[10px] font-medium text-(--ink-3)">{t('modal.autoPostBillHint')}</span>
           </span>
         </label>
 
@@ -142,7 +142,7 @@ export const AddCommitmentModal: React.FC<AddCommitmentModalProps> = ({
         ) : null}
 
         <div className="flex gap-2 pt-2">
-          <button type="button" onClick={onClose} className="flex-1 rounded-xl bg-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700">{t('common.cancel')}</button>
+          <button type="button" onClick={onClose} className="flex-1 rounded-xl bg-(--line) px-4 py-2.5 text-sm font-bold text-(--ink-2)">{t('common.cancel')}</button>
           <button type="button" onClick={save} className="flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white">{editingCommitment ? t('common.save') : t('modal.create')}</button>
         </div>
       </div>
@@ -150,10 +150,10 @@ export const AddCommitmentModal: React.FC<AddCommitmentModalProps> = ({
   );
 };
 
-const inputCls = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300';
+const inputCls = 'w-full rounded-xl border border-(--line) px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300';
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <div className="space-y-1.5">
-    <span className="text-xs font-bold text-slate-600">{label}</span>
+    <span className="text-xs font-bold text-(--ink-2)">{label}</span>
     {children}
   </div>
 );

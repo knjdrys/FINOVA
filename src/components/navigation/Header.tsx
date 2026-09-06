@@ -41,7 +41,7 @@ const SyncPill: React.FC<{ status: SyncStatus | null }> = ({ status }) => {
   if (!status.online) {
     icon = <CloudOff className="h-3 w-3" />;
     label = status.pending > 0 ? t('sync.offlinePending', { count: status.pending }) : t('sync.offline');
-    tone = 'bg-slate-500/15 text-slate-700 border-slate-500/25';
+    tone = 'bg-slate-500/15 text-(--ink-2) border-slate-500/25';
   } else if (status.phase === 'syncing') {
     icon = <RefreshCw className="h-3 w-3 animate-spin" />;
     label = t('sync.syncing');
@@ -127,7 +127,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onSignOut?.();
               }
             }}
-            className="flex items-center gap-1 rounded-lg text-[11px] font-extrabold text-slate-500 hover:text-rose-600 px-2 py-0.5 transition-colors cursor-pointer shrink-0"
+            className="flex items-center gap-1 rounded-lg text-[11px] font-extrabold text-(--ink-3) hover:text-rose-600 px-2 py-0.5 transition-colors cursor-pointer shrink-0"
           >
             <LogOut className="h-3 w-3" />
             <span>Logout</span>
@@ -155,8 +155,8 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           <div className="min-w-0">
-            <p className="truncate text-sm sm:text-base font-bold tracking-tight text-slate-800">
-              Welcome, <span className="font-black text-slate-900">{authUser?.fullName || settings.userName}</span>
+            <p className="truncate text-sm sm:text-base font-bold tracking-tight text-(--ink)">
+              Welcome, <span className="font-black text-(--ink)">{authUser?.fullName || settings.userName}</span>
             </p>
           </div>
         </div>
@@ -204,10 +204,10 @@ export const Header: React.FC<HeaderProps> = ({
                 </option>
               ))}
             </select>
-            <div className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-extrabold text-slate-800 shadow-xs border border-slate-200/80 hover:bg-slate-50 transition-colors">
+            <div className="flex items-center gap-1.5 rounded-full bg-(--surface) px-3 py-1.5 text-xs font-extrabold text-(--ink) shadow-xs border border-(--line)/80 hover:bg-(--surface-2) transition-colors">
               <Globe className="h-3.5 w-3.5 text-emerald-700 shrink-0" />
               <span>{settings.currency}</span>
-              <ChevronDown className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+              <ChevronDown className="h-3.5 w-3.5 text-(--ink-3) shrink-0" />
             </div>
           </div>
 
@@ -226,10 +226,10 @@ export const Header: React.FC<HeaderProps> = ({
                 </option>
               ))}
             </select>
-            <div className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-800 shadow-xs border border-slate-200/80 hover:bg-slate-50 transition-colors">
-              <UserIcon className="h-3.5 w-3.5 text-slate-600 shrink-0" />
+            <div className="flex items-center gap-1.5 rounded-full bg-(--surface) px-3 py-1.5 text-xs font-bold text-(--ink) shadow-xs border border-(--line)/80 hover:bg-(--surface-2) transition-colors">
+              <UserIcon className="h-3.5 w-3.5 text-(--ink-2) shrink-0" />
               <span className="truncate max-w-[90px] sm:max-w-[140px]">{accountLabel}</span>
-              <ChevronDown className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+              <ChevronDown className="h-3.5 w-3.5 text-(--ink-3) shrink-0" />
             </div>
           </div>
         </div>

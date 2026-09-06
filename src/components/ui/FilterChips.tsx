@@ -80,7 +80,7 @@ export const FilterChips: React.FC<FilterChipsProps> = ({
         <button
           type="button"
           onClick={() => scrollByAmount(-180)}
-          className="absolute left-0 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-slate-800 shadow-md border border-slate-200/80 hover:bg-slate-100 transition-all cursor-pointer"
+          className="absolute left-0 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-(--surface)/95 text-(--ink) shadow-md border border-(--line)/80 hover:bg-(--surface-3) transition-all cursor-pointer"
           aria-label="Scroll left"
         >
           <ChevronLeft className="h-4 w-4 stroke-[2.5]" />
@@ -108,7 +108,7 @@ export const FilterChips: React.FC<FilterChipsProps> = ({
           className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
             selectedCategoryId === 'ALL'
               ? 'bg-[#183625] text-[#D4F63D] shadow-sm'
-              : 'bg-white border border-slate-200/80 text-slate-700 hover:bg-slate-50'
+              : 'bg-(--surface) border border-(--line)/80 text-(--ink-2) hover:bg-(--surface-2)'
           }`}
         >
           {showFilterIcon && <Filter className="h-3.5 w-3.5" />}
@@ -126,7 +126,7 @@ export const FilterChips: React.FC<FilterChipsProps> = ({
               className={`inline-flex shrink-0 items-center rounded-full px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
                 isSelected
                   ? 'bg-[#183625] text-[#D4F63D] shadow-sm'
-                  : 'bg-white border border-slate-200/80 text-slate-700 hover:bg-slate-50'
+                  : 'bg-(--surface) border border-(--line)/80 text-(--ink-2) hover:bg-(--surface-2)'
               }`}
             >
               {cat.name}
@@ -143,7 +143,7 @@ export const FilterChips: React.FC<FilterChipsProps> = ({
         <button
           type="button"
           onClick={() => scrollByAmount(180)}
-          className="absolute right-0 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-slate-800 shadow-md border border-slate-200/80 hover:bg-slate-100 transition-all cursor-pointer"
+          className="absolute right-0 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-(--surface)/95 text-(--ink) shadow-md border border-(--line)/80 hover:bg-(--surface-3) transition-all cursor-pointer"
           aria-label="Scroll right"
         >
           <ChevronRight className="h-4 w-4 stroke-[2.5]" />

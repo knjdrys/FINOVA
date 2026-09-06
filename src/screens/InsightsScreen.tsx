@@ -137,15 +137,15 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
       </div>
 
       {/* Category Spending Breakdown */}
-      <div className="rounded-[24px] sm:rounded-[28px] bg-white p-5 sm:p-6 shadow-sm border border-slate-100 space-y-3.5">
+      <div className="rounded-[24px] sm:rounded-[28px] bg-(--surface) p-5 sm:p-6 shadow-sm border border-(--line-soft) space-y-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <PieChart className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-800" />
-            <h4 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wider">
+            <h4 className="text-xs sm:text-sm font-black text-(--ink) uppercase tracking-wider">
               {t('analytics.breakdownTitle')}
             </h4>
           </div>
-          <span className="text-xs sm:text-sm font-bold text-slate-500">
+          <span className="text-xs sm:text-sm font-bold text-(--ink-3)">
             {t('analytics.total')} {MoneyValue.fromMinorUnits(totalExpenseMinor, currency).format()}
           </span>
         </div>
@@ -153,13 +153,13 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
         {categoryBreakdown.length === 0 ? (
           <div className="flex flex-col items-center gap-1.5 py-6 text-center">
             <Inbox className="h-6 w-6 text-slate-300" aria-hidden="true" />
-            <p className="text-sm font-bold text-slate-700">{t('analytics.emptyTitle')}</p>
-            <p className="text-xs text-slate-500 max-w-xs">{t('analytics.emptyHint')}</p>
+            <p className="text-sm font-bold text-(--ink-2)">{t('analytics.emptyTitle')}</p>
+            <p className="text-xs text-(--ink-3) max-w-xs">{t('analytics.emptyHint')}</p>
           </div>
         ) : (
           <>
             {/* Stacked Segment Bar */}
-            <div className="h-3.5 sm:h-4 w-full rounded-full bg-slate-100 flex overflow-hidden" aria-hidden="true">
+            <div className="h-3.5 sm:h-4 w-full rounded-full bg-(--surface-3) flex overflow-hidden" aria-hidden="true">
               {categoryBreakdown.map((item) => (
                 <div
                   key={item.catId}
@@ -180,13 +180,13 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
                       style={{ backgroundColor: item.color }}
                       aria-hidden="true"
                     />
-                    <span className="font-bold text-slate-700">{item.name}</span>
+                    <span className="font-bold text-(--ink-2)">{item.name}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="font-black text-slate-900">
+                    <span className="font-black text-(--ink)">
                       {MoneyValue.fromMinorUnits(item.amount, currency).format()}
                     </span>
-                    <span className="text-slate-500 font-semibold">({item.percentage}%)</span>
+                    <span className="text-(--ink-3) font-semibold">({item.percentage}%)</span>
                   </div>
                 </div>
               ))}
@@ -198,7 +198,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
       {/* Smart Money Tips List */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
-          <span className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wider">
+          <span className="text-xs sm:text-sm font-black text-(--ink) uppercase tracking-wider">
             {t('analytics.tipsTitle')}
           </span>
           <span className="text-xs font-bold text-emerald-800">
@@ -207,9 +207,9 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
         </div>
 
         {insights.length === 0 ? (
-          <div className="rounded-[24px] sm:rounded-[28px] bg-white p-5 shadow-xs border border-slate-100 flex flex-col items-center gap-1.5 text-center">
+          <div className="rounded-[24px] sm:rounded-[28px] bg-(--surface) p-5 shadow-xs border border-(--line-soft) flex flex-col items-center gap-1.5 text-center">
             <Sparkles className="h-6 w-6 text-slate-300" aria-hidden="true" />
-            <p className="text-xs sm:text-sm text-slate-500 max-w-sm">{t('analytics.noTips')}</p>
+            <p className="text-xs sm:text-sm text-(--ink-3) max-w-sm">{t('analytics.noTips')}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -223,12 +223,12 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
                   ? 'bg-amber-50 text-amber-800 border-amber-200/80'
                   : insight.severity === 'ALERT'
                   ? 'bg-rose-50 text-rose-800 border-rose-200/80'
-                  : 'bg-slate-50 text-slate-800 border-slate-200/80';
+                  : 'bg-(--surface-2) text-(--ink) border-(--line)/80';
 
               return (
                 <div
                   key={insight.id}
-                  className="rounded-[24px] sm:rounded-[28px] bg-white p-4 sm:p-5 shadow-xs border border-slate-100 space-y-2.5"
+                  className="rounded-[24px] sm:rounded-[28px] bg-(--surface) p-4 sm:p-5 shadow-xs border border-(--line-soft) space-y-2.5"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3">
@@ -236,18 +236,18 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
                         <IconComp className="h-4 w-4 sm:h-5 sm:w-5" />
                       </div>
                       <div>
-                        <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-slate-500 block">
+                        <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-(--ink-3) block">
                           {t(`insightCat.${insight.category}`)}
                         </span>
-                        <h4 className="text-xs sm:text-sm font-extrabold text-slate-900">{insight.title}</h4>
+                        <h4 className="text-xs sm:text-sm font-extrabold text-(--ink)">{insight.title}</h4>
                       </div>
                     </div>
                   </div>
 
                   {/* Fact */}
-                  <div className="rounded-xl bg-slate-50 p-3 text-xs sm:text-sm text-slate-700">
-                    <p className="font-bold text-slate-900">{insight.fact}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{insight.calculation}</p>
+                  <div className="rounded-xl bg-(--surface-2) p-3 text-xs sm:text-sm text-(--ink-2)">
+                    <p className="font-bold text-(--ink)">{insight.fact}</p>
+                    <p className="text-xs text-(--ink-3) mt-0.5">{insight.calculation}</p>
                   </div>
 
                   {/* Interpretation */}

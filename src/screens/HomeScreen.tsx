@@ -231,7 +231,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             onOpenSafeToSpendExplainer();
           }
         }}
-        className={`group flex items-center justify-between rounded-2xl bg-white p-3.5 sm:p-4 shadow-xs border transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 ${
+        className={`group flex items-center justify-between rounded-2xl bg-(--surface) p-3.5 sm:p-4 shadow-xs border transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 ${
           safeToSpend.isDeficit ? 'border-rose-200 hover:border-rose-300' : 'border-emerald-100 hover:border-emerald-300'
         }`}
       >
@@ -244,7 +244,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <span className={`text-[10px] sm:text-xs font-black uppercase tracking-wider ${
-                safeToSpend.isDeficit ? 'text-rose-800' : 'text-emerald-800'
+                safeToSpend.isDeficit ? 'text-rose-800' : 'text-emerald-800 dark:text-emerald-300'
               }`}>
                 {t('home.safeToSpend')}
               </span>
@@ -262,13 +262,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 </span>
               )}
             </div>
-            <p className="truncate text-xs sm:text-sm font-semibold text-slate-600 mt-0.5">
-              <span className="text-sm sm:text-base font-black text-slate-900">
+            <p className="truncate text-xs sm:text-sm font-semibold text-(--ink-2) mt-0.5">
+              <span className="text-sm sm:text-base font-black text-(--ink)">
                 {MoneyValue.fromMinorUnits(safeToSpend.dailySafeToSpend, currency).format()}
               </span>
               {t('home.perDayRemaining', { days: safeToSpend.remainingDaysInPeriod })}
               {(safeToSpend.essentialUpcomingCommitments > 0 || safeToSpend.reservedGoalContributions > 0) && (
-                <span className="block truncate text-[10px] sm:text-[11px] font-medium text-slate-500">
+                <span className="block truncate text-[10px] sm:text-[11px] font-medium text-(--ink-3)">
                   {t('home.stsPreview', {
                     bills: MoneyValue.fromMinorUnits(safeToSpend.essentialUpcomingCommitments, currency).format(),
                     goals: MoneyValue.fromMinorUnits(safeToSpend.reservedGoalContributions, currency).format(),
@@ -278,7 +278,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-1 text-xs sm:text-sm font-bold text-emerald-800 shrink-0">
+        <div className="flex items-center gap-1 text-xs sm:text-sm font-bold text-emerald-800 dark:text-emerald-300 shrink-0">
           <span>{t('home.details')}</span>
           <ChevronRight className="h-4 w-4" />
         </div>
@@ -288,13 +288,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       {(homePlans.budgets.length > 0 || homePlans.goals.length > 0) && (
         <div className="space-y-2.5" data-tour="planning-glance">
           <div className="flex items-center justify-between px-1">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600">
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-(--ink-2)">
               {homePlans.hasRisk ? t('home.needsAttention') : t('home.budgetsAndGoals')}
             </span>
             <button
               type="button"
               onClick={() => onNavigateToTab('PLANS')}
-              className="flex items-center gap-1 text-[11px] font-bold text-emerald-800 hover:text-emerald-900 transition-colors"
+              className="flex items-center gap-1 text-[11px] font-bold text-emerald-800 dark:text-emerald-300 hover:text-emerald-900 transition-colors"
             >
               {t('home.viewAll')} <ChevronRight className="h-3.5 w-3.5" />
             </button>
@@ -329,10 +329,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           className="flex w-full items-center gap-2 px-1 text-left group"
         >
           <Sparkles className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
-          <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-500 group-hover:text-slate-700 transition-colors">
+          <span className="min-w-0 flex-1 truncate text-xs font-semibold text-(--ink-3) group-hover:text-(--ink-2) transition-colors">
             {calmInsight.title}
           </span>
-          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors" />
+          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300 group-hover:text-(--ink-3) transition-colors" />
         </button>
       )}
 
@@ -340,13 +340,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       <div className="space-y-4 pt-1">
         {showChecklist ? (
           /* First-run checklist: 3 guided wins, then it retires itself. */
-          <div className="rounded-[28px] bg-white p-5 text-center border border-slate-200/80 shadow-xs space-y-3">
+          <div className="rounded-[28px] bg-(--surface) p-5 text-center border border-(--line)/80 shadow-xs space-y-3">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <h4 className="text-sm sm:text-base font-black text-slate-900">
+                <h4 className="text-sm sm:text-base font-black text-(--ink)">
                   {t('home.checklistTitle')}
                 </h4>
-                <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                <p className="text-xs text-(--ink-3) mt-0.5 font-medium">
                   {t('home.checklistDone', { done: checklistItems.filter((i) => i.done).length })}
                 </p>
               </div>
@@ -354,7 +354,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 type="button"
                 onClick={onDismissChecklist}
                 aria-label={t('home.checklistDismiss')}
-                className="flex h-7 w-7 items-center justify-center rounded-full text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-(--ink-3) hover:text-(--ink-2) hover:bg-(--surface-3) transition-colors cursor-pointer shrink-0"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -367,16 +367,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   onClick={item.action}
                   className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-colors cursor-pointer ${
                     item.done
-                      ? 'border-emerald-200 bg-emerald-50/60'
-                      : 'border-slate-200 bg-white hover:border-emerald-300'
+                      ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-800/60 dark:bg-emerald-950/40'
+                      : 'border-(--line) bg-(--surface) hover:border-emerald-300'
                   }`}
                 >
                   <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
-                    item.done ? 'bg-emerald-600 text-white' : 'border border-slate-300 text-transparent'
+                    item.done ? 'bg-emerald-600 text-white' : 'border border-(--line-2) text-transparent'
                   }`}>
                     <Check className="h-3.5 w-3.5" />
                   </span>
-                  <span className={`text-xs font-bold ${item.done ? 'text-slate-500 line-through' : 'text-slate-800'}`}>
+                  <span className={`text-xs font-bold ${item.done ? 'text-(--ink-3) line-through' : 'text-(--ink)'}`}>
                     {item.label}
                   </span>
                 </button>
@@ -385,15 +385,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
         ) : !hasTransactions ? (
           /* Clean Zero-State Card when starting fresh */
-          <div className="rounded-[28px] bg-white p-6 text-center border border-slate-200/80 shadow-xs space-y-3">
+          <div className="rounded-[28px] bg-(--surface) p-6 text-center border border-(--line)/80 shadow-xs space-y-3">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800">
               <Sparkles className="h-6 w-6" />
             </div>
             <div>
-              <h4 className="text-sm sm:text-base font-black text-slate-900">
+              <h4 className="text-sm sm:text-base font-black text-(--ink)">
                 {t('home.readyToTrack')}
               </h4>
-              <p className="text-xs text-slate-500 max-w-xs mx-auto mt-1 font-medium">
+              <p className="text-xs text-(--ink-3) max-w-xs mx-auto mt-1 font-medium">
                 {t('home.readyToTrackHint', { amount: `${currencySymbol}0` })}
               </p>
             </div>
@@ -410,13 +410,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           /* Dynamic Date-Grouped Transaction List */
           <div className="space-y-4">
             <div className="flex items-center justify-between px-1">
-              <span className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+              <span className="text-sm sm:text-base font-black text-(--ink) tracking-tight">
                 {t('home.recentActivity')}
               </span>
               <button
                 type="button"
                 onClick={() => onNavigateToTab('ALL_EXPENSES')}
-                className="text-xs sm:text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                className="text-xs sm:text-sm font-bold text-(--ink-3) hover:text-(--ink) transition-colors cursor-pointer"
               >
                 {t('home.seeAllCount', { count: transactions.length })}
               </button>
@@ -429,7 +429,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               return (
                 <div key={dateStr} className="space-y-2">
                   <div className="px-1">
-                    <span className="text-xs sm:text-sm font-black text-slate-900 tracking-tight">
+                    <span className="text-xs sm:text-sm font-black text-(--ink) tracking-tight">
                       {dateLabel}
                     </span>
                   </div>
@@ -480,8 +480,8 @@ interface NotificationCenterProps {
 const severityStyle: Record<NotificationSeverity, { box: string; dot: string }> = {
   HIGH: { box: 'border-rose-200/70 bg-rose-50/80', dot: 'bg-rose-500' },
   MEDIUM: { box: 'border-amber-200/70 bg-amber-50/80', dot: 'bg-amber-500' },
-  LOW: { box: 'border-slate-200/70 bg-slate-50/80', dot: 'bg-slate-400' },
-  INFO: { box: 'border-slate-200/70 bg-slate-50/80', dot: 'bg-slate-400' },
+  LOW: { box: 'border-(--line)/70 bg-(--surface-2)/80', dot: 'bg-slate-400' },
+  INFO: { box: 'border-(--line)/70 bg-(--surface-2)/80', dot: 'bg-slate-400' },
 };
 
 /**
@@ -504,8 +504,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ notifications, 
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-1.5 px-1">
-        <Bell className="h-3.5 w-3.5 text-slate-500" />
-        <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-600">{t('home.alerts')}</span>
+        <Bell className="h-3.5 w-3.5 text-(--ink-3)" />
+        <span className="text-[11px] font-extrabold uppercase tracking-wider text-(--ink-2)">{t('home.alerts')}</span>
         {unread > 0 && (
           <span className="rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white">{unread}</span>
         )}
@@ -521,17 +521,17 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ notifications, 
       >
         <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${fst.dot}`} aria-hidden="true" />
         <div className="min-w-0 flex-1">
-          <h4 className="text-xs sm:text-[13px] font-bold text-slate-900">{focal.title}</h4>
-          {focal.body && <p className="text-[11px] sm:text-xs text-slate-600 mt-0.5">{focal.body}</p>}
+          <h4 className="text-xs sm:text-[13px] font-bold text-(--ink)">{focal.title}</h4>
+          {focal.body && <p className="text-[11px] sm:text-xs text-(--ink-2) mt-0.5">{focal.body}</p>}
           <div className="mt-2 flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-lg bg-white/80 px-2 py-1 text-[10px] font-black text-slate-700 shadow-xs">
+            <span className="inline-flex items-center gap-1 rounded-lg bg-(--surface)/80 px-2 py-1 text-[10px] font-black text-(--ink-2) shadow-xs">
               {actionLabel} <ChevronRight className="h-3 w-3" />
             </span>
             {!focal.isRead && (
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onMarkRead(focal.id); }}
-                className="rounded-lg px-2 py-1 text-[10px] font-bold text-slate-500 hover:bg-white/70 hover:text-slate-700 transition-colors"
+                className="rounded-lg px-2 py-1 text-[10px] font-bold text-(--ink-3) hover:bg-(--surface)/70 hover:text-(--ink-2) transition-colors"
               >
                 {t('home.markRead')}
               </button>
@@ -553,12 +553,12 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ notifications, 
             className={`rounded-xl border px-3 py-2 flex items-center gap-2 cursor-pointer ${n.isRead ? 'opacity-55 ' + st.box : st.box}`}
           >
             <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${st.dot}`} aria-hidden="true" />
-            <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-slate-700">{n.title}</span>
+            <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-(--ink-2)">{n.title}</span>
             {!n.isRead && (
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onMarkRead(n.id); }}
-                className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-slate-500 hover:bg-white/70 hover:text-slate-600 transition-colors"
+                className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-(--ink-3) hover:bg-(--surface)/70 hover:text-(--ink-2) transition-colors"
                 aria-label={t('home.markRead')}
               >
                 ✓

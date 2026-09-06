@@ -278,13 +278,25 @@ export const CLEAN_ZERO_STATE: FinovaState = {
     semiMonthlyCutoffDay: 15,
     minimumReserve: 0,
     safeToSpendPeriod: 'END_OF_MONTH',
-    darkTheme: false,
+    darkTheme: prefersDarkOS(),
     notificationsEnabled: true,
     budgetWarningThreshold: 80,
     autoGenerateCommitmentsFromRecurring: true,
     hasCompletedOnboarding: false,
   },
 };
+
+/**
+ * Fresh installs follow the OS color scheme until the user picks otherwise
+ * in Settings → Appearance. Guarded for non-DOM (test) environments.
+ */
+export function prefersDarkOS(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+  );
+}
 
 export class FinovaStorage {
   /** Point storage at a user's namespace. Call on login/logout transitions. */

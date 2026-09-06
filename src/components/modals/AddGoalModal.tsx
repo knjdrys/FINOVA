@@ -103,7 +103,7 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onS
               </option>
             ))}
           </select>
-          <p className="text-[10px] font-medium text-slate-500">
+          <p className="text-[10px] font-medium text-(--ink-3)">
             {t('modal.goalAccountHint')}
           </p>
         </Field>
@@ -133,7 +133,7 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onS
         ) : null}
 
         <div className="flex gap-2 pt-2">
-          <button type="button" onClick={onClose} className="flex-1 rounded-xl bg-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700">{t('common.cancel')}</button>
+          <button type="button" onClick={onClose} className="flex-1 rounded-xl bg-(--line) px-4 py-2.5 text-sm font-bold text-(--ink-2)">{t('common.cancel')}</button>
           <button type="button" onClick={save} className="flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white">{editingGoal ? t('common.save') : t('modal.create')}</button>
         </div>
       </div>
@@ -141,10 +141,10 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onS
   );
 };
 
-const inputCls = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300';
+const inputCls = 'w-full rounded-xl border border-(--line) px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300';
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <div className="space-y-1.5">
-    <span className="text-xs font-bold text-slate-600">{label}</span>
+    <span className="text-xs font-bold text-(--ink-2)">{label}</span>
     {children}
   </div>
 );

@@ -50,8 +50,8 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
     <Modal isOpen={isOpen} onClose={handleClose} title="Transaction Details">
       <div className="space-y-4">
         {/* Amount header */}
-        <div className="rounded-2xl bg-slate-50 p-4 text-center border border-slate-100">
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+        <div className="rounded-2xl bg-(--surface-2) p-4 text-center border border-(--line-soft)">
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-(--ink-3) block mb-1">
             {TransactionEngine.isGoalFunding(tx)
               ? 'Savings set aside'
               : isTransfer
@@ -62,8 +62,8 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
               ? 'Split expense'
               : 'Expense'}
           </span>
-          <p className="text-3xl font-black text-slate-900">{money.format()}</p>
-          <p className="text-xs font-bold text-slate-700 mt-1">{tx.merchant || categoryName(categories, tx.categoryId)}</p>
+          <p className="text-3xl font-black text-(--ink)">{money.format()}</p>
+          <p className="text-xs font-bold text-(--ink-2) mt-1">{tx.merchant || categoryName(categories, tx.categoryId)}</p>
           {tx.sourceCommitmentId && (
             <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
               <ShieldCheck className="h-3 w-3" /> Auto-posted from a plan
@@ -72,18 +72,18 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
         </div>
 
         {/* Facts */}
-        <div className="divide-y divide-slate-100 rounded-xl border border-slate-100 bg-white p-3 text-xs space-y-2">
+        <div className="divide-y divide-(--line-soft) rounded-xl border border-(--line-soft) bg-(--surface) p-3 text-xs space-y-2">
           <div className="flex justify-between py-1">
-            <span className="text-slate-500 font-medium">Date & Time</span>
-            <span className="font-bold text-slate-800">
+            <span className="text-(--ink-3) font-medium">Date & Time</span>
+            <span className="font-bold text-(--ink)">
               {tx.date} {tx.time || ''}
             </span>
           </div>
 
           {isTransfer ? (
             <div className="flex justify-between py-1">
-              <span className="text-slate-500 font-medium">Moved</span>
-              <span className="flex items-center gap-1.5 font-bold text-slate-800">
+              <span className="text-(--ink-3) font-medium">Moved</span>
+              <span className="flex items-center gap-1.5 font-bold text-(--ink)">
                 {accountName(accounts, tx.accountId, 'Source')}
                 <ArrowRightLeft className="h-3.5 w-3.5 text-blue-600" />
                 {accountName(accounts, tx.destinationAccountId, 'Destination')}
@@ -91,30 +91,30 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
             </div>
           ) : (
             <div className="flex justify-between py-1">
-              <span className="text-slate-500 font-medium">{tx.type === 'INCOME' ? 'Source' : 'Account'}</span>
-              <span className="font-bold text-slate-800">{accountName(accounts, tx.accountId, 'Default Account')}</span>
+              <span className="text-(--ink-3) font-medium">{tx.type === 'INCOME' ? 'Source' : 'Account'}</span>
+              <span className="font-bold text-(--ink)">{accountName(accounts, tx.accountId, 'Default Account')}</span>
             </div>
           )}
 
           {!isTransfer && !isSplit && (
             <div className="flex justify-between py-1">
-              <span className="text-slate-500 font-medium">Category</span>
-              <span className="font-bold text-slate-800">{categoryName(categories, tx.categoryId)}</span>
+              <span className="text-(--ink-3) font-medium">Category</span>
+              <span className="font-bold text-(--ink)">{categoryName(categories, tx.categoryId)}</span>
             </div>
           )}
 
           {tx.note && (
             <div className="flex justify-between py-1">
-              <span className="text-slate-500 font-medium">Note</span>
-              <span className="font-semibold text-slate-800 text-right max-w-[60%]">{tx.note}</span>
+              <span className="text-(--ink-3) font-medium">Note</span>
+              <span className="font-semibold text-(--ink) text-right max-w-[60%]">{tx.note}</span>
             </div>
           )}
 
           {tx.tags && tx.tags.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 py-1">
-              <span className="text-slate-500 font-medium mr-1">Tags</span>
+              <span className="text-(--ink-3) font-medium mr-1">Tags</span>
               {tx.tags.map((t) => (
-                <span key={t} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                <span key={t} className="rounded-full bg-(--surface-3) px-2 py-0.5 text-[10px] font-bold text-(--ink-2)">
                   {t}
                 </span>
               ))}
@@ -133,8 +133,8 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                 const share = tx.amount > 0 ? Math.round((amt / tx.amount) * 100) : 0;
                 return (
                   <div key={catId} className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-700">{categoryName(categories, catId)}</span>
-                    <span className="font-semibold text-slate-500">
+                    <span className="font-bold text-(--ink-2)">{categoryName(categories, catId)}</span>
+                    <span className="font-semibold text-(--ink-3)">
                       {MoneyValue.fromMinorUnits(amt, tx.currency).format()}
                       <span className="ml-1.5 text-[10px] font-black text-emerald-700">{share}%</span>
                     </span>
@@ -150,26 +150,26 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
           <button
             type="button"
             onClick={() => setShowReceipt(true)}
-            className="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white p-2.5 text-left hover:border-emerald-300 transition-colors cursor-pointer"
+            className="flex w-full items-center gap-3 rounded-xl border border-(--line) bg-(--surface) p-2.5 text-left hover:border-emerald-300 transition-colors cursor-pointer"
             aria-label="View attached receipt"
           >
             <img
               src={tx.receiptDataUrl}
               alt="Attached receipt thumbnail"
-              className="h-12 w-12 rounded-lg object-cover border border-slate-200"
+              className="h-12 w-12 rounded-lg object-cover border border-(--line)"
             />
             <span className="flex-1">
-              <span className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+              <span className="flex items-center gap-1.5 text-xs font-bold text-(--ink-2)">
                 <Paperclip className="h-3.5 w-3.5" /> Receipt attached
               </span>
-              <span className="block text-[10px] font-medium text-slate-500">Tap to view full size</span>
+              <span className="block text-[10px] font-medium text-(--ink-3)">Tap to view full size</span>
             </span>
           </button>
         )}
 
         {showReceipt && (
           <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/80 p-4" role="dialog" aria-label="Receipt full size">
-            <div className="relative max-h-full w-full max-w-md overflow-auto rounded-2xl bg-white p-2">
+            <div className="relative max-h-full w-full max-w-md overflow-auto rounded-2xl bg-(--surface) p-2">
               <button
                 type="button"
                 onClick={() => setShowReceipt(false)}
@@ -204,7 +204,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
               <button
                 type="button"
                 onClick={() => setConfirmingDelete(false)}
-                className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+                className="flex-1 rounded-xl border border-(--line) bg-(--surface) py-2.5 text-xs font-bold text-(--ink-2) hover:bg-(--surface-2) transition-colors cursor-pointer"
               >
                 Keep it
               </button>

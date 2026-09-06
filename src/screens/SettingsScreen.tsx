@@ -39,6 +39,9 @@ import {
   Languages,
   Check,
   Bell,
+  Sun,
+  Moon,
+  Palette,
 } from 'lucide-react';
 import { t, SUPPORTED_LANGS } from '../i18n';
 import { confirmDialog, notice } from '../components/ui/dialog';
@@ -175,7 +178,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     <div className="space-y-4 sm:space-y-5 pb-8">
       {/* Screen Header */}
       <div className="flex items-center justify-between py-1">
-        <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+        <h2 className="text-base sm:text-lg font-black text-(--ink) tracking-tight">
           Settings & Preferences
         </h2>
         <span className="rounded-full bg-emerald-100 text-emerald-800 text-xs font-black px-3 py-0.5">
@@ -184,7 +187,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       </div>
 
       {/* User Account & Cloud Sync Banner */}
-      <div className="rounded-[24px] sm:rounded-[28px] bg-white p-4 sm:p-5 shadow-sm border border-slate-100 flex items-center justify-between gap-3">
+      <div className="rounded-[24px] sm:rounded-[28px] bg-(--surface) p-4 sm:p-5 shadow-sm border border-(--line-soft) flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#122A1E] text-[#D4F63D] overflow-hidden shadow-xs">
             {authUser?.avatarUrl ? (
@@ -196,10 +199,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             )}
           </div>
           <div className="min-w-0">
-            <h4 className="truncate text-xs sm:text-sm font-black text-slate-900">
+            <h4 className="truncate text-xs sm:text-sm font-black text-(--ink)">
               {authUser?.fullName || settings.userName}
             </h4>
-            <p className="truncate text-[11px] text-slate-500">{authUser?.email || 'Logged in'}</p>
+            <p className="truncate text-[11px] text-(--ink-3)">{authUser?.email || 'Logged in'}</p>
             <div className="flex items-center gap-1 text-[10px] mt-0.5">
               {isSupabaseConfigured && !authUser?.isGuest ? (
                 <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
@@ -207,7 +210,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                   <span>Supabase PostgreSQL Synced</span>
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 text-slate-500 font-medium">
+                <span className="inline-flex items-center gap-1 text-(--ink-3) font-medium">
                   <CloudOff className="h-3 w-3" />
                   <span>Local Offline Session</span>
                 </span>
@@ -224,7 +227,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 onSignOut();
               }
             }}
-            className="flex items-center gap-1.5 rounded-xl bg-slate-100 px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-rose-50 hover:text-rose-700 transition-colors cursor-pointer shrink-0"
+            className="flex items-center gap-1.5 rounded-xl bg-(--surface-3) px-3.5 py-2 text-xs font-bold text-(--ink-2) hover:bg-rose-50 hover:text-rose-700 transition-colors cursor-pointer shrink-0"
           >
             <LogOut className="h-3.5 w-3.5" />
             <span>Log Out</span>
@@ -271,7 +274,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             <button
               type="button"
               onClick={() => setIsTutorialOpen(true)}
-              className="flex items-center justify-center gap-1.5 rounded-xl bg-white/10 text-white px-3.5 py-2.5 text-xs font-bold border border-white/20 hover:bg-white/20 transition-all cursor-pointer"
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-(--surface)/10 text-white px-3.5 py-2.5 text-xs font-bold border border-white/20 hover:bg-(--surface)/20 transition-all cursor-pointer"
             >
               <Play className="h-3 w-3 fill-current" />
               <span>Read Guide</span>
@@ -281,16 +284,16 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       </div>
 
       {/* 1. Default Expense Tracking Timeframe Setting */}
-      <div className="rounded-[24px] sm:rounded-[28px] bg-white p-4 sm:p-5 shadow-sm border border-slate-100 space-y-3">
+      <div className="rounded-[24px] sm:rounded-[28px] bg-(--surface) p-4 sm:p-5 shadow-sm border border-(--line-soft) space-y-3">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 shadow-2xs">
             <Clock className="h-4 w-4" />
           </div>
           <div>
-            <h4 className="text-xs sm:text-sm font-black text-slate-900">
+            <h4 className="text-xs sm:text-sm font-black text-(--ink)">
               Default Home View
             </h4>
-            <p className="text-[11px] sm:text-xs text-slate-500">
+            <p className="text-[11px] sm:text-xs text-(--ink-3)">
               Choose the time period shown when you open the app
             </p>
           </div>
@@ -315,7 +318,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
                   isSelected
                     ? 'border-emerald-700 bg-emerald-50 text-emerald-950 font-black shadow-xs ring-1 ring-emerald-700'
-                    : 'border-slate-200 bg-white text-slate-700 font-bold hover:bg-slate-50'
+                    : 'border-(--line) bg-(--surface) text-(--ink-2) font-bold hover:bg-(--surface-2)'
                 }`}
               >
                 <span className="text-xs">{item.label}</span>
@@ -327,17 +330,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       </div>
 
       {/* 2. 15-Day Semi-Monthly Payroll Budget Breakdown Feature */}
-      <div data-tour="payroll-cycle-setting" className="rounded-[24px] sm:rounded-[28px] bg-white p-4 sm:p-5 shadow-sm border border-slate-100 space-y-3.5">
+      <div data-tour="payroll-cycle-setting" className="rounded-[24px] sm:rounded-[28px] bg-(--surface) p-4 sm:p-5 shadow-sm border border-(--line-soft) space-y-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 shadow-2xs">
               <Calendar className="h-4 w-4" />
             </div>
             <div>
-              <h4 className="text-xs sm:text-sm font-black text-slate-900">
+              <h4 className="text-xs sm:text-sm font-black text-(--ink)">
                 Twice-a-Month Payday (15-Day Cycle)
               </h4>
-              <p className="text-[11px] sm:text-xs text-slate-500">
+              <p className="text-[11px] sm:text-xs text-(--ink-3)">
                 For people who get paid on the 15th and end of the month
               </p>
             </div>
@@ -354,11 +357,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
               settings.budgetCycleMode === 'SEMI_MONTHLY_15_DAYS'
                 ? 'border-emerald-700 bg-emerald-50/70 text-emerald-950 font-black ring-1 ring-emerald-700 shadow-xs'
-                : 'border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50'
+                : 'border-(--line) bg-(--surface) text-(--ink-2) font-semibold hover:bg-(--surface-2)'
             }`}
           >
             <span className="text-xs font-black block">Twice a Month (15-Day)</span>
-            <span className="text-[10px] text-slate-500">
+            <span className="text-[10px] text-(--ink-3)">
               Splits into 1st & 2nd half periods
             </span>
           </button>
@@ -369,11 +372,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
               settings.budgetCycleMode === 'MONTHLY'
                 ? 'border-emerald-700 bg-emerald-50/70 text-emerald-950 font-black ring-1 ring-emerald-700 shadow-xs'
-                : 'border-slate-200 bg-white text-slate-700 font-semibold hover:bg-slate-50'
+                : 'border-(--line) bg-(--surface) text-(--ink-2) font-semibold hover:bg-(--surface-2)'
             }`}
           >
             <span className="text-xs font-black block">Once a Month</span>
-            <span className="text-[10px] text-slate-500">Full Monthly Budget</span>
+            <span className="text-[10px] text-(--ink-3)">Full Monthly Budget</span>
           </button>
         </div>
 
@@ -416,17 +419,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       </div>
 
       {/* 3. Real Banks & Accounts Management */}
-      <div data-tour="bank-accounts-setting" className="rounded-[24px] sm:rounded-[28px] bg-white p-4 sm:p-5 shadow-sm border border-slate-100 space-y-3.5">
+      <div data-tour="bank-accounts-setting" className="rounded-[24px] sm:rounded-[28px] bg-(--surface) p-4 sm:p-5 shadow-sm border border-(--line-soft) space-y-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-800 shadow-2xs">
               <Building2 className="h-4 w-4" />
             </div>
             <div>
-              <h4 className="text-xs sm:text-sm font-black text-slate-900">
+              <h4 className="text-xs sm:text-sm font-black text-(--ink)">
                 Bank Accounts & Wallets
               </h4>
-              <p className="text-[11px] sm:text-xs text-slate-500">
+              <p className="text-[11px] sm:text-xs text-(--ink-3)">
                 Manage GRBI, BPI, BDO, GCash, Maya, and cash
               </p>
             </div>
@@ -453,7 +456,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             return (
               <div
                 key={acc.id}
-                className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200/70"
+                className="flex items-center justify-between p-3 rounded-2xl bg-(--surface-2) border border-(--line)/70"
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div
@@ -471,15 +474,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                     )}
                   </div>
                   <div className="min-w-0">
-                    <h5 className="truncate text-xs font-black text-slate-900">{acc.name}</h5>
-                    <p className="text-[10px] font-semibold text-slate-500">
+                    <h5 className="truncate text-xs font-black text-(--ink)">{acc.name}</h5>
+                    <p className="text-[10px] font-semibold text-(--ink-3)">
                       {acc.type.replace('_', ' ')} {acc.accountNumberMask ? `• ${acc.accountNumberMask}` : ''}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <span className="text-xs sm:text-sm font-black text-slate-900">
+                  <span className="text-xs sm:text-sm font-black text-(--ink)">
                     {money.format()}
                   </span>
                   {accounts.length > 1 && (
@@ -490,7 +493,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                           onDeleteAccount(acc.id);
                         }
                       }}
-                      className="text-[11px] font-bold text-slate-500 hover:text-rose-600 transition-colors cursor-pointer"
+                      className="text-[11px] font-bold text-(--ink-3) hover:text-rose-600 transition-colors cursor-pointer"
                     >
                       Delete
                     </button>
@@ -503,14 +506,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       </div>
 
       {/* 3b. Language Hub */}
-      <div className="rounded-[24px] sm:rounded-[28px] bg-white p-4 sm:p-5 shadow-sm border border-slate-100 space-y-3">
+      <div className="rounded-[24px] sm:rounded-[28px] bg-(--surface) p-4 sm:p-5 shadow-sm border border-(--line-soft) space-y-3">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 shadow-2xs">
             <Languages className="h-4 w-4" />
           </div>
           <div>
-            <h4 className="text-xs sm:text-sm font-black text-slate-900">{t('settings.language')}</h4>
-            <p className="text-[11px] sm:text-xs text-slate-500">{t('settings.languageHint')}</p>
+            <h4 className="text-xs sm:text-sm font-black text-(--ink)">{t('settings.language')}</h4>
+            <p className="text-[11px] sm:text-xs text-(--ink-3)">{t('settings.languageHint')}</p>
           </div>
         </div>
 
@@ -525,7 +528,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                   isSelected
                     ? 'border-emerald-700 bg-emerald-50/70 text-emerald-950 shadow-xs ring-1 ring-emerald-700'
-                    : 'border-slate-200/80 bg-white text-slate-700 hover:bg-slate-50'
+                    : 'border-(--line)/80 bg-(--surface) text-(--ink-2) hover:bg-(--surface-2)'
                 }`}
               >
                 <span>{lang.label}</span>
@@ -536,16 +539,58 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         </div>
       </div>
 
+      {/* 3b2. Appearance — light / dark theme */}
+      <div className="rounded-[24px] sm:rounded-[28px] bg-(--surface) p-4 sm:p-5 shadow-sm border border-(--line-soft) space-y-3">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 shadow-2xs">
+            <Palette className="h-4 w-4" />
+          </div>
+          <div>
+            <h4 className="text-xs sm:text-sm font-black text-(--ink)">{t('settings.themeMode')}</h4>
+            <p className="text-[11px] sm:text-xs text-(--ink-3)">{t('settings.themeHint')}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t('settings.themeMode')}>
+          {([
+            { value: false, label: t('settings.light'), Icon: Sun },
+            { value: true, label: t('settings.dark'), Icon: Moon },
+          ] as const).map(({ value, label, Icon }) => {
+            const isSelected = (settings.darkTheme === true) === value;
+            return (
+              <button
+                key={label}
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
+                onClick={() => onUpdateSettings({ ...settings, darkTheme: value })}
+                className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  isSelected
+                    ? 'border-emerald-700 bg-emerald-50/70 text-emerald-950 shadow-xs ring-1 ring-emerald-700'
+                    : 'border-(--line)/80 bg-(--surface) text-(--ink-2) hover:bg-(--surface-2)'
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </span>
+                {isSelected && <Check className="h-3.5 w-3.5 text-emerald-700 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* 3c. Notifications Hub */}
-      <div className="rounded-[24px] sm:rounded-[28px] bg-white p-4 sm:p-5 shadow-sm border border-slate-100 space-y-3">
+      <div className="rounded-[24px] sm:rounded-[28px] bg-(--surface) p-4 sm:p-5 shadow-sm border border-(--line-soft) space-y-3">
         <div className="flex items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 shadow-2xs">
               <Bell className="h-4 w-4" />
             </div>
             <div>
-              <h4 className="text-xs sm:text-sm font-black text-slate-900">{t('notifSet.title')}</h4>
-              <p className="text-[11px] sm:text-xs text-slate-500">{t('notifSet.hint')}</p>
+              <h4 className="text-xs sm:text-sm font-black text-(--ink)">{t('notifSet.title')}</h4>
+              <p className="text-[11px] sm:text-xs text-(--ink-3)">{t('notifSet.hint')}</p>
             </div>
           </div>
           <button
@@ -555,7 +600,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             onClick={() => setNotif({ enabled: !notifPrefs.enabled })}
             className={`shrink-0 h-6 w-11 rounded-full p-0.5 transition-colors cursor-pointer ${notifPrefs.enabled ? 'bg-emerald-700' : 'bg-slate-300'}`}
           >
-            <span className={`block h-5 w-5 rounded-full bg-white shadow transition-transform ${notifPrefs.enabled ? 'translate-x-5' : ''}`} />
+            <span className={`block h-5 w-5 rounded-full bg-(--surface) shadow transition-transform ${notifPrefs.enabled ? 'translate-x-5' : ''}`} />
           </button>
         </div>
 
@@ -580,7 +625,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                     className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                       on
                         ? 'border-emerald-700 bg-emerald-50/70 text-emerald-950 ring-1 ring-emerald-700'
-                        : 'border-slate-200/80 bg-white text-slate-500 hover:bg-slate-50'
+                        : 'border-(--line)/80 bg-(--surface) text-(--ink-3) hover:bg-(--surface-2)'
                     }`}
                   >
                     <span>{label}</span>
@@ -592,11 +637,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
               <label className="flex flex-col gap-1">
-                <span className="text-[11px] font-bold text-slate-600">{t('notifSet.leadTime')}</span>
+                <span className="text-[11px] font-bold text-(--ink-2)">{t('notifSet.leadTime')}</span>
                 <select
                   value={notifPrefs.billLeadDays}
                   onChange={(e) => setNotif({ billLeadDays: Number(e.target.value) })}
-                  className="rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold text-slate-800"
+                  className="rounded-xl border border-(--line) bg-(--surface) px-2.5 py-2 text-xs font-bold text-(--ink)"
                 >
                   <option value={1}>{t('notifSet.lead1')}</option>
                   <option value={2}>{t('notifSet.lead2')}</option>
@@ -605,11 +650,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 </select>
               </label>
               <label className="flex flex-col gap-1">
-                <span className="text-[11px] font-bold text-slate-600">{t('notifSet.cooldown')}</span>
+                <span className="text-[11px] font-bold text-(--ink-2)">{t('notifSet.cooldown')}</span>
                 <select
                   value={notifPrefs.cooldownHours}
                   onChange={(e) => setNotif({ cooldownHours: Number(e.target.value) })}
-                  className="rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold text-slate-800"
+                  className="rounded-xl border border-(--line) bg-(--surface) px-2.5 py-2 text-xs font-bold text-(--ink)"
                 >
                   <option value={6}>{t('notifSet.cooldown6')}</option>
                   <option value={12}>{t('notifSet.cooldown12')}</option>
@@ -632,16 +677,16 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 }}
                 className={`flex w-full items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all ${
                   !osNotifySupported() || osPerm === 'denied'
-                    ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed'
+                    ? 'border-(--line) bg-(--surface-2) text-slate-400 cursor-not-allowed'
                     : notifPrefs.osNotifications
                       ? 'border-emerald-700 bg-emerald-50/70 text-emerald-950 ring-1 ring-emerald-700 cursor-pointer'
-                      : 'border-slate-200/80 bg-white text-slate-700 hover:bg-slate-50 cursor-pointer'
+                      : 'border-(--line)/80 bg-(--surface) text-(--ink-2) hover:bg-(--surface-2) cursor-pointer'
                 }`}
               >
                 <span>{t('notifSet.os')}</span>
                 {notifPrefs.osNotifications ? <Check className="h-3.5 w-3.5 text-emerald-700 shrink-0" /> : <span className="h-3.5 w-3.5 shrink-0" />}
               </button>
-              <p className="text-[10px] sm:text-[11px] leading-snug text-slate-500">
+              <p className="text-[10px] sm:text-[11px] leading-snug text-(--ink-3)">
                 {!osNotifySupported()
                   ? t('notifSet.osUnsupported')
                   : osPerm === 'denied'
@@ -654,22 +699,22 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       </div>
 
       {/* 3d. Security — App Lock (PIN). Honest: UI-level lock, not encryption. */}
-      <div className="rounded-[24px] sm:rounded-[28px] bg-white p-4 sm:p-5 shadow-sm border border-slate-100 space-y-3">
+      <div className="rounded-[24px] sm:rounded-[28px] bg-(--surface) p-4 sm:p-5 shadow-sm border border-(--line-soft) space-y-3">
         <div className="flex items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 shadow-2xs">
               <Shield className="h-4 w-4" />
             </div>
             <div>
-              <h4 className="text-xs sm:text-sm font-black text-slate-900">{t('security.title')}</h4>
-              <p className="text-[11px] sm:text-xs text-slate-500">{t('security.hint')}</p>
+              <h4 className="text-xs sm:text-sm font-black text-(--ink)">{t('security.title')}</h4>
+              <p className="text-[11px] sm:text-xs text-(--ink-3)">{t('security.hint')}</p>
             </div>
           </div>
           {lockOn ? (
             <button
               type="button"
               onClick={() => void disableLock()}
-              className="shrink-0 rounded-xl border border-slate-200 px-3 py-1.5 text-[11px] font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+              className="shrink-0 rounded-xl border border-(--line) px-3 py-1.5 text-[11px] font-bold text-(--ink-2) hover:bg-(--surface-2) cursor-pointer"
             >
               {t('security.disable')}
             </button>
@@ -680,9 +725,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               aria-checked={showPinForm}
               disabled={!AppLockService.isSupported()}
               onClick={() => setShowPinForm((v) => !v)}
-              className={`shrink-0 h-6 w-11 rounded-full p-0.5 transition-colors ${AppLockService.isSupported() ? 'bg-slate-300 hover:bg-slate-400 cursor-pointer' : 'bg-slate-200 cursor-not-allowed'}`}
+              className={`shrink-0 h-6 w-11 rounded-full p-0.5 transition-colors ${AppLockService.isSupported() ? 'bg-slate-300 hover:bg-slate-400 cursor-pointer' : 'bg-(--line) cursor-not-allowed'}`}
             >
-              <span className={`block h-5 w-5 rounded-full bg-white shadow transition-transform ${showPinForm ? 'translate-x-5' : ''}`} />
+              <span className={`block h-5 w-5 rounded-full bg-(--surface) shadow transition-transform ${showPinForm ? 'translate-x-5' : ''}`} />
             </button>
           )}
         </div>
@@ -694,7 +739,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         {!lockOn && AppLockService.isSupported() && showPinForm && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-bold text-slate-600">{t('security.newPin')}</span>
+              <span className="text-[11px] font-bold text-(--ink-2)">{t('security.newPin')}</span>
               <input
                 type="password"
                 inputMode="numeric"
@@ -703,11 +748,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 value={pinDraft}
                 onChange={(e) => setPinDraft(e.target.value.replace(/\D/g, ''))}
                 placeholder="••••"
-                className="rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-sm font-bold tracking-widest text-slate-800"
+                className="rounded-xl border border-(--line) bg-(--surface) px-2.5 py-2 text-sm font-bold tracking-widest text-(--ink)"
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-bold text-slate-600">{t('security.confirmPin')}</span>
+              <span className="text-[11px] font-bold text-(--ink-2)">{t('security.confirmPin')}</span>
               <input
                 type="password"
                 inputMode="numeric"
@@ -716,7 +761,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 value={pinConfirm}
                 onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, ''))}
                 placeholder="••••"
-                className="rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-sm font-bold tracking-widest text-slate-800"
+                className="rounded-xl border border-(--line) bg-(--surface) px-2.5 py-2 text-sm font-bold tracking-widest text-(--ink)"
               />
             </label>
             {lockError && <p className="sm:col-span-2 text-[11px] font-semibold text-rose-600" role="alert">{lockError}</p>}
@@ -734,7 +779,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         {lockOn && (
           <>
             <label className="flex flex-col gap-1">
-              <span className="text-[11px] font-bold text-slate-600">{t('security.autoLock')}</span>
+              <span className="text-[11px] font-bold text-(--ink-2)">{t('security.autoLock')}</span>
               <select
                 value={autoLockMs}
                 onChange={(e) => {
@@ -742,7 +787,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                   setAutoLockMs(ms);
                   setAutoLockMsState(ms);
                 }}
-                className="rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold text-slate-800"
+                className="rounded-xl border border-(--line) bg-(--surface) px-2.5 py-2 text-xs font-bold text-(--ink)"
               >
                 <option value={0}>{t('security.autoLockNever')}</option>
                 <option value={30000}>{t('security.autoLock30s')}</option>
@@ -750,20 +795,20 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 <option value={300000}>{t('security.autoLock5m')}</option>
               </select>
             </label>
-            <p className="text-[10px] sm:text-[11px] leading-snug text-slate-500">{t('security.honestNote')}</p>
+            <p className="text-[10px] sm:text-[11px] leading-snug text-(--ink-3)">{t('security.honestNote')}</p>
           </>
         )}
       </div>
 
       {/* 4. Global Currency Hub */}
-      <div className="rounded-[24px] sm:rounded-[28px] bg-white p-4 sm:p-5 shadow-sm border border-slate-100 space-y-3">
+      <div className="rounded-[24px] sm:rounded-[28px] bg-(--surface) p-4 sm:p-5 shadow-sm border border-(--line-soft) space-y-3">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 shadow-2xs">
             <Globe className="h-4 w-4" />
           </div>
           <div>
-            <h4 className="text-xs sm:text-sm font-black text-slate-900">App Currency</h4>
-            <p className="text-[11px] sm:text-xs text-slate-500">
+            <h4 className="text-xs sm:text-sm font-black text-(--ink)">App Currency</h4>
+            <p className="text-[11px] sm:text-xs text-(--ink-3)">
               Select your currency. Updates all cards, transactions, and formulas.
             </p>
           </div>
@@ -780,11 +825,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 className={`flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                   isSelected
                     ? 'border-emerald-700 bg-emerald-50/70 text-emerald-950 shadow-xs ring-1 ring-emerald-700'
-                    : 'border-slate-200/80 bg-white text-slate-700 hover:bg-slate-50'
+                    : 'border-(--line)/80 bg-(--surface) text-(--ink-2) hover:bg-(--surface-2)'
                 }`}
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-100 font-black text-slate-900 text-xs shrink-0">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-(--surface-3) font-black text-(--ink) text-xs shrink-0">
                     {curr.symbol}
                   </span>
                   <span className="truncate">{curr.name}</span>
@@ -797,14 +842,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       </div>
 
       {/* 5. User Profile */}
-      <div className="rounded-[24px] sm:rounded-[28px] bg-white p-4 sm:p-5 shadow-sm border border-slate-100 space-y-3">
+      <div className="rounded-[24px] sm:rounded-[28px] bg-(--surface) p-4 sm:p-5 shadow-sm border border-(--line-soft) space-y-3">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-800 shadow-2xs">
             <User className="h-4 w-4" />
           </div>
           <div>
-            <h4 className="text-xs sm:text-sm font-black text-slate-900">Your Name</h4>
-            <p className="text-[11px] sm:text-xs text-slate-500">Customize your greeting name</p>
+            <h4 className="text-xs sm:text-sm font-black text-(--ink)">Your Name</h4>
+            <p className="text-[11px] sm:text-xs text-(--ink-3)">Customize your greeting name</p>
           </div>
         </div>
 
@@ -812,28 +857,28 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           type="text"
           value={settings.userName}
           onChange={(e) => onUpdateSettings({ ...settings, userName: e.target.value })}
-          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-emerald-600"
+          className="w-full rounded-xl border border-(--line) bg-(--surface) px-3 py-2 text-xs font-bold text-(--ink) outline-none focus:border-emerald-600"
         />
       </div>
 
       {/* 6. Emergency Safety Reserve */}
-      <div className="rounded-[24px] sm:rounded-[28px] bg-white p-4 sm:p-5 shadow-sm border border-slate-100 space-y-3">
+      <div className="rounded-[24px] sm:rounded-[28px] bg-(--surface) p-4 sm:p-5 shadow-sm border border-(--line-soft) space-y-3">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-800 shadow-2xs">
             <Shield className="h-4 w-4" />
           </div>
           <div>
-            <h4 className="text-xs sm:text-sm font-black text-slate-900">
+            <h4 className="text-xs sm:text-sm font-black text-(--ink)">
               Emergency Savings Cushion
             </h4>
-            <p className="text-[11px] sm:text-xs text-slate-500">
+            <p className="text-[11px] sm:text-xs text-(--ink-3)">
               Money kept safe that won't be counted in your daily spending limit
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 focus-within:border-emerald-600">
-          <span className="text-xs font-bold text-slate-500">{currentSymbol}</span>
+        <div className="flex items-center gap-2 rounded-xl border border-(--line) bg-(--surface) px-3 py-1.5 focus-within:border-emerald-600">
+          <span className="text-xs font-bold text-(--ink-3)">{currentSymbol}</span>
           <input
             type="number"
             min="0"
@@ -842,19 +887,19 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               const val = parseFloat(e.target.value) || 0;
               onUpdateSettings({ ...settings, minimumReserve: Math.round(val * 100) });
             }}
-            className="w-full text-xs font-bold text-slate-900 outline-none"
+            className="w-full text-xs font-bold text-(--ink) outline-none"
           />
         </div>
       </div>
 
       {/* 7. Data Management & Clean Slate vs Demo */}
-      <div className="rounded-[24px] sm:rounded-[28px] bg-white p-4 sm:p-5 shadow-sm border border-slate-100 space-y-3">
-        <h4 className="text-xs sm:text-sm font-black text-slate-900">Data Management</h4>
+      <div className="rounded-[24px] sm:rounded-[28px] bg-(--surface) p-4 sm:p-5 shadow-sm border border-(--line-soft) space-y-3">
+        <h4 className="text-xs sm:text-sm font-black text-(--ink)">Data Management</h4>
 
         <button
           type="button"
           onClick={handleExportCSV}
-          className="w-full flex items-center justify-center gap-2 rounded-xl bg-slate-50 border border-slate-200 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 rounded-xl bg-(--surface-2) border border-(--line) py-2.5 text-xs font-bold text-(--ink-2) hover:bg-(--surface-3) transition-colors cursor-pointer"
         >
           <Download className="h-4 w-4 text-emerald-700" />
           <span>Download All Transactions ({currentCurrency} CSV Spreadsheet)</span>

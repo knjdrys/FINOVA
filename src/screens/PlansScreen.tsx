@@ -127,7 +127,7 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({
   return (
     <div className="space-y-4 pb-20">
       {/* Internal segments — no new top-level navigation tab */}
-      <div className="flex rounded-xl bg-slate-100 p-1 text-[10px] font-bold">
+      <div className="flex rounded-xl bg-(--surface-3) p-1 text-[10px] font-bold">
         <Seg label="Timeline" active={subTab === 'TIMELINE'} onClick={() => setSubTab('TIMELINE')} />
         <Seg label="Budgets" active={subTab === 'BUDGETS'} onClick={() => setSubTab('BUDGETS')} />
         <Seg label="Goals" active={subTab === 'GOALS'} onClick={() => setSubTab('GOALS')} />
@@ -197,7 +197,7 @@ const Seg: React.FC<{ label: string; active: boolean; onClick: () => void }> = (
     type="button"
     onClick={onClick}
     className={`flex-1 py-2 rounded-lg transition-all ${
-      active ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+      active ? 'bg-(--surface) text-(--ink) shadow-sm' : 'text-(--ink-2) hover:text-(--ink)'
     }`}
   >
     {label}
@@ -214,19 +214,19 @@ const TimelineView: React.FC<{ timeline: TimelineDay[]; settings: UserSettings; 
   return (
   <div className="space-y-3">
     <div className="flex items-center justify-between px-1">
-      <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">30-Day Cash Flow Projection</span>
-      <span className="text-[11px] font-semibold text-emerald-800">Running Projected Balances</span>
+      <span className="text-xs font-extrabold text-(--ink) uppercase tracking-wider">30-Day Cash Flow Projection</span>
+      <span className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300">Running Projected Balances</span>
     </div>
-    <p className="px-1 text-[10px] font-medium text-slate-500">
+    <p className="px-1 text-[10px] font-medium text-(--ink-3)">
       {t('plans.timelineLegend')}
     </p>
     {!hasAnyEvents && (
-      <div className="rounded-2xl bg-white p-6 text-center border border-slate-200/80 shadow-xs space-y-2">
+      <div className="rounded-2xl bg-(--surface) p-6 text-center border border-(--line)/80 shadow-xs space-y-2">
         <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
           <Calendar className="h-5 w-5" />
         </div>
-        <p className="text-xs font-bold text-slate-800">{t('plans.timelineEmpty')}</p>
-        <p className="text-[11px] font-medium text-slate-500 max-w-xs mx-auto">{t('plans.timelineEmptyHint')}</p>
+        <p className="text-xs font-bold text-(--ink)">{t('plans.timelineEmpty')}</p>
+        <p className="text-[11px] font-medium text-(--ink-3) max-w-xs mx-auto">{t('plans.timelineEmptyHint')}</p>
       </div>
     )}
     <div className="space-y-3">
@@ -239,10 +239,10 @@ const TimelineView: React.FC<{ timeline: TimelineDay[]; settings: UserSettings; 
           return (
             <div
               key={day.date}
-              className="flex items-center justify-between rounded-xl border border-slate-100 bg-white px-4 py-2 shadow-xs"
+              className="flex items-center justify-between rounded-xl border border-(--line-soft) bg-(--surface) px-4 py-2 shadow-xs"
             >
-              <span className="text-[11px] font-semibold text-slate-500">{day.dayLabel}</span>
-              <span className={`text-[11px] font-extrabold ${day.projectedEndOfDayBalance < settings.minimumReserve ? 'text-rose-600' : 'text-slate-700'}`}>
+              <span className="text-[11px] font-semibold text-(--ink-3)">{day.dayLabel}</span>
+              <span className={`text-[11px] font-extrabold ${day.projectedEndOfDayBalance < settings.minimumReserve ? 'text-rose-600' : 'text-(--ink-2)'}`}>
                 {projMoney.format()}
               </span>
             </div>
@@ -252,17 +252,17 @@ const TimelineView: React.FC<{ timeline: TimelineDay[]; settings: UserSettings; 
           <div
             key={day.date}
             className={`rounded-2xl border p-4 transition-all ${
-              day.isToday ? 'bg-emerald-50/50 border-emerald-200/80 shadow-sm' : 'bg-white border-slate-100 shadow-xs'
+              day.isToday ? 'bg-emerald-50/50 border-emerald-200/80 shadow-sm dark:bg-emerald-950/50 dark:border-emerald-800/50' : 'bg-(--surface) border-(--line-soft) shadow-xs'
             }`}
           >
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+            <div className="flex items-center justify-between pb-2 border-b border-(--line-soft)">
               <div className="flex items-center gap-2">
-                <Calendar className={`h-4 w-4 ${day.isToday ? 'text-emerald-700' : 'text-slate-500'}`} />
-                <span className="text-xs font-bold text-slate-800">{day.dayLabel}</span>
+                <Calendar className={`h-4 w-4 ${day.isToday ? 'text-emerald-700' : 'text-(--ink-3)'}`} />
+                <span className="text-xs font-bold text-(--ink)">{day.dayLabel}</span>
               </div>
               <div className="text-right">
-                <span className="text-[10px] text-slate-500 font-semibold block">Projected Balance</span>
-                <span className={`text-xs font-extrabold ${day.projectedEndOfDayBalance < settings.minimumReserve ? 'text-rose-600' : 'text-slate-900'}`}>
+                <span className="text-[10px] text-(--ink-3) font-semibold block">Projected Balance</span>
+                <span className={`text-xs font-extrabold ${day.projectedEndOfDayBalance < settings.minimumReserve ? 'text-rose-600' : 'text-(--ink)'}`}>
                   {projMoney.format()}
                 </span>
               </div>
@@ -278,7 +278,7 @@ const TimelineView: React.FC<{ timeline: TimelineDay[]; settings: UserSettings; 
                         <span
                           className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${
                             ev.status === 'ACTUAL'
-                              ? 'bg-slate-100 text-slate-700'
+                              ? 'bg-(--surface-3) text-(--ink-2)'
                               : ev.status === 'OVERDUE'
                               ? 'bg-rose-100 text-rose-800'
                               : 'bg-emerald-100 text-emerald-800'
@@ -286,9 +286,9 @@ const TimelineView: React.FC<{ timeline: TimelineDay[]; settings: UserSettings; 
                         >
                           {ev.status}
                         </span>
-                        <span className="truncate text-slate-800 font-semibold">{ev.title}</span>
+                        <span className="truncate text-(--ink) font-semibold">{ev.title}</span>
                       </div>
-                      <span className={`shrink-0 font-extrabold ${isInflow ? 'text-emerald-700' : 'text-slate-900'}`}>
+                      <span className={`shrink-0 font-extrabold ${isInflow ? 'text-emerald-700' : 'text-(--ink)'}`}>
                         {isInflow ? '+' : '-'}
                         {evMoney.format()}
                       </span>
@@ -297,7 +297,7 @@ const TimelineView: React.FC<{ timeline: TimelineDay[]; settings: UserSettings; 
                 })}
               </div>
             ) : (
-              <p className="mt-2 text-[11px] text-slate-500 italic">No scheduled transactions or bills.</p>
+              <p className="mt-2 text-[11px] text-(--ink-3) italic">No scheduled transactions or bills.</p>
             )}
           </div>
         );
@@ -323,7 +323,7 @@ const BudgetsView: React.FC<{
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between px-1">
-        <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Budgets</span>
+        <span className="text-xs font-extrabold text-(--ink) uppercase tracking-wider">Budgets</span>
         <button type="button" onClick={onOpenAdd} className="flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-emerald-950">
           <Plus className="h-3.5 w-3.5" /> <span>New Budget</span>
         </button>
@@ -345,29 +345,29 @@ const BudgetsView: React.FC<{
               : insight.risk === 'MEDIUM'
               ? { text: t('plans.riskMEDIUM'), cls: 'bg-amber-100 text-amber-800' }
               : insight.risk === 'LOW'
-              ? { text: t('plans.riskLOW'), cls: 'bg-slate-200 text-slate-600' }
+              ? { text: t('plans.riskLOW'), cls: 'bg-(--line) text-(--ink-2)' }
               : null;
           return (
-            <div key={b.id} className="rounded-2xl bg-white p-4 shadow-sm border border-slate-100 space-y-2">
+            <div key={b.id} className="rounded-2xl bg-(--surface) p-4 shadow-sm border border-(--line-soft) space-y-2">
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-bold text-slate-900">{b.name}</h4>
+                    <h4 className="text-sm font-bold text-(--ink)">{b.name}</h4>
                     {riskBadge && (
                       <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${riskBadge.cls}`}>{riskBadge.text}</span>
                     )}
                   </div>
-                  <p className="text-[11px] font-medium text-slate-500">
+                  <p className="text-[11px] font-medium text-(--ink-3)">
                     {spentMoney.format()} / {budgetMoney.format()}
                     {b.rolloverUnused ? ' · rollover' : ''}
                   </p>
                 </div>
                 <RowActions onEdit={() => onEdit(b)} onDelete={() => onDelete(b.id)} />
               </div>
-              <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+              <div className="h-2 w-full rounded-full bg-(--surface-3) overflow-hidden">
                 <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: barColor }} />
               </div>
-              <p className="text-[11px] font-medium text-slate-500">
+              <p className="text-[11px] font-medium text-(--ink-3)">
                 {t('plans.budgetLeftOver', { remaining: remainingMoney.format(), projected: projectedMoney.format() })}
                 {insight.isOverBudget && (
                   <span className="font-bold text-rose-600"> · {t('plans.budgetOverBy', { amount: MoneyValue.fromMinorUnits(insight.projectedOverspend, currency).format() })}</span>
@@ -386,19 +386,19 @@ const BudgetsView: React.FC<{
             type="button"
             onClick={() => setShowArchived((v) => !v)}
             aria-expanded={showArchived}
-            className="w-full rounded-xl border border-slate-200 bg-white py-2 text-[11px] font-bold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+            className="w-full rounded-xl border border-(--line) bg-(--surface) py-2 text-[11px] font-bold text-(--ink-3) hover:text-(--ink) transition-colors cursor-pointer"
           >
             {showArchived ? t('plans.archivedHide') : t('plans.archivedShow', { count: archivedBudgets.length })}
           </button>
           {showArchived && (
             <div className="mt-2 space-y-2">
               {archivedBudgets.map((b) => (
-                <div key={b.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-                  <span className="text-xs font-bold text-slate-500">{b.name}</span>
+                <div key={b.id} className="flex items-center justify-between rounded-xl border border-(--line-soft) bg-(--surface-2) px-3 py-2">
+                  <span className="text-xs font-bold text-(--ink-3)">{b.name}</span>
                   <button
                     type="button"
                     onClick={() => onRestore(b.id)}
-                    className="rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+                    className="rounded-full border border-emerald-200 bg-(--surface) px-2.5 py-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
                   >
                     {t('plans.restoreBtn')}
                   </button>
@@ -432,7 +432,7 @@ const GoalsView: React.FC<{
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between px-1">
-        <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Savings Goals</span>
+        <span className="text-xs font-extrabold text-(--ink) uppercase tracking-wider">Savings Goals</span>
         <button type="button" onClick={onOpenAdd} className="flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-emerald-950">
           <Plus className="h-3.5 w-3.5" /> <span>New Goal</span>
         </button>
@@ -449,8 +449,8 @@ const GoalsView: React.FC<{
               <Shield className="h-5 w-5" />
             </span>
             <span>
-              <span className="block text-sm font-bold text-slate-900">{t('plans.efStart')}</span>
-              <span className="block text-[11px] font-medium text-slate-500">{t('plans.efHint')}</span>
+              <span className="block text-sm font-bold text-(--ink)">{t('plans.efStart')}</span>
+              <span className="block text-[11px] font-medium text-(--ink-3)">{t('plans.efHint')}</span>
             </span>
           </button>
         </div>
@@ -459,7 +459,7 @@ const GoalsView: React.FC<{
         <button
           type="button"
           onClick={onOpenEmergencyFund}
-          className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 bg-white py-2 text-[11px] font-bold text-slate-500 hover:border-emerald-300 hover:text-emerald-700 transition-colors cursor-pointer"
+          className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-(--line-2) bg-(--surface) py-2 text-[11px] font-bold text-(--ink-3) hover:border-emerald-300 hover:text-emerald-700 transition-colors cursor-pointer"
         >
           <Plus className="h-3.5 w-3.5" /> {t('plans.efStart')}
         </button>
@@ -479,10 +479,10 @@ const GoalsView: React.FC<{
               : insight.risk === 'MEDIUM'
               ? { text: t('plans.riskMEDIUM'), cls: 'bg-amber-100 text-amber-800' }
               : insight.risk === 'LOW'
-              ? { text: t('plans.riskLOW'), cls: 'bg-slate-200 text-slate-600' }
+              ? { text: t('plans.riskLOW'), cls: 'bg-(--line) text-(--ink-2)' }
               : null;
           return (
-            <div key={goal.id} className="rounded-2xl bg-white p-4 shadow-sm border border-slate-100 space-y-3">
+            <div key={goal.id} className="rounded-2xl bg-(--surface) p-4 shadow-sm border border-(--line-soft) space-y-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white font-bold" style={{ backgroundColor: goal.color }}>
@@ -490,12 +490,12 @@ const GoalsView: React.FC<{
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-bold text-slate-900">{goal.name}</h4>
+                      <h4 className="text-sm font-bold text-(--ink)">{goal.name}</h4>
                       {riskBadge && (
                         <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${riskBadge.cls}`}>{riskBadge.text}</span>
                       )}
                     </div>
-                    <p className="text-[11px] font-medium text-slate-500">Target: {DateUtils.formatDisplayDate(goal.targetDate, { fullYear: true })}</p>
+                    <p className="text-[11px] font-medium text-(--ink-3)">Target: {DateUtils.formatDisplayDate(goal.targetDate, { fullYear: true })}</p>
                     {goal.accountId && (
                       <p className="text-[10px] font-bold text-emerald-700">
                         {t('plans.savingInto', { name: accounts.find((a) => a.id === goal.accountId)?.name || 'linked account' })}
@@ -507,16 +507,16 @@ const GoalsView: React.FC<{
               </div>
               <div>
                 <div className="flex justify-between text-xs font-bold mb-1">
-                  <span className="text-slate-800">{currMoney.format()}</span>
-                  <span className="text-slate-500">{targetMoney.format()}</span>
+                  <span className="text-(--ink)">{currMoney.format()}</span>
+                  <span className="text-(--ink-3)">{targetMoney.format()}</span>
                 </div>
-                <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                <div className="h-2 w-full rounded-full bg-(--surface-3) overflow-hidden">
                   <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress.progressPercentage}%`, backgroundColor: goal.color }} />
                 </div>
               </div>
-              <div className="rounded-xl bg-slate-50 p-2.5 text-[11px] font-medium text-slate-600 flex items-center justify-between">
+              <div className="rounded-xl bg-(--surface-2) p-2.5 text-[11px] font-medium text-(--ink-2) flex items-center justify-between">
                 <span>Required Velocity:</span>
-                <span className="font-bold text-slate-900">{monthlyRequired.format()}/mo</span>
+                <span className="font-bold text-(--ink)">{monthlyRequired.format()}/mo</span>
               </div>
               {insight.variance < 0 && remaining > 0 && (
                 <p className="text-[11px] font-semibold text-amber-700">
@@ -532,7 +532,7 @@ const GoalsView: React.FC<{
                         const mult = CURRENCY_CONFIGS[currency]?.minorUnitMultiplier ?? 100;
                         setFundAmount(String(suggested / mult));
                       }}
-                      className="rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+                      className="rounded-full border border-emerald-200 bg-(--surface) px-2.5 py-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
                     >
                       {t('plans.fundSuggested', { amount: MoneyValue.fromMinorUnits(suggested, currency).format() })}
                     </button>
@@ -542,9 +542,9 @@ const GoalsView: React.FC<{
                     value={fundAmount}
                     onChange={(e) => setFundAmount(e.target.value)}
                     placeholder="Amount"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="w-full rounded-lg border border-(--line) px-3 py-2 text-sm"
                   />
-                  <select value={fundSource} onChange={(e) => setFundSource(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                  <select value={fundSource} onChange={(e) => setFundSource(e.target.value)} className="w-full rounded-lg border border-(--line) px-3 py-2 text-sm">
                     <option value="">From account…</option>
                     {accounts.filter((a) => a.currency === (goal.currency || currency)).map((a) => (
                       <option key={a.id} value={a.id}>{a.name} ({MoneyValue.fromMinorUnits(a.currentBalance, a.currency).format()})</option>
@@ -566,7 +566,7 @@ const GoalsView: React.FC<{
                     >
                       Fund
                     </button>
-                    <button type="button" onClick={() => setFundingId(null)} className="rounded-lg bg-slate-200 px-3 py-2 text-xs font-bold text-slate-700">
+                    <button type="button" onClick={() => setFundingId(null)} className="rounded-lg bg-(--line) px-3 py-2 text-xs font-bold text-(--ink-2)">
                       Cancel
                     </button>
                   </div>
@@ -618,9 +618,9 @@ const BillsView: React.FC<{
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between px-1">
-        <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Upcoming Bills & Liabilities</span>
+        <span className="text-xs font-extrabold text-(--ink) uppercase tracking-wider">Upcoming Bills & Liabilities</span>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={onOpenPayday} className="flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-emerald-700 transition-colors cursor-pointer">
+          <button type="button" onClick={onOpenPayday} className="flex items-center gap-1 text-xs font-bold text-(--ink-3) hover:text-emerald-700 transition-colors cursor-pointer">
             <Plus className="h-3.5 w-3.5" /> <span>{t('plans.paydayBtn')}</span>
           </button>
           <button type="button" onClick={onOpenAdd} className="flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-emerald-950">
@@ -637,7 +637,7 @@ const BillsView: React.FC<{
             aria-selected={filter === v}
             onClick={() => setFilter(v)}
             className={`rounded-full px-2.5 py-1 text-[10px] font-bold transition-colors cursor-pointer ${
-              filter === v ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:text-slate-800'
+              filter === v ? 'bg-slate-900 text-white' : 'bg-(--surface-3) text-(--ink-3) hover:text-(--ink)'
             }`}
           >
             {label}
@@ -653,34 +653,34 @@ const BillsView: React.FC<{
           const statusBadge = isCompleted
             ? { text: 'PAID', cls: 'bg-emerald-100 text-emerald-800' }
             : isCancelled
-            ? { text: 'CANCELLED', cls: 'bg-slate-200 text-slate-500' }
+            ? { text: 'CANCELLED', cls: 'bg-(--line) text-(--ink-3)' }
             : isOverdue
             ? { text: 'OVERDUE', cls: 'bg-rose-100 text-rose-800' }
             : { text: comm.status, cls: 'bg-amber-100 text-amber-800' };
           return (
-            <div key={comm.id} className={`rounded-2xl p-4 border transition-all ${isCompleted ? 'bg-slate-50/70 border-slate-200/60 opacity-60' : isCancelled ? 'bg-slate-50/40 border-slate-200/40 opacity-50' : 'bg-white border-slate-100 shadow-sm'}`}>
+            <div key={comm.id} className={`rounded-2xl p-4 border transition-all ${isCompleted ? 'bg-(--surface-2)/70 border-(--line)/60 opacity-60' : isCancelled ? 'bg-(--surface-2)/40 border-(--line)/40 opacity-50' : 'bg-(--surface) border-(--line-soft) shadow-sm'}`}>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-3 min-w-0">
                   <button
                     type="button"
                     onClick={() => onToggle(comm.id)}
                     disabled={isCancelled}
-                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors ${isCompleted ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-300 hover:border-emerald-600 disabled:opacity-40'}`}
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors ${isCompleted ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-(--line-2) hover:border-emerald-600 disabled:opacity-40'}`}
                     aria-label={comm.direction === 'INFLOW' ? 'Mark received' : 'Mark paid'}
                   >
                     {isCompleted && <CheckCircle2 className="h-4 w-4" />}
                   </button>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h4 className={`text-xs font-bold text-slate-900 truncate ${isCompleted || isCancelled ? 'line-through' : ''}`}>{comm.title}</h4>
+                      <h4 className={`text-xs font-bold text-(--ink) truncate ${isCompleted || isCancelled ? 'line-through' : ''}`}>{comm.title}</h4>
                       <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${statusBadge.cls}`}>{statusBadge.text}</span>
                     </div>
-                    <p className="text-[11px] font-medium text-slate-500">Due: {DateUtils.formatDisplayDate(comm.dueDate, { fullYear: true })} • {comm.priority}{comm.autoPostEnabled ? ' • auto' : ''}</p>
+                    <p className="text-[11px] font-medium text-(--ink-3)">Due: {DateUtils.formatDisplayDate(comm.dueDate, { fullYear: true })} • {comm.priority}{comm.autoPostEnabled ? ' • auto' : ''}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <span className="text-xs font-extrabold text-slate-900">{MoneyValue.fromMinorUnits(comm.amount, comm.currency).format()}</span>
-                  <button type="button" onClick={() => onEdit(comm)} className="p-1.5 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100" aria-label="Edit">
+                  <span className="text-xs font-extrabold text-(--ink)">{MoneyValue.fromMinorUnits(comm.amount, comm.currency).format()}</span>
+                  <button type="button" onClick={() => onEdit(comm)} className="p-1.5 rounded-lg text-(--ink-3) hover:text-(--ink-2) hover:bg-(--surface-3)" aria-label="Edit">
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
                   <RowMenu
@@ -706,14 +706,14 @@ const BillsView: React.FC<{
                     type="date"
                     value={reschedDate}
                     onChange={(e) => setReschedDate(e.target.value)}
-                    className="rounded-lg border border-slate-200 px-2 py-1 text-xs"
+                    className="rounded-lg border border-(--line) px-2 py-1 text-xs"
                   />
                   <button
                     type="button"
                     onClick={() => { if (reschedDate) { onReschedule(comm.id, reschedDate); setReschedId(null); } }}
                     className="rounded-lg bg-amber-600 px-2 py-1 text-[10px] font-bold text-white"
                   >Save</button>
-                  <button type="button" onClick={() => setReschedId(null)} className="rounded-lg bg-slate-200 px-2 py-1 text-[10px] font-bold text-slate-700">X</button>
+                  <button type="button" onClick={() => setReschedId(null)} className="rounded-lg bg-(--line) px-2 py-1 text-[10px] font-bold text-(--ink-2)">X</button>
                 </div>
               )}
             </div>
@@ -742,7 +742,7 @@ const RecurringView: React.FC<{
   return (
   <div className="space-y-3">
     <div className="flex items-center justify-between px-1">
-      <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Recurring Transactions</span>
+      <span className="text-xs font-extrabold text-(--ink) uppercase tracking-wider">Recurring Transactions</span>
       <button type="button" onClick={onOpenAdd} className="flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-emerald-950">
         <Plus className="h-3.5 w-3.5" /> <span>Add Recurring</span>
       </button>
@@ -755,11 +755,11 @@ const RecurringView: React.FC<{
         const auto = (r.autoPostEnabled ?? r.reminderEnabled) === true;
         const badge = !r.isActive
           ? ended
-            ? { text: t('plans.stEnded'), cls: 'bg-slate-200 text-slate-500' }
-            : { text: t('plans.stPaused'), cls: 'bg-slate-200 text-slate-500' }
+            ? { text: t('plans.stEnded'), cls: 'bg-(--line) text-(--ink-3)' }
+            : { text: t('plans.stPaused'), cls: 'bg-(--line) text-(--ink-3)' }
           : { text: t('plans.stActive'), cls: 'bg-emerald-100 text-emerald-800' };
         return (
-          <div key={r.id} className={`rounded-2xl p-4 border transition-all ${r.isActive ? 'bg-white border-slate-100 shadow-sm' : 'bg-slate-50/70 border-slate-200/60'}`}>
+          <div key={r.id} className={`rounded-2xl p-4 border transition-all ${r.isActive ? 'bg-(--surface) border-(--line-soft) shadow-sm' : 'bg-(--surface-2)/70 border-(--line)/60'}`}>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
@@ -767,23 +767,23 @@ const RecurringView: React.FC<{
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <h4 className="text-xs font-bold text-slate-900 truncate">{r.title}</h4>
+                    <h4 className="text-xs font-bold text-(--ink) truncate">{r.title}</h4>
                     <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${badge.cls}`}>{badge.text}</span>
                   </div>
-                  <p className="text-[11px] font-medium text-slate-500">{r.frequency} • {r.type} • Next: {DateUtils.formatDisplayDate(r.nextOccurrence, { fullYear: true })}{auto && r.isActive ? ` • ${t('plans.autoBadge')}` : ''}</p>
+                  <p className="text-[11px] font-medium text-(--ink-3)">{r.frequency} • {r.type} • Next: {DateUtils.formatDisplayDate(r.nextOccurrence, { fullYear: true })}{auto && r.isActive ? ` • ${t('plans.autoBadge')}` : ''}</p>
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                <span className="text-xs font-extrabold text-slate-900">{rMoney.format()}</span>
+                <span className="text-xs font-extrabold text-(--ink)">{rMoney.format()}</span>
                 <button
                   type="button"
                   onClick={() => onToggleActive(r.id)}
                   aria-label={r.isActive ? t('plans.pauseBtn') : t('plans.resumeBtn')}
-                  className="rounded-lg border border-slate-200 px-2 py-1 text-[10px] font-bold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="rounded-lg border border-(--line) px-2 py-1 text-[10px] font-bold text-(--ink-2) hover:bg-(--surface-3) transition-colors cursor-pointer"
                 >
                   {r.isActive ? t('plans.pauseBtn') : t('plans.resumeBtn')}
                 </button>
-                <button type="button" onClick={() => onEdit(r)} className="p-1.5 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100" aria-label="Edit">
+                <button type="button" onClick={() => onEdit(r)} className="p-1.5 rounded-lg text-(--ink-3) hover:text-(--ink-2) hover:bg-(--surface-3)" aria-label="Edit">
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
                 <RowMenu
@@ -811,7 +811,7 @@ const RecurringView: React.FC<{
                   value={reschedDate}
                   onChange={(e) => setReschedDate(e.target.value)}
                   aria-label="New next-occurrence date"
-                  className="rounded-lg border border-slate-200 px-2 py-1 text-xs"
+                  className="rounded-lg border border-(--line) px-2 py-1 text-xs"
                 />
                 <button
                   type="button"
@@ -832,10 +832,10 @@ const RecurringView: React.FC<{
 
 const RowActions: React.FC<{ onEdit: () => void; onDelete: () => void }> = ({ onEdit, onDelete }) => (
   <div className="flex items-center gap-1 shrink-0">
-    <button type="button" onClick={onEdit} className="p-1.5 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100" aria-label="Edit">
+    <button type="button" onClick={onEdit} className="p-1.5 rounded-lg text-(--ink-3) hover:text-(--ink-2) hover:bg-(--surface-3)" aria-label="Edit">
       <Pencil className="h-3.5 w-3.5" />
     </button>
-    <button type="button" onClick={onDelete} className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50" aria-label="Delete">
+    <button type="button" onClick={onDelete} className="p-1.5 rounded-lg text-(--ink-3) hover:text-rose-600 hover:bg-rose-50" aria-label="Delete">
       <Trash2 className="h-3.5 w-3.5" />
     </button>
   </div>
@@ -863,7 +863,7 @@ const RowMenu: React.FC<{
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={label}
-        className="p-1.5 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+        className="p-1.5 rounded-lg text-(--ink-3) hover:text-(--ink-2) hover:bg-(--surface-3) transition-colors cursor-pointer"
       >
         <MoreHorizontal className="h-4 w-4" />
       </button>
@@ -873,7 +873,7 @@ const RowMenu: React.FC<{
           <div
             role="menu"
             onKeyDown={(e) => { if (e.key === 'Escape') onOpen(null); }}
-            className="absolute right-0 z-20 mt-1 w-40 rounded-xl border border-slate-200 bg-white p-1 shadow-lg"
+            className="absolute right-0 z-20 mt-1 w-40 rounded-xl border border-(--line) bg-(--surface) p-1 shadow-lg"
           >
             {items.map((item) => (
               <button
@@ -885,7 +885,7 @@ const RowMenu: React.FC<{
                   item.onSelect();
                 }}
                 className={`flex w-full items-center rounded-lg px-3 py-2 text-left text-xs font-bold transition-colors cursor-pointer ${
-                  item.danger ? 'text-rose-600 hover:bg-rose-50' : 'text-slate-600 hover:bg-slate-100'
+                  item.danger ? 'text-rose-600 hover:bg-rose-50' : 'text-(--ink-2) hover:bg-(--surface-3)'
                 }`}
               >
                 {item.label}
@@ -899,10 +899,10 @@ const RowMenu: React.FC<{
 };
 
 const EmptyHint: React.FC<{ text: string }> = ({ text }) => (
-  <div className="rounded-2xl bg-white p-6 text-center border border-slate-200/80 shadow-xs">
-    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-500">
+  <div className="rounded-2xl bg-(--surface) p-6 text-center border border-(--line)/80 shadow-xs">
+    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-(--surface-2) text-(--ink-3)">
       <Wallet className="h-5 w-5" />
     </div>
-    <p className="text-xs text-slate-500 mt-2 font-medium max-w-xs mx-auto">{text}</p>
+    <p className="text-xs text-(--ink-3) mt-2 font-medium max-w-xs mx-auto">{text}</p>
   </div>
 );

@@ -90,14 +90,14 @@ export const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
               const on = categoryIds.includes(c.id);
               return (
                 <button key={c.id} type="button" onClick={() => setCategoryIds((prev) => on ? prev.filter((id) => id !== c.id) : [...prev, c.id])}
-                  className={`rounded-full px-3 py-1 text-xs font-bold border ${on ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200'}`}>
+                  className={`rounded-full px-3 py-1 text-xs font-bold border ${on ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-(--surface) text-(--ink-2) border-(--line)'}`}>
                   {c.name}
                 </button>
               );
             })}
           </div>
         </Field>
-        <label className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+        <label className="flex items-center gap-2 text-xs font-semibold text-(--ink-2)">
           <input type="checkbox" checked={rollover} onChange={(e) => setRollover(e.target.checked)} />
           {t('modal.rollover')}
         </label>
@@ -109,7 +109,7 @@ export const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
         ) : null}
 
         <div className="flex gap-2 pt-2">
-          <button type="button" onClick={onClose} className="flex-1 rounded-xl bg-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700">{t('common.cancel')}</button>
+          <button type="button" onClick={onClose} className="flex-1 rounded-xl bg-(--line) px-4 py-2.5 text-sm font-bold text-(--ink-2)">{t('common.cancel')}</button>
           <button type="button" onClick={save} className="flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white">{editingBudget ? t('common.save') : t('modal.create')}</button>
         </div>
       </div>
@@ -117,10 +117,10 @@ export const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
   );
 };
 
-const inputCls = 'w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300';
+const inputCls = 'w-full rounded-xl border border-(--line) px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300';
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <div className="space-y-1.5">
-    <span className="text-xs font-bold text-slate-600">{label}</span>
+    <span className="text-xs font-bold text-(--ink-2)">{label}</span>
     {children}
   </div>
 );

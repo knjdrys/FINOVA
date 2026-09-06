@@ -10,6 +10,7 @@ import {
 } from '../../types';
 import { MoneyValue } from '../../domain/money/MoneyValue';
 import { GrbiLogo } from '../ui/GrbiLogo';
+import { prefersDarkOS } from '../../services/storage/FinovaStorage';
 import { useI18n } from '../../i18n';
 import { Sparkles, ArrowRight, CheckCircle2, Building2, Smartphone, Wallet } from 'lucide-react';
 
@@ -47,7 +48,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
       semiMonthlyCutoffDay: 15,
       minimumReserve: 0,
       safeToSpendPeriod: 'END_OF_MONTH',
-      darkTheme: false,
+      darkTheme: prefersDarkOS(),
       notificationsEnabled: true,
       budgetWarningThreshold: 80,
       autoGenerateCommitmentsFromRecurring: true,
@@ -87,17 +88,17 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
             </div>
 
             <div>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-black text-(--ink) tracking-tight">
                 {t('onboard.welcome')}
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-sm mx-auto font-medium">
+              <p className="text-xs sm:text-sm text-(--ink-3) mt-1 max-w-sm mx-auto font-medium">
                 {t('onboard.tagline')}
               </p>
             </div>
 
-            <div className="space-y-3 pt-2 text-left bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+            <div className="space-y-3 pt-2 text-left bg-(--surface-2) p-4 rounded-2xl border border-(--line)/80">
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">
+                <label className="text-xs font-bold text-(--ink-2) block mb-1">
                   {t('onboard.namePrompt')}
                 </label>
                 <input
@@ -105,18 +106,18 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
                   placeholder={t('onboard.namePlaceholder')}
                   value={userName}
                   onChange={(e) => setUserName(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-bold text-slate-800 outline-none focus:border-emerald-600"
+                  className="w-full rounded-xl border border-(--line) bg-(--surface) px-3.5 py-2.5 text-xs sm:text-sm font-bold text-(--ink) outline-none focus:border-emerald-600"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">
+                <label className="text-xs font-bold text-(--ink-2) block mb-1">
                   {t('onboard.currencyPrompt')}
                 </label>
                 <select
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs sm:text-sm font-bold text-slate-800 outline-none focus:border-emerald-600 cursor-pointer"
+                  className="w-full rounded-xl border border-(--line) bg-(--surface) px-3 py-2.5 text-xs sm:text-sm font-bold text-(--ink) outline-none focus:border-emerald-600 cursor-pointer"
                 >
                   {ALL_CURRENCIES.map((c) => (
                     <option key={c.code} value={c.code}>
@@ -145,17 +146,17 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
               <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full">
                 {t('onboard.stepOf', { current: 2, total: 2 })}
               </span>
-              <h3 className="text-lg sm:text-xl font-black text-slate-900 mt-1">
+              <h3 className="text-lg sm:text-xl font-black text-(--ink) mt-1">
                 {t('onboard.step2Title')}
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-(--ink-3)">
                 {t('onboard.step2Body')}
               </p>
             </div>
 
             {/* Bank Preset Picker */}
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1.5">
+              <label className="text-xs font-bold text-(--ink-2) block mb-1.5">
                 {t('onboard.bankLabel')}
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-44 overflow-y-auto pr-1">
@@ -174,7 +175,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
                       className={`flex items-center gap-2 p-2 rounded-xl border text-left transition-all cursor-pointer ${
                         isSelected
                           ? 'border-emerald-700 bg-emerald-50/70 shadow-xs ring-1 ring-emerald-700'
-                          : 'border-slate-200 bg-white hover:bg-slate-50'
+                          : 'border-(--line) bg-(--surface) hover:bg-(--surface-2)'
                       }`}
                     >
                       <div
@@ -191,7 +192,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
                           <Building2 className="h-3.5 w-3.5" />
                         )}
                       </div>
-                      <span className="truncate text-[11px] font-bold text-slate-800">
+                      <span className="truncate text-[11px] font-bold text-(--ink)">
                         {preset.name.split('(')[0].trim()}
                       </span>
                     </button>
@@ -201,26 +202,26 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
             </div>
 
             {/* Starting Balance (Default 0) */}
-            <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2">
-              <label className="text-xs font-bold text-slate-700 block">
+            <div className="bg-(--surface-2) p-3.5 rounded-2xl border border-(--line)/80 space-y-2">
+              <label className="text-xs font-bold text-(--ink-2) block">
                 {t('onboard.startingBalanceLabel')}
               </label>
-              <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 focus-within:border-emerald-600">
-                <span className="text-sm font-black text-slate-500">{currencySymbol}</span>
+              <div className="flex items-center gap-1.5 rounded-xl border border-(--line) bg-(--surface) px-3 py-1.5 focus-within:border-emerald-600">
+                <span className="text-sm font-black text-(--ink-3)">{currencySymbol}</span>
                 <input
                   type="number"
                   step="any"
                   min="0"
                   value={initialBalanceStr}
                   onChange={(e) => setInitialBalanceStr(e.target.value)}
-                  className="w-full text-base font-black text-slate-900 outline-none"
+                  className="w-full text-base font-black text-(--ink) outline-none"
                 />
               </div>
             </div>
 
             {/* Budget & Paycheck Cycle */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 block">
+              <label className="text-xs font-bold text-(--ink-2) block">
                 How often do you get paid?
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -230,11 +231,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
                   className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
                     budgetCycleMode === 'SEMI_MONTHLY_15_DAYS'
                       ? 'border-emerald-700 bg-emerald-50 text-emerald-950 font-black ring-1 ring-emerald-700 shadow-xs'
-                      : 'border-slate-200 bg-white text-slate-700 font-semibold'
+                      : 'border-(--line) bg-(--surface) text-(--ink-2) font-semibold'
                   }`}
                 >
                   <span className="text-xs font-black block">Twice a Month (15-Day)</span>
-                  <span className="text-[10px] text-slate-500">15th & End of Month</span>
+                  <span className="text-[10px] text-(--ink-3)">15th & End of Month</span>
                 </button>
 
                 <button
@@ -243,11 +244,11 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
                   className={`p-2.5 rounded-xl border text-left cursor-pointer transition-all ${
                     budgetCycleMode === 'MONTHLY'
                       ? 'border-emerald-700 bg-emerald-50 text-emerald-950 font-black ring-1 ring-emerald-700'
-                      : 'border-slate-200 bg-white text-slate-700 font-semibold'
+                      : 'border-(--line) bg-(--surface) text-(--ink-2) font-semibold'
                   }`}
                 >
                   <span className="text-xs font-black block">Once a Month</span>
-                  <span className="text-[10px] text-slate-500">Full Monthly Budget</span>
+                  <span className="text-[10px] text-(--ink-3)">Full Monthly Budget</span>
                 </button>
               </div>
             </div>
@@ -266,7 +267,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
               <button
                 type="button"
                 onClick={() => handleFinish(true)}
-                className="w-full text-center py-2 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+                className="w-full text-center py-2 text-xs font-bold text-(--ink-3) hover:text-(--ink) transition-colors cursor-pointer"
               >
                 Or explore first with Sample Demo Data
               </button>

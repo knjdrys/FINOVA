@@ -44,10 +44,10 @@ export const SafeToSpendExplainerModal: React.FC<SafeToSpendExplainerModalProps>
 
         {/* Step-by-Step Breakdown */}
         <div>
-          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+          <h4 className="text-xs font-bold text-(--ink-3) uppercase tracking-wider mb-2">
             How We Calculate Your Limit
           </h4>
-          <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+          <div className="divide-y divide-(--line-soft) rounded-2xl border border-(--line) bg-(--surface) overflow-hidden shadow-sm">
             {/* Zero-amount steps (beyond the opening balance) add noise, not signal. */}
             {safeToSpend.explanation.steps.filter((step, idx) => idx === 0 || step.amount !== 0).map((step, idx) => {
               const stepMoney = MoneyValue.fromMinorUnits(step.amount, currency);
@@ -64,8 +64,8 @@ export const SafeToSpendExplainerModal: React.FC<SafeToSpendExplainerModalProps>
                       {step.isDeduction ? <Minus className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-slate-800">{step.label}</p>
-                      <p className="text-[11px] text-slate-500">{step.description}</p>
+                      <p className="text-xs font-bold text-(--ink)">{step.label}</p>
+                      <p className="text-[11px] text-(--ink-3)">{step.description}</p>
                     </div>
                   </div>
                   <span
@@ -81,12 +81,12 @@ export const SafeToSpendExplainerModal: React.FC<SafeToSpendExplainerModalProps>
             })}
 
             {/* Total Money Available */}
-            <div className="p-3.5 bg-slate-50 flex items-center justify-between font-bold text-xs">
-              <div className="flex items-center gap-2 text-slate-700">
+            <div className="p-3.5 bg-(--surface-2) flex items-center justify-between font-bold text-xs">
+              <div className="flex items-center gap-2 text-(--ink-2)">
                 <ArrowDownRight className="h-4 w-4 text-emerald-700" />
                 <span>Total Money Available to Spend</span>
               </div>
-              <span className="text-sm font-extrabold text-slate-900">
+              <span className="text-sm font-extrabold text-(--ink)">
                 {poolMoney.format()}
               </span>
             </div>
@@ -107,7 +107,7 @@ export const SafeToSpendExplainerModal: React.FC<SafeToSpendExplainerModalProps>
         <button
           type="button"
           onClick={onClose}
-          className="w-full rounded-xl bg-slate-100 py-3 text-xs font-bold text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
+          className="w-full rounded-xl bg-(--surface-3) py-3 text-xs font-bold text-(--ink-2) hover:bg-(--line) transition-colors cursor-pointer"
         >
           Got It
         </button>

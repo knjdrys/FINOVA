@@ -102,7 +102,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
         },
       ],
       interactivePreview: (sym) => (
-        <div className="rounded-2xl bg-white p-3.5 border border-emerald-200 shadow-sm space-y-2.5">
+        <div className="rounded-2xl bg-(--surface) p-3.5 border border-emerald-200 shadow-sm space-y-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] font-black text-emerald-900 uppercase">
@@ -114,8 +114,8 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
             </div>
             <span className="text-xs font-black text-emerald-700">13 Days Left</span>
           </div>
-          <div className="text-xl font-black text-slate-900">
-            {sym}288.46<span className="text-xs text-slate-500 font-semibold"> / day</span>
+          <div className="text-xl font-black text-(--ink)">
+            {sym}288.46<span className="text-xs text-(--ink-3) font-semibold"> / day</span>
           </div>
           <div className="h-1.5 w-full rounded-full bg-emerald-100 overflow-hidden">
             <div className="h-full bg-emerald-600 rounded-full w-2/3"></div>
@@ -184,29 +184,29 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
       ],
       interactivePreview: (sym) => (
         <div className="space-y-2">
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-(--surface-2) border border-(--line)">
             <div className="flex items-center gap-2.5">
               <div className="h-7 w-7 shrink-0 rounded-lg overflow-hidden flex items-center justify-center bg-[#1C205E]">
                 <GrbiLogo size={28} />
               </div>
               <div>
-                <span className="text-xs font-black text-slate-900 block">Guagua Rural Bank, Inc.</span>
-                <span className="text-[10px] text-slate-500 font-semibold">Bank • •••• 5678</span>
+                <span className="text-xs font-black text-(--ink) block">Guagua Rural Bank, Inc.</span>
+                <span className="text-[10px] text-(--ink-3) font-semibold">Bank • •••• 5678</span>
               </div>
             </div>
-            <span className="text-xs font-black text-slate-900">{sym}45,000.00</span>
+            <span className="text-xs font-black text-(--ink)">{sym}45,000.00</span>
           </div>
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+          <div className="flex items-center justify-between p-2.5 rounded-xl bg-(--surface-2) border border-(--line)">
             <div className="flex items-center gap-2.5">
               <div className="h-7 w-7 shrink-0 rounded-lg flex items-center justify-center bg-[#0284C7] text-white">
                 <Smartphone className="h-4 w-4" />
               </div>
               <div>
-                <span className="text-xs font-black text-slate-900 block">GCash Wallet</span>
-                <span className="text-[10px] text-slate-500 font-semibold">E-Wallet • •••• 0917</span>
+                <span className="text-xs font-black text-(--ink) block">GCash Wallet</span>
+                <span className="text-[10px] text-(--ink-3) font-semibold">E-Wallet • •••• 0917</span>
               </div>
             </div>
-            <span className="text-xs font-black text-slate-900">{sym}11,180.00</span>
+            <span className="text-xs font-black text-(--ink)">{sym}11,180.00</span>
           </div>
         </div>
       ),
@@ -231,14 +231,14 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
         },
       ],
       interactivePreview: () => (
-        <div className="flex items-center justify-center p-4 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+        <div className="flex items-center justify-center p-4 bg-(--surface-2) rounded-2xl border border-(--line) text-center">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#D4F63D] text-[#122A1E] shadow-lg shadow-lime-500/30">
               <Plus className="h-6 w-6 stroke-[3]" />
             </div>
             <div className="text-left">
-              <span className="text-xs font-black text-slate-900 block">Quick-Add Button</span>
-              <span className="text-[11px] text-slate-500 font-medium">Available on every screen</span>
+              <span className="text-xs font-black text-(--ink) block">Quick-Add Button</span>
+              <span className="text-[11px] text-(--ink-3) font-medium">Available on every screen</span>
             </div>
           </div>
         </div>
@@ -299,12 +299,12 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
         },
       ],
       interactivePreview: (sym) => (
-        <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
+        <div className="flex items-center justify-between p-3.5 bg-(--surface-2) rounded-2xl border border-(--line)">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 font-black text-emerald-900 text-xs">
               {sym}
             </span>
-            <span className="text-xs font-bold text-slate-800">{currency} Active</span>
+            <span className="text-xs font-bold text-(--ink)">{currency} Active</span>
           </div>
           <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
             Download Ready
@@ -322,7 +322,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title="" maxWidth="lg">
       <div className="space-y-4 py-1">
         {/* Header with Progress */}
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="flex items-center justify-between border-b border-(--line-soft) pb-3">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#122A1E] text-[#D4F63D] shadow-xs">
               <Sparkles className="h-4 w-4" />
@@ -331,7 +331,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
               <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
                 FINOVA Guide
               </span>
-              <h3 className="text-sm sm:text-base font-black text-slate-900">
+              <h3 className="text-sm sm:text-base font-black text-(--ink)">
                 Part {currentStepIndex + 1} of {steps.length}
               </h3>
             </div>
@@ -349,7 +349,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
                     ? 'w-6 bg-emerald-700'
                     : idx < currentStepIndex
                     ? 'w-2 bg-emerald-300'
-                    : 'w-2 bg-slate-200'
+                    : 'w-2 bg-(--line)'
                 }`}
                 aria-label={`Step ${idx + 1}`}
               />
@@ -363,10 +363,10 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
             <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full">
               {currentStep.tag}
             </span>
-            <h4 className="text-base sm:text-lg font-black text-slate-900 mt-1">
+            <h4 className="text-base sm:text-lg font-black text-(--ink) mt-1">
               {currentStep.title}
             </h4>
-            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
+            <p className="text-xs sm:text-sm text-(--ink-3) font-medium mt-0.5">
               {currentStep.subtitle}
             </p>
           </div>
@@ -381,14 +381,14 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
             {currentStep.bullets.map((b, i) => (
               <div
                 key={i}
-                className="flex items-start gap-2.5 rounded-xl bg-slate-50 p-2.5 border border-slate-200/70"
+                className="flex items-start gap-2.5 rounded-xl bg-(--surface-2) p-2.5 border border-(--line)/70"
               >
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white shadow-2xs mt-0.5">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-(--surface) shadow-2xs mt-0.5">
                   {b.icon}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <span className="text-xs font-black text-slate-900 block">{b.label}</span>
-                  <p className="text-[11px] text-slate-600 font-medium leading-relaxed mt-0.5">
+                  <span className="text-xs font-black text-(--ink) block">{b.label}</span>
+                  <p className="text-[11px] text-(--ink-2) font-medium leading-relaxed mt-0.5">
                     {b.text}
                   </p>
                 </div>
@@ -398,7 +398,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
         </div>
 
         {/* Navigation Actions */}
-        <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+        <div className="flex items-center justify-between pt-3 border-t border-(--line-soft)">
           <button
             type="button"
             disabled={isFirst}
@@ -406,7 +406,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
             className={`flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               isFirst
                 ? 'opacity-30 cursor-not-allowed text-slate-400'
-                : 'text-slate-700 bg-slate-100 hover:bg-slate-200'
+                : 'text-(--ink-2) bg-(--surface-3) hover:bg-(--line)'
             }`}
           >
             <ChevronLeft className="h-4 w-4" />

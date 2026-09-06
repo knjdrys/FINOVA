@@ -168,7 +168,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
   };
 
   const selectCls =
-    'rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-slate-700 outline-none focus:border-emerald-600 cursor-pointer';
+    'rounded-xl border border-(--line) bg-(--surface) px-2.5 py-1.5 text-[11px] font-bold text-(--ink-2) outline-none focus:border-emerald-600 cursor-pointer';
 
   return (
     <div className="space-y-4 sm:space-y-5 pb-6">
@@ -177,13 +177,13 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
         <button
           type="button"
           onClick={onBackToHome}
-          className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-2xl bg-white text-slate-800 shadow-xs border border-slate-200/80 hover:bg-slate-50 transition-colors cursor-pointer"
+          className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-2xl bg-(--surface) text-(--ink) shadow-xs border border-(--line)/80 hover:bg-(--surface-2) transition-colors cursor-pointer"
           aria-label={t('tx.backHome')}
         >
           <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.5]" />
         </button>
 
-        <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
+        <h2 className="text-base sm:text-lg font-black text-(--ink) tracking-tight">
           {t('tx.title')}
         </h2>
 
@@ -192,7 +192,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
           onClick={handleExport}
           title={t('tx.exportCsv')}
           aria-label={t('tx.exportCsv')}
-          className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-2xl bg-white text-slate-800 shadow-xs border border-slate-200/80 hover:bg-slate-50 transition-colors cursor-pointer"
+          className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-2xl bg-(--surface) text-(--ink) shadow-xs border border-(--line)/80 hover:bg-(--surface-2) transition-colors cursor-pointer"
         >
           <Download className="h-4 w-4 sm:h-5 sm:w-5 stroke-[2.2]" />
         </button>
@@ -227,7 +227,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
 
       {/* 3. Type segmented control + sort + advanced toggle */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex rounded-xl bg-slate-100 p-1" role="tablist" aria-label={t('tx.typeAria')}>
+        <div className="flex rounded-xl bg-(--surface-3) p-1" role="tablist" aria-label={t('tx.typeAria')}>
           {(
             [
               ['ALL', t('tx.segAll')],
@@ -243,7 +243,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
               aria-selected={typeFilter === value}
               onClick={() => setTypeFilter(value)}
               className={`rounded-lg px-3 py-1.5 text-[11px] font-bold transition-all cursor-pointer ${
-                typeFilter === value ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                typeFilter === value ? 'bg-(--surface) text-(--ink) shadow-sm' : 'text-(--ink-2) hover:text-(--ink)'
               }`}
             >
               {label}
@@ -270,7 +270,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
           className={`flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] font-bold transition-colors cursor-pointer ${
             showAdvanced || activeFilterCount > 0
               ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
-              : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-300'
+              : 'border-(--line) bg-(--surface) text-(--ink-2) hover:border-emerald-300'
           }`}
         >
           <SlidersHorizontal className="h-3.5 w-3.5" />
@@ -285,10 +285,10 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
 
       {/* 4. Advanced filters — account, amount range, custom dates (contextual, collapsible) */}
       {showAdvanced && (
-        <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs">
+        <div className="space-y-3 rounded-2xl border border-(--line) bg-(--surface) p-3 shadow-xs">
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">{t('tx.filterAccount')}</label>
+              <label className="text-[10px] font-black uppercase tracking-wider text-(--ink-3) block mb-1">{t('tx.filterAccount')}</label>
               <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className={selectCls + ' w-full'} aria-label={t('tx.filterAccount')}>
                 <option value="ALL">{t('tx.allAccounts')}</option>
                 {accounts.map((a) => (
@@ -297,7 +297,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
               </select>
             </div>
             <div>
-              <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">{t('tx.amount')}</label>
+              <label className="text-[10px] font-black uppercase tracking-wider text-(--ink-3) block mb-1">{t('tx.amount')}</label>
               <div className="flex items-center gap-1.5">
                 <input
                   type="number" min="0" placeholder={`${t('tx.filterMin')} ${currencySymbol}`} value={minStr}
@@ -315,11 +315,11 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
           {period === 'CUSTOM' && (
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">{t('tx.filterFrom')}</label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-(--ink-3) block mb-1">{t('tx.filterFrom')}</label>
                 <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className={selectCls + ' w-full'} aria-label={t('tx.filterFrom')} />
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 block mb-1">{t('tx.filterTo')}</label>
+                <label className="text-[10px] font-black uppercase tracking-wider text-(--ink-3) block mb-1">{t('tx.filterTo')}</label>
                 <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className={selectCls + ' w-full'} aria-label={t('tx.filterTo')} />
               </div>
             </div>
@@ -347,28 +347,28 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
 
       {/* Search Input */}
       <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-(--ink-3)" />
         <input
           type="text"
           placeholder={t('tx.searchPlaceholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           aria-label={t('tx.searchPlaceholder')}
-          className="w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-800 placeholder:text-slate-500 outline-none focus:border-emerald-600 shadow-xs"
+          className="w-full rounded-2xl border border-(--line) bg-(--surface) pl-10 pr-4 py-2.5 text-xs sm:text-sm font-semibold text-(--ink) placeholder:text-(--ink-3) outline-none focus:border-emerald-600 shadow-xs"
         />
       </div>
 
       {/* 6. Date Group Timeline List or Zero State */}
       <div className="space-y-4 pt-1">
         {filtered.length === 0 ? (
-          <div className="rounded-[28px] bg-white p-6 text-center border border-slate-200/80 shadow-xs space-y-2">
-            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+          <div className="rounded-[28px] bg-(--surface) p-6 text-center border border-(--line)/80 shadow-xs space-y-2">
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-(--surface-3) text-(--ink-3)">
               <Search className="h-5 w-5" />
             </div>
-            <h4 className="text-xs sm:text-sm font-black text-slate-900">
+            <h4 className="text-xs sm:text-sm font-black text-(--ink)">
               {transactions.length === 0 ? t('tx.noTransactions') : t('tx.nothingMatches')}
             </h4>
-            <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+            <p className="text-[11px] text-(--ink-3) max-w-xs mx-auto">
               {transactions.length === 0
                 ? t('tx.noTransactionsHint')
                 : t('tx.nothingMatchesHint')}
@@ -377,7 +377,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
               <button
                 type="button"
                 onClick={resetFilters}
-                className="mt-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600 hover:border-emerald-300 hover:text-emerald-700 transition-colors cursor-pointer"
+                className="mt-1 rounded-full border border-(--line) bg-(--surface) px-3 py-1.5 text-[11px] font-bold text-(--ink-2) hover:border-emerald-300 hover:text-emerald-700 transition-colors cursor-pointer"
               >
                 {t('tx.resetFilters')}
               </button>
@@ -398,13 +398,13 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
                     <span className="rounded-md bg-[#183625] px-2 py-0.5 text-[10px] sm:text-xs font-black text-white tracking-wider">
                       {dayAbbr}
                     </span>
-                    <span className="text-xs sm:text-sm font-black text-slate-700">
+                    <span className="text-xs sm:text-sm font-black text-(--ink-2)">
                       {dateDisplay}
                     </span>
                   </div>
                   <span
                     className={`text-xs sm:text-sm font-black ${
-                      group.net > 0 ? 'text-emerald-700' : group.net < 0 ? 'text-slate-900' : 'text-slate-500'
+                      group.net > 0 ? 'text-emerald-700' : group.net < 0 ? 'text-(--ink)' : 'text-(--ink-3)'
                     }`}
                   >
                     {group.net > 0 ? `+${dayNetMoney.format()}` : group.net < 0 ? `-${dayNetMoney.format()}` : dayNetMoney.format()}
@@ -435,7 +435,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
           <button
             type="button"
             onClick={() => setVisibleLimit((v) => v + 200)}
-            className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-slate-600 hover:border-emerald-300 hover:text-emerald-700 transition-colors cursor-pointer"
+            className="w-full rounded-2xl border border-(--line) bg-(--surface) py-2.5 text-xs font-bold text-(--ink-2) hover:border-emerald-300 hover:text-emerald-700 transition-colors cursor-pointer"
           >
             {t('tx.showMore', { count: hiddenRows })}
           </button>
