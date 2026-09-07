@@ -29,7 +29,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             }`}
           >
             <Home className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
-            <span className="text-[10px] sm:text-[11px] font-bold mt-1 truncate max-w-[54px] sm:max-w-none">{t('nav.home')}</span>
+            <span className="text-[10px] sm:text-[11px] font-bold mt-1 truncate min-w-0">{t('nav.home')}</span>
             {currentTab === 'HOME' ? (
               <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
             ) : (
@@ -46,7 +46,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             }`}
           >
             <ListOrdered className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
-            <span className="text-[10px] sm:text-[11px] font-bold mt-1 truncate max-w-[54px] sm:max-w-none">{t('nav.transactions')}</span>
+            <span className="text-[10px] sm:text-[11px] font-bold mt-1 truncate min-w-0">{t('nav.transactions')}</span>
             {currentTab === 'ALL_EXPENSES' ? (
               <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
             ) : (
@@ -63,7 +63,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             }`}
           >
             <CalendarDays className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
-            <span className="text-[10px] sm:text-[11px] font-bold mt-1 truncate max-w-[54px] sm:max-w-none">{t('nav.plans')}</span>
+            <span className="text-[10px] sm:text-[11px] font-bold mt-1 truncate min-w-0">{t('nav.plans')}</span>
             {currentTab === 'PLANS' ? (
               <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
             ) : (
@@ -94,7 +94,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             }`}
           >
             <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
-            <span className="text-[10px] sm:text-[11px] font-bold mt-1 truncate max-w-[54px] sm:max-w-none">{t('nav.insights')}</span>
+            <span className="text-[10px] sm:text-[11px] font-bold mt-1 truncate min-w-0">{t('nav.insights')}</span>
             {currentTab === 'ANALYTICS' ? (
               <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
             ) : (
@@ -111,7 +111,7 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             }`}
           >
             <Settings className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
-            <span className="text-[10px] sm:text-[11px] font-bold mt-1 truncate max-w-[54px] sm:max-w-none">{t('nav.settings')}</span>
+            <span className="text-[10px] sm:text-[11px] font-bold mt-1 truncate min-w-0">{t('nav.settings')}</span>
             {currentTab === 'SETTINGS' ? (
               <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
             ) : (

@@ -105,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={onOpenSignIn}
-            className="flex items-center gap-1.5 rounded-xl bg-[#122A1E] text-[#D4F63D] px-3 py-1 text-[11px] sm:text-xs font-black shadow-xs hover:bg-[#183625] active:scale-95 transition-all cursor-pointer shrink-0 ml-2"
+            className="flex items-center gap-1.5 rounded-xl bg-[#122A1E] text-[#D4F63D] px-3 py-1.5 text-[11px] sm:text-xs font-black shadow-xs hover:bg-[#183625] active:scale-95 transition-all cursor-pointer shrink-0 ml-2"
           >
             <LogIn className="h-3.5 w-3.5 stroke-[2.5]" />
             <span>Sign In</span>
@@ -127,7 +127,7 @@ export const Header: React.FC<HeaderProps> = ({
                 onSignOut?.();
               }
             }}
-            className="flex items-center gap-1 rounded-lg text-[11px] font-extrabold text-(--ink-3) hover:text-rose-600 px-2 py-0.5 transition-colors cursor-pointer shrink-0"
+            className="flex items-center gap-1 rounded-lg text-[11px] font-extrabold text-(--ink-3) hover:text-rose-600 px-2 py-1.5 transition-colors cursor-pointer shrink-0"
           >
             <LogOut className="h-3 w-3" />
             <span>Logout</span>
@@ -171,7 +171,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onApplyUpdate}
-              className="flex items-center gap-1 rounded-full bg-sky-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white shadow-xs hover:bg-sky-700 active:scale-95 transition-all cursor-pointer"
+              className="flex items-center gap-1 rounded-full bg-sky-600 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wide text-white shadow-xs hover:bg-sky-700 active:scale-95 transition-all cursor-pointer"
             >
               <RefreshCw className="h-3 w-3" />
               <span>{t('sync.update')}</span>
@@ -183,7 +183,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onInstall}
-              className="flex items-center gap-1 rounded-full bg-[#122A1E] px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-[#D4F63D] shadow-xs hover:bg-[#183625] active:scale-95 transition-all cursor-pointer"
+              className="flex items-center gap-1 rounded-full bg-[#122A1E] px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wide text-[#D4F63D] shadow-xs hover:bg-[#183625] active:scale-95 transition-all cursor-pointer"
             >
               <Download className="h-3 w-3" />
               <span>{t('sync.install')}</span>
