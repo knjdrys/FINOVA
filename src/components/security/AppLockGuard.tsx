@@ -34,11 +34,21 @@ export const AppLockGuard: React.FC<{ children: React.ReactNode }> = ({ children
     setLocked(true);
   }, []);
 
-  // Re-lock when the tab is hidden/backgrounded, and after inactivity.
+  // Re-lock when the tab is hidden/backgrounded beyond timeout, and after inactivity.
   useEffect(() => {
     if (!locked) {
+      let hiddenAt: number | null = null;
       const onVis = () => {
-        if (document.visibilityState === 'hidden') lock();
+        if (document.visibilityState === 'hidden') {
+          hiddenAt = Date.now();
+        } else if (document.visibilityState === 'visible' && hiddenAt !== null) {
+          const ms = getAutoLockMs();
+          // Lock if hidden for longer than autoLockMs (or a 10s grace period if autoLockMs is 0)
+          if (ms > 0 && Date.now() - hiddenAt >= ms) {
+            lock();
+          }
+          hiddenAt = null;
+        }
       };
       const arm = () => {
         if (timerRef.current) window.clearTimeout(timerRef.current);
@@ -57,6 +67,25 @@ export const AppLockGuard: React.FC<{ children: React.ReactNode }> = ({ children
     }
     return undefined;
   }, [locked, lock]);
+
+  // Physical keyboard PIN entry when locked
+  useEffect(() => {
+    if (!locked) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key >= '0' && e.key <= '9') {
+        setError(null);
+        setPin((p) => (p.length >= 10 ? p : p + e.key));
+      } else if (e.key === 'Backspace') {
+        setPin((p) => p.slice(0, -1));
+      } else if (e.key === 'Enter') {
+        if (pin.length >= 4 && !checking) {
+          void submit();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [locked, pin, checking]);
 
   const submit = async () => {
     if (checking) return;

@@ -1,4 +1,4 @@
-import { Account, CurrencyCode, SplitPart, Transaction, TransactionType } from '../../types';
+import { Account, CurrencyCode, CURRENCY_CONFIGS, SplitPart, Transaction, TransactionType } from '../../types';
 import { MoneyValue } from '../money/MoneyValue';
 import { DateUtils } from '../date/DateUtils';
 import { t } from '../../i18n/core';
@@ -54,7 +54,7 @@ export class TransactionEngine {
    * Validates split allocations against the parent amount.
    * Returns null when valid (or when not a split), or a human-readable reason.
    */
-  public static validateSplitParts(amount: number, splitParts: SplitPart[] | undefined): string | null {
+  public static validateSplitParts(amount: number, splitParts: SplitPart[] | undefined, currency: CurrencyCode = 'PHP'): string | null {
     if (!splitParts || splitParts.length === 0) return null;
     if (splitParts.length < 2) return t('engine.splitMinTwo');
     if (splitParts.some((p) => !p.categoryId)) return t('engine.splitCategory');
@@ -62,10 +62,12 @@ export class TransactionEngine {
     if (splitParts.some((p) => p.amount <= 0)) return t('engine.splitZero');
     const sum = splitParts.reduce((s, p) => s + p.amount, 0);
     if (sum !== amount) {
-      const diff = Math.abs(amount - sum) / 100;
+      const mult = CURRENCY_CONFIGS[currency]?.minorUnitMultiplier ?? 100;
+      const diffMoney = MoneyValue.fromMinorUnits(Math.abs(amount - sum), currency);
+      const diffStr = diffMoney.format({ includeSymbol: false, forceDecimals: mult > 1 });
       return sum < amount
-        ? t('engine.splitUnassigned', { amount: diff.toFixed(2) })
-        : t('engine.splitExceed', { amount: diff.toFixed(2) });
+        ? t('engine.splitUnassigned', { amount: diffStr })
+        : t('engine.splitExceed', { amount: diffStr });
     }
     return null;
   }

@@ -123,7 +123,7 @@ export class DateUtils {
     const d1 = this.parseISO(startISO);
     const d2 = this.parseISO(endISO);
     const diffTime = d2.getTime() - d1.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.round(diffTime / (1000 * 60 * 60 * 24));
   }
 
   public static addDaysISO(dateStr: string, days: number): string {

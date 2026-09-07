@@ -36,7 +36,8 @@ export function initSyncManager(opts: {
   getState = opts.getState;
   authUser = opts.authUser;
 
-  const queue = new SyncQueue(createPersistentQueueStorage());
+  const storageKey = opts.authUser?.id ? `FINOVA_SYNC_QUEUE_${opts.authUser.id}` : 'FINOVA_SYNC_QUEUE_GUEST';
+  const queue = new SyncQueue(createPersistentQueueStorage(storageKey));
   manager = new SyncManager({
     queue,
     cloudAvailable: () => isSupabaseConfigured && !!authUser && !authUser.isGuest,
@@ -47,6 +48,12 @@ export function initSyncManager(opts: {
     pushDelete: async (txId) => {
       if (!authUser) return false;
       return CloudSyncService.deleteTransactionFromCloud(txId, authUser);
+    },
+    pushDeleteEntity: async (table, entityId) => {
+      if (!authUser) return false;
+      return table === 'money_commitments'
+        ? CloudSyncService.deleteCommitmentFromCloud(entityId, authUser)
+        : CloudSyncService.deleteRecurringFromCloud(entityId, authUser);
     },
     onStatus: (s) => listeners.forEach((l) => l(s)),
   });

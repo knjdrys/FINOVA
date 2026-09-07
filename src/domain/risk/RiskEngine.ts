@@ -17,7 +17,7 @@ export class RiskEngine {
   ): CashFlowRisk[] {
     const todayISO = referenceDateISO || DateUtils.getTodayISO();
     const minReserve = settings.minimumReserve || 0;
-    const currency = settings.currency || accounts[0]?.currency || 'PKR';
+    const currency = settings.currency || accounts[0]?.currency || 'PHP';
     const risks: CashFlowRisk[] = [];
 
     // 1. Scan timeline for negative balance or reserve breach

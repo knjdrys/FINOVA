@@ -882,10 +882,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           <input
             type="number"
             min="0"
-            value={(settings.minimumReserve / 100).toString()}
+            step={MoneyValue.fromMinorUnits(1, currentCurrency).getMajorUnits().toString()}
+            value={MoneyValue.fromMinorUnits(settings.minimumReserve, currentCurrency).getMajorUnits().toString()}
             onChange={(e) => {
               const val = parseFloat(e.target.value) || 0;
-              onUpdateSettings({ ...settings, minimumReserve: Math.round(val * 100) });
+              onUpdateSettings({ ...settings, minimumReserve: MoneyValue.fromMajorUnits(val, currentCurrency).getMinorUnits() });
             }}
             className="w-full text-xs font-bold text-(--ink) outline-none"
           />

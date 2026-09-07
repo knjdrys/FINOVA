@@ -27,6 +27,7 @@ function makeManager(over: Partial<SyncDeps> = {}) {
   const statuses: SyncStatus[] = [];
   const pushState = vi.fn(async () => true);
   const pushDelete = vi.fn(async () => true);
+  const pushDeleteEntity = vi.fn(async () => true);
   let t = 0;
   let cloudAvailable = true;
   const timers: Array<{ fn: () => void; at: number; done?: boolean }> = [];
@@ -34,6 +35,7 @@ function makeManager(over: Partial<SyncDeps> = {}) {
     queue,
     pushState,
     pushDelete,
+    pushDeleteEntity,
     cloudAvailable: () => cloudAvailable,
     onStatus: (s) => statuses.push({ ...s }),
     now: () => t,
@@ -42,7 +44,7 @@ function makeManager(over: Partial<SyncDeps> = {}) {
     ...over,
   });
   return {
-    m, queue, statuses, pushState, pushDelete,
+    m, queue, statuses, pushState, pushDelete, pushDeleteEntity,
     advance: (dt: number) => {
       t += dt;
       for (const x of [...timers]) {

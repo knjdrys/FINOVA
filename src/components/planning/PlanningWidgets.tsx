@@ -268,7 +268,7 @@ export const FundGoalModal: React.FC<{
 
   const remaining = goal.targetAmount - goal.currentAmount;
   const parsed = parseFloat(amountStr);
-  const amountMinor = Number.isFinite(parsed) ? Math.round(parsed * 100) : NaN;
+  const amountMinor = Number.isFinite(parsed) ? MoneyValue.fromMajorUnits(parsed, currency).getMinorUnits() : NaN;
   const valid = Number.isFinite(amountMinor) && amountMinor > 0;
 
   const submit = () => {
@@ -295,7 +295,7 @@ export const FundGoalModal: React.FC<{
             type="number"
             inputMode="decimal"
             min="0"
-            step="0.01"
+            step={MoneyValue.fromMinorUnits(1, currency).getMajorUnits().toString()}
             value={amountStr}
             onChange={(e) => { setAmountStr(e.target.value); setError(null); }}
             onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
@@ -313,7 +313,7 @@ export const FundGoalModal: React.FC<{
           <button
             key={q}
             type="button"
-            onClick={() => { setAmountStr(String(q / 100)); setError(null); }}
+            onClick={() => { setAmountStr(MoneyValue.fromMinorUnits(q, currency).getMajorUnits().toString()); setError(null); }}
             className="rounded-full border border-(--line) bg-(--surface) px-3 py-1 text-xs font-bold text-(--ink-2) transition hover:border-violet-300 hover:text-violet-700"
           >
             +{fmt(q, currency)}
@@ -322,7 +322,7 @@ export const FundGoalModal: React.FC<{
         {remaining > 0 ? (
           <button
             type="button"
-            onClick={() => { setAmountStr(String(remaining / 100)); setError(null); }}
+            onClick={() => { setAmountStr(MoneyValue.fromMinorUnits(remaining, currency).getMajorUnits().toString()); setError(null); }}
             className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700 transition hover:bg-violet-100"
           >
             {t('plans.fundTheRest')}

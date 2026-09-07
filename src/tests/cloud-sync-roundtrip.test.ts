@@ -1,17 +1,24 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // hoist the mock store AND the chain so they exist BEFORE vi.mock factory runs
 const hoisted = vi.hoisted(() => {
   const captured: any[] = [];
   const deleteCaptured: any[] = [];
 
-  const tableApi = {
+  const tableApi: any = {
     upsert: (rows: any) => { captured.push(rows); return Promise.resolve({ error: null }); },
     select: () => ({ ...tableApi, eq: () => ({ ...tableApi, maybeSingle: () => Promise.resolve({ data: null, error: null }), order: () => Promise.resolve({ data: [], error: null }) }), order: () => Promise.resolve({ data: [], error: null }), maybeSingle: () => Promise.resolve({ data: null, error: null }) }),
     eq: () => ({ ...tableApi, maybeSingle: () => Promise.resolve({ data: null, error: null }), order: () => Promise.resolve({ data: [], error: null }) }),
     maybeSingle: () => Promise.resolve({ data: null, error: null }),
     order: () => Promise.resolve({ data: [], error: null }),
-    delete: (..._a: any[]) => { deleteCaptured.push(_a); return { eq: () => Promise.resolve({ error: null }) }; },
+    delete: (..._a: any[]) => {
+      deleteCaptured.push(_a);
+      const chainObj: any = {
+        eq: () => chainObj,
+        then: (resolve: any) => Promise.resolve({ error: null }).then(resolve),
+      };
+      return chainObj;
+    },
   };
 
   const chain = {
@@ -79,6 +86,11 @@ function makeState(): FinovaState {
 const fakeUser = { id: 'user-1', email: 't@x.com', fullName: 'Test', avatarUrl: null, isGuest: false };
 
 describe('Cloud Sync — round-trip persistence of ALL plans data', () => {
+  beforeEach(() => {
+    hoisted.captured.length = 0;
+    hoisted.deleteCaptured.length = 0;
+  });
+
   it('syncStateToCloud writes budgets, goals, commitments, recurring (not just profiles/settings/accounts/tx)', async () => {
     const ok = await CloudSyncService.syncStateToCloud(makeState(), fakeUser as any);
     expect(ok).toBe(true);
@@ -106,5 +118,38 @@ describe('Cloud Sync — round-trip persistence of ALL plans data', () => {
     expect(txPayload).toBeTruthy();
     expect(txPayload[0].category_id).toBe('cat-food');
     expect(txPayload[0].category_id).not.toBeNull();
+  });
+
+  it('syncStateToCloud writes categories and preserves category_id in commitments and recurring', async () => {
+    const s = makeState();
+    s.categories = [{ id: 'cat-custom-1', userId: 'user-1', name: 'Custom Category', icon: 'Tag', color: '#ff0000', type: 'EXPENSE', isSystem: false, isArchived: false }];
+    s.commitments[0].categoryId = 'cat-custom-1';
+    s.recurring[0].categoryId = 'cat-custom-1';
+
+    await CloudSyncService.syncStateToCloud(s, fakeUser as any);
+
+    const catPayload = hoisted.captured.find((p) => Array.isArray(p) && p[0] && p[0].id === 'cat-custom-1') as any[];
+    expect(catPayload).toBeTruthy();
+    expect(catPayload[0].name).toBe('Custom Category');
+
+    const commPayload = hoisted.captured.find((p) => Array.isArray(p) && p[0] && 'due_date' in p[0]) as any[];
+    expect(commPayload[0].category_id).toBe('cat-custom-1');
+
+    const recPayload = hoisted.captured.find((p) => Array.isArray(p) && p[0] && 'next_occurrence' in p[0]) as any[];
+    expect(recPayload[0].category_id).toBe('cat-custom-1');
+  });
+
+  it('delete helper methods execute cleanly without exceptions', async () => {
+    const delTx = await CloudSyncService.deleteTransactionFromCloud('tx-1', fakeUser as any);
+    const delComm = await CloudSyncService.deleteCommitmentFromCloud('comm-1', fakeUser as any);
+    const delRec = await CloudSyncService.deleteRecurringFromCloud('rec-1', fakeUser as any);
+    const delBud = await CloudSyncService.deleteBudgetFromCloud('bud-1', fakeUser as any);
+    const delGoal = await CloudSyncService.deleteGoalFromCloud('goal-1', fakeUser as any);
+
+    expect(delTx).toBe(true);
+    expect(delComm).toBe(true);
+    expect(delRec).toBe(true);
+    expect(delBud).toBe(true);
+    expect(delGoal).toBe(true);
   });
 });

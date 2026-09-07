@@ -32,7 +32,7 @@ export class WhatIfEngine {
     referenceDateISO?: string
   ): WhatIfSimulationResult {
     const todayISO = referenceDateISO || DateUtils.getTodayISO();
-    const currency = settings.currency || accounts[0]?.currency || 'PKR';
+    const currency = settings.currency || accounts[0]?.currency || 'PHP';
     const monthEndISO = DateUtils.getMonthEndISO(todayISO);
 
     // 1. Base calculations before simulation

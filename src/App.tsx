@@ -15,7 +15,7 @@ import {
   UserSettings,
   PlansSection,
 } from './types';
-import { FinovaState, FinovaStorage } from './services/storage/FinovaStorage';
+import { FinovaState, FinovaStorage, INITIAL_CATEGORIES } from './services/storage/FinovaStorage';
 import { AccountEngine } from './domain/account/AccountEngine';
 import { SafeToSpendEngine } from './domain/safe-to-spend/SafeToSpendEngine';
 import { RiskEngine } from './domain/risk/RiskEngine';
@@ -180,7 +180,9 @@ export function App() {
           if (cloudState && cloudState.accounts.length > 0) {
             setState((prev) => ({
               ...cloudState,
-              categories: prev.categories.length > 0 ? prev.categories : cloudState.categories,
+              categories: cloudState.categories && cloudState.categories.length > 0
+                ? cloudState.categories
+                : (prev.categories.length > 0 ? prev.categories : INITIAL_CATEGORIES),
               settings: {
                 ...cloudState.settings,
                 userName: userNameToSet,
@@ -671,6 +673,10 @@ export function App() {
   const handleDeleteCommitment = async (id: string) => {
     if (!(await confirmDialog({ title: t('dialog.deleteBill'), message: t('dialog.deleteBillHint'), danger: true, confirmLabel: t('common.delete') }))) return;
     mutatePlans({ commitments: state.commitments.filter((c) => c.id !== id) });
+    // Hard delete: the cloud row must go too, or it resurrects on restore.
+    if (authUser && !authUser.isGuest) {
+      getSyncManager()?.requestDeleteEntity('money_commitments', id);
+    }
   };
   // Mark a bill paid: flips status and posts the real money movement.
   // Direction-aware: OUTFLOW posts an EXPENSE (overdraft-guarded), INFLOW
@@ -755,6 +761,10 @@ export function App() {
   const handleDeleteRecurring = async (id: string) => {
     if (!(await confirmDialog({ title: t('dialog.deleteRecurring'), message: t('dialog.deleteRecurringHint'), danger: true, confirmLabel: t('common.delete') }))) return;
     mutatePlans({ recurring: state.recurring.filter((r) => r.id !== id) });
+    // Hard delete: the cloud row must go too, or it resurrects on restore.
+    if (authUser && !authUser.isGuest) {
+      getSyncManager()?.requestDeleteEntity('recurring_transactions', id);
+    }
   };
 
   // Pause / resume a rule. Resume rolls nextOccurrence forward so a paused
@@ -828,6 +838,11 @@ export function App() {
     // and re-pulls on next login. Guest data is never wiped.
     if (previousUser && !previousUser.isGuest) {
       FinovaStorage.wipeForUser(previousUser.id);
+      try {
+        localStorage.removeItem(`FINOVA_SYNC_QUEUE_${previousUser.id}`);
+      } catch {
+        /* storage quota / private mode fallback */
+      }
     }
     adoptAuthUser(null);
   };

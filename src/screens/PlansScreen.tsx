@@ -128,11 +128,11 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({
     <div className="space-y-4 pb-20">
       {/* Internal segments — no new top-level navigation tab */}
       <div className="flex rounded-xl bg-(--surface-3) p-1 text-[10px] font-bold">
-        <Seg label="Timeline" active={subTab === 'TIMELINE'} onClick={() => setSubTab('TIMELINE')} />
-        <Seg label="Budgets" active={subTab === 'BUDGETS'} onClick={() => setSubTab('BUDGETS')} />
-        <Seg label="Goals" active={subTab === 'GOALS'} onClick={() => setSubTab('GOALS')} />
-        <Seg label="Bills" active={subTab === 'BILLS'} onClick={() => setSubTab('BILLS')} />
-        <Seg label="Recurring" active={subTab === 'RECURRING'} onClick={() => setSubTab('RECURRING')} />
+        <Seg label={t('plans.timeline')} active={subTab === 'TIMELINE'} onClick={() => setSubTab('TIMELINE')} />
+        <Seg label={t('plans.budgets')} active={subTab === 'BUDGETS'} onClick={() => setSubTab('BUDGETS')} />
+        <Seg label={t('plans.goals')} active={subTab === 'GOALS'} onClick={() => setSubTab('GOALS')} />
+        <Seg label={t('plans.bills')} active={subTab === 'BILLS'} onClick={() => setSubTab('BILLS')} />
+        <Seg label={t('plans.recurring')} active={subTab === 'RECURRING'} onClick={() => setSubTab('RECURRING')} />
       </div>
 
       {subTab === 'TIMELINE' && <TimelineView timeline={timeline} settings={settings} currency={currency} />}
@@ -554,7 +554,7 @@ const GoalsView: React.FC<{
                     <button
                       type="button"
                       onClick={() => {
-                        const amt = Math.round(Number(fundAmount) * 100);
+                        const amt = MoneyValue.parse(fundAmount, goal.currency || currency).getMinorUnits();
                         if (amt > 0 && fundSource) {
                           onFund(goal.id, amt, fundSource);
                           setFundingId(null);

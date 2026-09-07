@@ -27,6 +27,12 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
   // First commit wins per open — Modal unmounts on close, so this resets naturally.
   const submittedRef = useRef(false);
 
+  React.useEffect(() => {
+    if (isOpen) {
+      submittedRef.current = false;
+    }
+  }, [isOpen]);
+
   const currencySymbol = MoneyValue.zero(currency).getCurrencySymbol();
 
   const handleSelectPreset = (presetId: string) => {

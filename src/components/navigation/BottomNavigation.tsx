@@ -24,12 +24,12 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           <button
             type="button"
             onClick={() => onSelectTab('HOME')}
-            className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer ${
+            className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer min-w-0 ${
               currentTab === 'HOME' ? 'text-(--ink) scale-105' : 'text-(--ink-3) hover:text-(--ink-2)'
             }`}
           >
             <Home className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
-            <span className="text-[11px] font-bold mt-1">{t('nav.home')}</span>
+            <span className="text-[10px] sm:text-[11px] font-bold mt-1 truncate max-w-[54px] sm:max-w-none">{t('nav.home')}</span>
             {currentTab === 'HOME' ? (
               <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
             ) : (
@@ -41,12 +41,12 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           <button
             type="button"
             onClick={() => onSelectTab('ALL_EXPENSES')}
-            className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer ${
+            className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer min-w-0 ${
               currentTab === 'ALL_EXPENSES' ? 'text-(--ink) scale-105' : 'text-(--ink-3) hover:text-(--ink-2)'
             }`}
           >
             <ListOrdered className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
-            <span className="text-[11px] font-bold mt-1">{t('nav.transactions')}</span>
+            <span className="text-[10px] sm:text-[11px] font-bold mt-1 truncate max-w-[54px] sm:max-w-none">{t('nav.transactions')}</span>
             {currentTab === 'ALL_EXPENSES' ? (
               <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
             ) : (
@@ -58,12 +58,12 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           <button
             type="button"
             onClick={() => onSelectTab('PLANS')}
-            className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer ${
+            className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer min-w-0 ${
               currentTab === 'PLANS' ? 'text-(--ink) scale-105' : 'text-(--ink-3) hover:text-(--ink-2)'
             }`}
           >
             <CalendarDays className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
-            <span className="text-[11px] font-bold mt-1">{t('nav.plans')}</span>
+            <span className="text-[10px] sm:text-[11px] font-bold mt-1 truncate max-w-[54px] sm:max-w-none">{t('nav.plans')}</span>
             {currentTab === 'PLANS' ? (
               <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
             ) : (
@@ -72,15 +72,15 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           </button>
 
           {/* Elevated Floating Quick-Add Button with soft glow ring */}
-          <div data-tour="quick-add" className="relative -top-5 sm:-top-6 flex items-center justify-center px-2">
-            <div className="rounded-full bg-[#E8F8B6]/80 p-1.5 shadow-sm">
+          <div data-tour="quick-add" className="relative -top-5 sm:-top-6 flex items-center justify-center px-1 sm:px-2 shrink-0">
+            <div className="rounded-full bg-[#E8F8B6]/80 p-1 sm:p-1.5 shadow-sm">
               <button
                 type="button"
                 onClick={onOpenQuickAdd}
                 aria-label={t('nav.addTransaction')}
-                className="flex h-13 w-13 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-[#C6F432] text-[#122A1E] shadow-md shadow-lime-600/30 transition-transform duration-150 hover:scale-105 active:scale-95 cursor-pointer"
+                className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-[#C6F432] text-[#122A1E] shadow-md shadow-lime-600/30 transition-transform duration-150 hover:scale-105 active:scale-95 cursor-pointer"
               >
-                <Plus className="h-7 w-7 sm:h-8 sm:w-8 stroke-[3]" />
+                <Plus className="h-6 w-6 sm:h-8 sm:w-8 stroke-[3]" />
               </button>
             </div>
           </div>
@@ -89,12 +89,12 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           <button
             type="button"
             onClick={() => onSelectTab('ANALYTICS')}
-            className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer ${
+            className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer min-w-0 ${
               currentTab === 'ANALYTICS' ? 'text-(--ink) scale-105' : 'text-(--ink-3) hover:text-(--ink-2)'
             }`}
           >
             <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
-            <span className="text-[11px] font-bold mt-1">{t('nav.insights')}</span>
+            <span className="text-[10px] sm:text-[11px] font-bold mt-1 truncate max-w-[54px] sm:max-w-none">{t('nav.insights')}</span>
             {currentTab === 'ANALYTICS' ? (
               <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
             ) : (
@@ -106,12 +106,12 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
           <button
             type="button"
             onClick={() => onSelectTab('SETTINGS')}
-            className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer ${
+            className={`flex flex-1 flex-col items-center justify-center py-1 transition-all cursor-pointer min-w-0 ${
               currentTab === 'SETTINGS' ? 'text-(--ink) scale-105' : 'text-(--ink-3) hover:text-(--ink-2)'
             }`}
           >
             <Settings className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
-            <span className="text-[11px] font-bold mt-1">{t('nav.settings')}</span>
+            <span className="text-[10px] sm:text-[11px] font-bold mt-1 truncate max-w-[54px] sm:max-w-none">{t('nav.settings')}</span>
             {currentTab === 'SETTINGS' ? (
               <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
             ) : (

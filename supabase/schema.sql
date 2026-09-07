@@ -66,13 +66,16 @@ CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON public.accounts(user_id);
 -- 4. CATEGORIES
 -- --------------------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.categories (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id TEXT PRIMARY KEY,
     user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE, -- NULL for system-wide default categories
     name TEXT NOT NULL,
     icon TEXT NOT NULL DEFAULT 'ShoppingBag',
+    emoji TEXT,
     color TEXT NOT NULL DEFAULT '#059669',
-    type TEXT NOT NULL DEFAULT 'EXPENSE', -- 'INCOME' | 'EXPENSE' | 'BOTH'
+    bg_color TEXT DEFAULT '#D1FAE5',
+    type TEXT NOT NULL DEFAULT 'EXPENSE', -- 'INCOME' | 'EXPENSE'
     is_system BOOLEAN DEFAULT false,
+    is_archived BOOLEAN DEFAULT false,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -85,7 +88,7 @@ CREATE TABLE IF NOT EXISTS public.transactions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     account_id UUID NOT NULL REFERENCES public.accounts(id) ON DELETE CASCADE,
-    category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
+    category_id TEXT REFERENCES public.categories(id) ON DELETE SET NULL,
     to_account_id UUID REFERENCES public.accounts(id) ON DELETE SET NULL, -- Only used when type = 'TRANSFER'
     type TEXT NOT NULL, -- 'EXPENSE' | 'INCOME' | 'TRANSFER'
     amount BIGINT NOT NULL, -- Integer minor units (e.g. 150000 = ₱1,500.00)
@@ -112,7 +115,7 @@ CREATE TABLE IF NOT EXISTS public.budgets (
     name TEXT NOT NULL,
     amount BIGINT NOT NULL, -- Minor units
     currency VARCHAR(5) DEFAULT 'PHP',
-    category_ids UUID[] DEFAULT '{}',
+    category_ids TEXT[] DEFAULT '{}',
     period TEXT NOT NULL DEFAULT 'MONTHLY', -- 'MONTHLY' | 'SEMI_MONTHLY_15_DAYS' | 'WEEKLY'
     semi_monthly_cutoff_day INT DEFAULT 15,
     rollover_unused BOOLEAN DEFAULT false,
@@ -155,7 +158,7 @@ CREATE TABLE IF NOT EXISTS public.money_commitments (
     currency VARCHAR(5) DEFAULT 'PHP',
     due_date DATE NOT NULL,
     frequency TEXT NOT NULL DEFAULT 'MONTHLY', -- 'ONCE' | 'WEEKLY' | 'BI_WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'ANNUAL'
-    category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
+    category_id TEXT REFERENCES public.categories(id) ON DELETE SET NULL,
     account_id UUID REFERENCES public.accounts(id) ON DELETE SET NULL,
     is_essential BOOLEAN DEFAULT true,
     is_auto_generated BOOLEAN DEFAULT false,
@@ -291,7 +294,7 @@ CREATE TABLE IF NOT EXISTS public.recurring_transactions (
     amount BIGINT NOT NULL, -- Minor units
     currency VARCHAR(5) DEFAULT 'PHP',
     type TEXT NOT NULL DEFAULT 'EXPENSE', -- 'EXPENSE' | 'INCOME'
-    category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
+    category_id TEXT REFERENCES public.categories(id) ON DELETE SET NULL,
     account_id UUID REFERENCES public.accounts(id) ON DELETE SET NULL,
     frequency TEXT NOT NULL DEFAULT 'MONTHLY', -- 'DAILY' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY' | 'YEARLY'
     start_date DATE NOT NULL DEFAULT CURRENT_DATE,

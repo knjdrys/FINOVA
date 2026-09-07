@@ -33,6 +33,7 @@ export const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      submittedRef.current = false;
       setName(editingBudget?.name || '');
       setAmountStr(editingBudget ? MoneyValue.fromMinorUnits(editingBudget.amount, currency).format({ includeSymbol: false }) : '');
       setPeriod((editingBudget?.period as any) || 'MONTHLY');

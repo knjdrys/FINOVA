@@ -18,10 +18,13 @@
  */
 
 export interface QueueOp {
-  /** Stable dedupe key: 'state-sync' or `delete-tx:<id>`. */
+  /** Stable dedupe key: 'state-sync', `delete-tx:<id>`, or `delete:<table>:<id>`. */
   id: string;
-  kind: 'state-sync' | 'delete-tx';
+  kind: 'state-sync' | 'delete-tx' | 'delete-entity';
   txId?: string;
+  /** Cloud table + row for 'delete-entity' ops (whitelisted at the service layer). */
+  entityTable?: 'money_commitments' | 'recurring_transactions';
+  entityId?: string;
   attempts: number;
   /** Epoch ms before which the op should not be retried (backoff). */
   nextRetryAt: number;
@@ -61,6 +64,7 @@ export function createPersistentQueueStorage(key = 'FINOVA_SYNC_QUEUE_V1'): Queu
 
 export const STATE_SYNC_OP_ID = 'state-sync';
 export const deleteOpId = (txId: string) => `delete-tx:${txId}`;
+export const deleteEntityOpId = (table: string, id: string) => `delete:${table}:${id}`;
 
 export class SyncQueue {
   private ops: QueueOp[];
@@ -87,6 +91,18 @@ export class SyncQueue {
     const id = deleteOpId(txId);
     if (this.ops.some((o) => o.id === id)) return;
     this.ops.push({ id, kind: 'delete-tx', txId, attempts: 0, nextRetryAt: 0, enqueuedAt: now });
+    this.storage.save(this.ops);
+  }
+
+  /** Enqueue a commitment/recurring delete, deduped per table+id. */
+  enqueueDeleteEntity(
+    table: 'money_commitments' | 'recurring_transactions',
+    entityId: string,
+    now: number
+  ): void {
+    const id = deleteEntityOpId(table, entityId);
+    if (this.ops.some((o) => o.id === id)) return;
+    this.ops.push({ id, kind: 'delete-entity', entityTable: table, entityId, attempts: 0, nextRetryAt: 0, enqueuedAt: now });
     this.storage.save(this.ops);
   }
 
@@ -145,6 +161,8 @@ export interface SyncDeps {
   pushState: () => Promise<boolean>;
   /** Delete one tx cloud-side; resolves true on confirmed success. */
   pushDelete: (txId: string) => Promise<boolean>;
+  /** Delete one commitment/recurring row cloud-side; true on confirmed success. */
+  pushDeleteEntity?: (table: 'money_commitments' | 'recurring_transactions', entityId: string) => Promise<boolean>;
   /** Whether cloud sync is possible at all (configured + real user). */
   cloudAvailable: () => boolean;
   onStatus?: (s: SyncStatus) => void;
@@ -215,6 +233,20 @@ export class SyncManager {
     void this.flush();
   }
 
+  /** A commitment/recurring row was deleted locally; the cloud delete is owed. */
+  requestDeleteEntity(table: 'money_commitments' | 'recurring_transactions', entityId: string): void {
+    if (!this.deps.cloudAvailable()) {
+      this.emit('local-only');
+      return;
+    }
+    this.deps.queue.enqueueDeleteEntity(table, entityId, this.now());
+    if (!this.online) {
+      this.emit('queued-offline');
+      return;
+    }
+    void this.flush();
+  }
+
   setOnline(online: boolean): void {
     if (this.online === online) return;
     this.online = online;
@@ -249,7 +281,11 @@ export class SyncManager {
       for (const op of this.deps.queue.runnable(this.now())) {
         let ok = false;
         try {
-          ok = op.kind === 'state-sync' ? await this.deps.pushState() : await this.deps.pushDelete(op.txId!);
+          ok = op.kind === 'state-sync'
+            ? await this.deps.pushState()
+            : op.kind === 'delete-entity'
+              ? (this.deps.pushDeleteEntity ? await this.deps.pushDeleteEntity(op.entityTable!, op.entityId!) : true)
+              : await this.deps.pushDelete(op.txId!);
         } catch {
           ok = false;
         }

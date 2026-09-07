@@ -32,6 +32,33 @@ export function toValidUuid(rawId: string): string {
   return `${hex}-${hexPart2.slice(0, 4)}-4${hexPart2.slice(4, 7)}-8${hexPart2.slice(7, 10)}-${hexPart3}`;
 }
 
+/**
+ * Category id bridge (security audit fix).
+ *
+ * Local category ids are slugs ('cat-food'); the cloud schema keys categories
+ * by UUID with FK references from transactions/budgets/commitments/recurring.
+ * Raw slugs sent to UUID columns fail every sync (`invalid input syntax for
+ * type uuid`) while the UI keeps reporting success — silent backup loss.
+ *
+ * toValidUuid() is deterministic, so slugs map to STABLE cloud UUIDs on save,
+ * and known system slugs map back on load via the reverse table below. Custom
+ * categories keep their hashed ids on both sides (nothing hardcoded about
+ * them), staying internally consistent. Split-part allocations are mapped too.
+ */
+const CLOUD_CATEGORY_SLUG_BY_UUID = new Map<string, string>(
+  INITIAL_CATEGORIES.map((c) => [toValidUuid(c.id), c.id])
+);
+
+export function toCloudCategoryId(localId: string | undefined | null): string | null {
+  if (!localId) return null;
+  return toValidUuid(localId);
+}
+
+export function fromCloudCategoryId(cloudId: string | null | undefined, fallback: string): string {
+  if (!cloudId) return fallback;
+  return CLOUD_CATEGORY_SLUG_BY_UUID.get(cloudId) ?? cloudId;
+}
+
 export class CloudSyncService {
   /**
    * Load complete state from Supabase PostgreSQL for the authenticated user
@@ -51,12 +78,12 @@ export class CloudSyncService {
 
       if (sErr) console.warn('Supabase settings load error:', sErr);
 
-      // 2. Fetch Accounts
+      // 2. Fetch Accounts (ALL of them — archived accounts stay out of totals
+      // via isArchived, but their history must survive a cross-device restore)
       const { data: accountsData, error: aErr } = await supabase
         .from('accounts')
         .select('*')
         .eq('user_id', user.id)
-        .eq('is_archived', false)
         .order('created_at', { ascending: true });
 
       if (aErr) console.warn('Supabase accounts load error:', aErr);
@@ -70,19 +97,17 @@ export class CloudSyncService {
 
       if (tErr) console.warn('Supabase tx load error:', tErr);
 
-      // 4. Fetch Budgets
+      // 4. Fetch Budgets (ALL — inactive/archived budgets are history, not garbage)
       const { data: budgetData } = await supabase
         .from('budgets')
         .select('*')
-        .eq('user_id', user.id)
-        .eq('is_active', true);
+        .eq('user_id', user.id);
 
-      // 5. Fetch Goals
+      // 5. Fetch Goals (ALL — archived goals keep their contribution history)
       const { data: goalsData } = await supabase
         .from('savings_goals')
         .select('*')
-        .eq('user_id', user.id)
-        .eq('is_archived', false);
+        .eq('user_id', user.id);
 
       // 6. Fetch Commitments
       const { data: commitmentsData } = await supabase
@@ -93,6 +118,12 @@ export class CloudSyncService {
       // 7. Fetch Recurring Transactions
       const { data: recurringData } = await supabase
         .from('recurring_transactions')
+        .select('*')
+        .eq('user_id', user.id);
+
+      // 8. Fetch Categories (own rows only — RLS also enforces this server-side)
+      const { data: categoriesData } = await supabase
+        .from('categories')
         .select('*')
         .eq('user_id', user.id);
 
@@ -139,7 +170,7 @@ export class CloudSyncService {
         id: t.id,
         userId: t.user_id,
         accountId: t.account_id,
-        categoryId: t.category_id || 'cat-general',
+        categoryId: fromCloudCategoryId(t.category_id, 'cat-general'),
         destinationAccountId: t.to_account_id || undefined,
         type: t.type,
         amount: Number(t.amount),
@@ -150,7 +181,12 @@ export class CloudSyncService {
         time: t.time || '12:00',
         tags: t.tags || [],
         status: t.status || 'CONFIRMED',
-        splitParts: Array.isArray(t.split_parts) && t.split_parts.length > 0 ? t.split_parts : undefined,
+        splitParts: Array.isArray(t.split_parts) && t.split_parts.length > 0
+          ? t.split_parts.map((p: { categoryId: string; amount: number }) => ({
+              categoryId: fromCloudCategoryId(p.categoryId, 'cat-general'),
+              amount: Number(p.amount),
+            }))
+          : undefined,
         receiptDataUrl: t.receipt_data_url || undefined,
         createdAt: t.created_at,
         updatedAt: t.updated_at,
@@ -165,7 +201,7 @@ export class CloudSyncService {
         period: b.period || 'MONTHLY',
         startDate: b.start_date || new Date().toISOString().substring(0, 10),
         endDate: b.end_date || new Date().toISOString().substring(0, 10),
-        categoryIds: b.category_ids || [],
+        categoryIds: (b.category_ids || []).map((cid: string) => fromCloudCategoryId(cid, 'cat-general')),
         notifyThresholdPercentage: b.notify_threshold_percentage || 80,
         isActive: b.is_active ?? true,
         createdAt: b.created_at,
@@ -200,7 +236,7 @@ export class CloudSyncService {
         direction: c.direction || 'OUTFLOW',
         status: c.status || 'PROJECTED',
         dueDate: c.due_date,
-        categoryId: c.category_id || 'cat-bills',
+        categoryId: fromCloudCategoryId(c.category_id, 'cat-bills'),
         accountId: c.account_id || accounts[0]?.id || 'acc-1',
         priority: c.priority || 'ESSENTIAL',
         isAutoGenerated: c.is_auto_generated ?? false,
@@ -216,7 +252,7 @@ export class CloudSyncService {
         amount: Number(r.amount),
         currency: r.currency || 'PHP',
         type: r.type || 'EXPENSE',
-        categoryId: r.category_id || 'cat-bills',
+        categoryId: fromCloudCategoryId(r.category_id, 'cat-bills'),
         accountId: r.account_id || accounts[0]?.id || 'acc-1',
         frequency: r.frequency || 'MONTHLY',
         startDate: r.start_date,
@@ -229,10 +265,33 @@ export class CloudSyncService {
         updatedAt: r.updated_at,
       }));
 
+      // Categories: cloud rows win when present (mapped back to local slugs);
+      // otherwise the local seeds. Known system slugs recover their canonical
+      // seed entry (emoji, i18n names); custom rows keep stable cloud ids.
+      const categories = (categoriesData && categoriesData.length > 0)
+        ? categoriesData.map((c: any) => {
+            const slug = CLOUD_CATEGORY_SLUG_BY_UUID.get(c.id);
+            if (slug) {
+              const seed = INITIAL_CATEGORIES.find((s) => s.id === slug);
+              if (seed) return { ...seed };
+            }
+            return {
+              id: c.id,
+              userId: c.user_id,
+              name: c.name,
+              type: c.type || 'EXPENSE',
+              icon: c.icon || 'ShoppingBag',
+              color: c.color || '#059669',
+              isSystem: false,
+              isArchived: false,
+            };
+          })
+        : INITIAL_CATEGORIES;
+
       return {
         accounts,
         transactions,
-        categories: INITIAL_CATEGORIES,
+        categories,
         budgets,
         goals,
         commitments,
@@ -282,7 +341,23 @@ export class CloudSyncService {
       });
       if (setErr) console.warn('Supabase settings upsert warning:', setErr);
 
-      // 3. Sync Accounts
+      // 3. Sync Categories
+      if (state.categories && state.categories.length > 0) {
+        const categoryPayloads = state.categories.map((c) => ({
+          id: c.id,
+          user_id: user.id,
+          name: c.name,
+          icon: c.icon || 'Tag',
+          color: c.color || '#059669',
+          type: c.type || 'EXPENSE',
+          is_system: c.isSystem ?? false,
+          updated_at: new Date().toISOString(),
+        }));
+        const { error: catErr } = await supabase.from('categories').upsert(categoryPayloads);
+        if (catErr) console.error('Supabase categories upsert error:', catErr);
+      }
+
+      // 4. Sync Accounts
       let accountPayloads: any[] = [];
       if (state.accounts.length > 0) {
         accountPayloads = state.accounts.map((acc) => ({
@@ -306,7 +381,7 @@ export class CloudSyncService {
         if (accErr) console.error('Supabase accounts upsert error:', accErr);
       }
 
-      // 4. Sync Transactions (Ensuring account_id references an existing account)
+      // 5. Sync Transactions (Ensuring account_id references an existing account)
       if (state.transactions.length > 0 && accountPayloads.length > 0) {
         const insertedAccountIds = new Set(accountPayloads.map((a) => a.id));
         const fallbackAccountId = accountPayloads[0].id;
@@ -341,7 +416,7 @@ export class CloudSyncService {
         if (txErr) console.error('Supabase transactions upsert error:', txErr);
       }
 
-      // 5. Sync Budgets
+      // 6. Sync Budgets
       if (state.budgets.length > 0) {
         const budgetPayloads = state.budgets.map((b) => ({
           id: toValidUuid(b.id),
@@ -362,7 +437,7 @@ export class CloudSyncService {
         if (bErr) console.error('Supabase budgets upsert error:', bErr);
       }
 
-      // 6. Sync Savings Goals
+      // 7. Sync Savings Goals
       if (state.goals.length > 0) {
         const goalPayloads = state.goals.map((g) => ({
           id: toValidUuid(g.id),
@@ -384,7 +459,7 @@ export class CloudSyncService {
         if (gErr) console.error('Supabase goals upsert error:', gErr);
       }
 
-      // 7. Sync Money Commitments
+      // 8. Sync Money Commitments
       if (state.commitments.length > 0) {
         const commitmentPayloads = state.commitments.map((c) => ({
           id: toValidUuid(c.id),
@@ -397,7 +472,7 @@ export class CloudSyncService {
           status: c.status || 'PROJECTED',
           priority: c.priority || 'ESSENTIAL',
           direction: c.direction || 'OUTFLOW',
-          category_id: c.categoryId ? toValidUuid(c.categoryId) : null,
+          category_id: c.categoryId || null,
           account_id: c.accountId ? toValidUuid(c.accountId) : null,
           is_auto_generated: c.isAutoGenerated ?? false,
           auto_post_enabled: c.autoPostEnabled ?? false,
@@ -407,7 +482,7 @@ export class CloudSyncService {
         if (cErr) console.error('Supabase commitments upsert error:', cErr);
       }
 
-      // 8. Sync Recurring Transactions
+      // 9. Sync Recurring Transactions
       if (state.recurring.length > 0) {
         const recurringPayloads = state.recurring.map((r) => ({
           id: toValidUuid(r.id),
@@ -416,7 +491,7 @@ export class CloudSyncService {
           amount: Math.round(r.amount),
           currency: r.currency || state.settings.currency || 'PHP',
           type: r.type || 'EXPENSE',
-          category_id: r.categoryId ? toValidUuid(r.categoryId) : null,
+          category_id: r.categoryId || null,
           account_id: r.accountId ? toValidUuid(r.accountId) : null,
           frequency: r.frequency || 'MONTHLY',
           start_date: r.startDate,
@@ -448,6 +523,76 @@ export class CloudSyncService {
       return !error;
     } catch (err) {
       console.error('Supabase delete tx error:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Delete a money commitment from Supabase
+   */
+  public static async deleteCommitmentFromCloud(commId: string, user: AuthUserProfile): Promise<boolean> {
+    if (!isSupabaseConfigured || user.isGuest) return false;
+    try {
+      const { error } = await supabase.from('money_commitments').delete().eq('id', toValidUuid(commId)).eq('user_id', user.id);
+      return !error;
+    } catch (err) {
+      console.error('Supabase delete commitment error:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Delete a recurring transaction from Supabase
+   */
+  public static async deleteRecurringFromCloud(recId: string, user: AuthUserProfile): Promise<boolean> {
+    if (!isSupabaseConfigured || user.isGuest) return false;
+    try {
+      const { error } = await supabase.from('recurring_transactions').delete().eq('id', toValidUuid(recId)).eq('user_id', user.id);
+      return !error;
+    } catch (err) {
+      console.error('Supabase delete recurring error:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Delete a budget from Supabase
+   */
+  public static async deleteBudgetFromCloud(budgetId: string, user: AuthUserProfile): Promise<boolean> {
+    if (!isSupabaseConfigured || user.isGuest) return false;
+    try {
+      const { error } = await supabase.from('budgets').delete().eq('id', toValidUuid(budgetId)).eq('user_id', user.id);
+      return !error;
+    } catch (err) {
+      console.error('Supabase delete budget error:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Delete a savings goal from Supabase
+   */
+  public static async deleteGoalFromCloud(goalId: string, user: AuthUserProfile): Promise<boolean> {
+    if (!isSupabaseConfigured || user.isGuest) return false;
+    try {
+      const { error } = await supabase.from('savings_goals').delete().eq('id', toValidUuid(goalId)).eq('user_id', user.id);
+      return !error;
+    } catch (err) {
+      console.error('Supabase delete goal error:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Delete an account from Supabase
+   */
+  public static async deleteAccountFromCloud(accountId: string, user: AuthUserProfile): Promise<boolean> {
+    if (!isSupabaseConfigured || user.isGuest) return false;
+    try {
+      const { error } = await supabase.from('accounts').delete().eq('id', toValidUuid(accountId)).eq('user_id', user.id);
+      return !error;
+    } catch (err) {
+      console.error('Supabase delete account error:', err);
       return false;
     }
   }

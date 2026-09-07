@@ -3,6 +3,7 @@ import {
   Budget,
   Category,
   CurrencyCode,
+  CURRENCY_CONFIGS,
   MoneyCommitment,
   RecurringTransaction,
   SavingsGoal,
@@ -449,21 +450,25 @@ export class FinovaStorage {
     };
 
     const headers = ['ID', 'Date', 'Time', 'Type', 'Amount', 'Currency', 'Category', 'Account', 'Destination Account', 'Merchant', 'Subtitle', 'Note', 'Status'];
-    const rows = transactions.map((t) => [
-      cell(t.id),
-      cell(t.date),
-      cell(t.time || ''),
-      cell(t.type),
-      cell((t.amount / 100).toFixed(2)),
-      cell(t.currency),
-      cell(catMap.get(t.categoryId) || t.categoryId),
-      cell(accMap.get(t.accountId) || t.accountId),
-      cell(t.destinationAccountId ? accMap.get(t.destinationAccountId) || t.destinationAccountId : ''),
-      cell(t.merchant || ''),
-      cell(t.subtitle || ''),
-      cell(t.note || ''),
-      cell(t.status),
-    ]);
+    const rows = transactions.map((t) => {
+      const multiplier = CURRENCY_CONFIGS[t.currency]?.minorUnitMultiplier ?? 100;
+      const formattedAmount = (t.amount / multiplier).toFixed(multiplier === 1 ? 0 : 2);
+      return [
+        cell(t.id),
+        cell(t.date),
+        cell(t.time || ''),
+        cell(t.type),
+        cell(formattedAmount),
+        cell(t.currency),
+        cell(catMap.get(t.categoryId) || t.categoryId),
+        cell(accMap.get(t.accountId) || t.accountId),
+        cell(t.destinationAccountId ? accMap.get(t.destinationAccountId) || t.destinationAccountId : ''),
+        cell(t.merchant || ''),
+        cell(t.subtitle || ''),
+        cell(t.note || ''),
+        cell(t.status),
+      ];
+    });
 
     return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
   }

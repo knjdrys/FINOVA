@@ -32,6 +32,7 @@ export class TimelineEngine {
     for (const tx of transactions) {
       if (!DateUtils.isDateInRange(tx.date, startDateISO, endDateISO)) continue;
       if (tx.status === 'PENDING') continue;
+      if (tx.currency && tx.currency !== currency) continue; // never mix currencies
 
       const cat = categoryMap.get(tx.categoryId);
       const acc = accountMap.get(tx.accountId);
@@ -60,6 +61,7 @@ export class TimelineEngine {
     for (const comm of commitments) {
       if (!DateUtils.isDateInRange(comm.dueDate, startDateISO, endDateISO)) continue;
       if (comm.status === 'COMPLETED' || comm.status === 'CANCELLED') continue;
+      if (comm.currency && comm.currency !== currency) continue; // never mix currencies
 
       const cat = categoryMap.get(comm.categoryId);
       const acc = accountMap.get(comm.accountId);

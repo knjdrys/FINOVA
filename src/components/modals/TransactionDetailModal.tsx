@@ -4,6 +4,7 @@ import { Account, Category, Transaction } from '../../types';
 import { MoneyValue } from '../../domain/money/MoneyValue';
 import { TransactionEngine } from '../../domain/transaction/TransactionEngine';
 import { Pencil, Trash2, Scissors, Paperclip, X, ArrowRightLeft, ShieldCheck } from 'lucide-react';
+import { t } from '../../i18n';
 
 interface TransactionDetailModalProps {
   isOpen: boolean;
@@ -47,26 +48,26 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Transaction Details">
+    <Modal isOpen={isOpen} onClose={handleClose} title={t('tx.detailTitle')}>
       <div className="space-y-4">
         {/* Amount header */}
         <div className="rounded-2xl bg-(--surface-2) p-4 text-center border border-(--line-soft)">
           <span className="text-[10px] font-extrabold uppercase tracking-wider text-(--ink-3) block mb-1">
             {TransactionEngine.isGoalFunding(tx)
-              ? 'Savings set aside'
+              ? t('plans.goals')
               : isTransfer
-              ? 'Transfer'
+              ? t('tx.transfer')
               : tx.type === 'INCOME'
-              ? 'Income'
+              ? t('tx.income')
               : isSplit
-              ? 'Split expense'
-              : 'Expense'}
+              ? t('tx.split')
+              : t('tx.expense')}
           </span>
           <p className="text-3xl font-black text-(--ink)">{money.format()}</p>
           <p className="text-xs font-bold text-(--ink-2) mt-1">{tx.merchant || categoryName(categories, tx.categoryId)}</p>
           {tx.sourceCommitmentId && (
             <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
-              <ShieldCheck className="h-3 w-3" /> Auto-posted from a plan
+              <ShieldCheck className="h-3 w-3" /> Auto-posted
             </span>
           )}
         </div>
@@ -126,7 +127,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
         {isSplit && (
           <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/40 p-3">
             <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-emerald-800 mb-2">
-              <Scissors className="h-3.5 w-3.5" /> Split across {allocations.size} categories
+              <Scissors className="h-3.5 w-3.5" /> {t('tx.splitAcross', { count: allocations.size })}
             </p>
             <div className="space-y-1.5">
               {Array.from(allocations.entries()).map(([catId, amt]) => {
@@ -151,7 +152,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
             type="button"
             onClick={() => setShowReceipt(true)}
             className="flex w-full items-center gap-3 rounded-xl border border-(--line) bg-(--surface) p-2.5 text-left hover:border-emerald-300 transition-colors cursor-pointer"
-            aria-label="View attached receipt"
+            aria-label={t('tx.viewReceipt')}
           >
             <img
               src={tx.receiptDataUrl}
@@ -160,20 +161,20 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
             />
             <span className="flex-1">
               <span className="flex items-center gap-1.5 text-xs font-bold text-(--ink-2)">
-                <Paperclip className="h-3.5 w-3.5" /> Receipt attached
+                <Paperclip className="h-3.5 w-3.5" /> {t('tx.receiptAttached')}
               </span>
-              <span className="block text-[10px] font-medium text-(--ink-3)">Tap to view full size</span>
+              <span className="block text-[10px] font-medium text-(--ink-3)">{t('tx.viewReceipt')}</span>
             </span>
           </button>
         )}
 
         {showReceipt && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/80 p-4" role="dialog" aria-label="Receipt full size">
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/80 p-4" role="dialog" aria-label={t('tx.viewReceipt')}>
             <div className="relative max-h-full w-full max-w-md overflow-auto rounded-2xl bg-(--surface) p-2">
               <button
                 type="button"
                 onClick={() => setShowReceipt(false)}
-                aria-label="Close receipt"
+                aria-label={t('common.cancel')}
                 className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900/70 text-white hover:bg-slate-900 cursor-pointer"
               >
                 <X className="h-4 w-4" />
@@ -187,8 +188,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
         {confirmingDelete ? (
           <div className="space-y-2 rounded-xl border border-rose-200 bg-rose-50 p-3">
             <p className="text-xs font-bold text-rose-800">
-              Delete this transaction? The {money.format()} will be reversed on{' '}
-              {accountName(accounts, tx.accountId, 'your account')}.
+              {t('tx.deleteConfirm')} {t('tx.deleteConfirmHint')}
             </p>
             <div className="flex gap-2">
               <button
@@ -199,14 +199,14 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                 }}
                 className="flex-1 rounded-xl bg-rose-600 py-2.5 text-xs font-bold text-white hover:bg-rose-700 transition-colors cursor-pointer"
               >
-                Yes, delete it
+                {t('common.delete')}
               </button>
               <button
                 type="button"
                 onClick={() => setConfirmingDelete(false)}
                 className="flex-1 rounded-xl border border-(--line) bg-(--surface) py-2.5 text-xs font-bold text-(--ink-2) hover:bg-(--surface-2) transition-colors cursor-pointer"
               >
-                Keep it
+                {t('common.cancel')}
               </button>
             </div>
           </div>
@@ -220,12 +220,12 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
               }}
               className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[#122A1E] py-3 text-xs font-bold text-[#D4F63D] hover:bg-[#183625] transition-colors cursor-pointer"
             >
-              <Pencil className="h-3.5 w-3.5" /> Edit Transaction
+              <Pencil className="h-3.5 w-3.5" /> {t('tx.editTitle')}
             </button>
             <button
               type="button"
               onClick={() => setConfirmingDelete(true)}
-              aria-label="Delete transaction"
+              aria-label={t('common.delete')}
               className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors cursor-pointer"
             >
               <Trash2 className="h-4 w-4" />
