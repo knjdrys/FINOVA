@@ -157,7 +157,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
       </div>
 
       {/* Amount Display */}
-      <div className="shrink-0 text-right">
+      <div className="shrink-0 text-right money">
         <p className="text-sm sm:text-base font-black tracking-tight text-(--ink)">
           {isIncome ? '+' : ''}
           {money.format()}

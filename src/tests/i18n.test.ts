@@ -174,3 +174,37 @@ describe('domain engines localize at generation time', () => {
     );
   });
 });
+
+describe('i18n dead-key guard', () => {
+  it('every static t(...) call in src resolves to a real key (no raw keys on screen)', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const srcDir = path.resolve(__dirname, '..');
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (e.name === 'tests') continue;
+        const p = path.join(dir, e.name);
+        if (e.isDirectory()) walk(p);
+        else if (/\.(tsx?|ts)$/.test(e.name)) files.push(p);
+      }
+    };
+    walk(srcDir);
+    const enKeys = new Set(localeKeys('en'));
+    const dead: string[] = [];
+    // Static single/double-quoted literals only — dynamic template keys are
+    // out of scope for static analysis (reviewed by hand when added).
+    const re = /\bt\(\s*['"]([A-Za-z0-9_.]+)['"]/g;
+    for (const f of files) {
+      const src = fs.readFileSync(f, 'utf8');
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(src))) {
+        const key = m[1];
+        const ok =
+          enKeys.has(key) || enKeys.has(`${key}_one`) || enKeys.has(`${key}_other`);
+        if (!ok) dead.push(`${path.relative(srcDir, f)}: ${key}`);
+      }
+    }
+    expect(dead).toEqual([]);
+  });
+});

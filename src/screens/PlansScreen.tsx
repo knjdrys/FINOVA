@@ -196,7 +196,7 @@ const Seg: React.FC<{ label: string; active: boolean; onClick: () => void }> = (
   <button
     type="button"
     onClick={onClick}
-    className={`flex-1 py-2 rounded-lg transition-all ${
+    className={`flex-1 py-2 px-0.5 rounded-lg transition-all leading-tight ${
       active ? 'bg-(--surface) text-(--ink) shadow-sm' : 'text-(--ink-2) hover:text-(--ink)'
     }`}
   >

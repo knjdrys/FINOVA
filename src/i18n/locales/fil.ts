@@ -149,6 +149,8 @@ export const fil = {
     activeFilters: '{count} filter ang aktibo',
     activeFilters_other: '{count} filter ang aktibo',
     noResults: 'Walang transaksyong tumugma',
+    noTransactions: 'Wala pang transaksyon',
+    noTransactionsHint: 'Pindutin ang + para maidagdag ang una.',
     nothingMatches: 'Walang tumugma sa mga filter',
     nothingMatchesHint: 'Palawakin ang panahon, alisin ang category chip, o i-reset ang mga filter.',
     resetFilters: 'I-reset ang filters',

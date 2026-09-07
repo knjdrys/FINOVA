@@ -6,7 +6,7 @@ import { TransactionItem } from '../components/ui/TransactionItem';
 import { DateUtils } from '../domain/date/DateUtils';
 import { MoneyValue } from '../domain/money/MoneyValue';
 import { TransactionEngine, TransactionFilterOptions } from '../domain/transaction/TransactionEngine';
-import { ChevronLeft, Download, Search, SlidersHorizontal, X } from 'lucide-react';
+import { ChevronLeft, Download, Search, SlidersHorizontal, X, ReceiptText } from 'lucide-react';
 import { FinovaStorage } from '../services/storage/FinovaStorage';
 import { t } from '../i18n/core';
 import { notice } from '../components/ui/dialog';
@@ -297,7 +297,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
               </select>
             </div>
             <div>
-              <label className="text-[10px] font-black uppercase tracking-wider text-(--ink-3) block mb-1">{t('tx.amount')}</label>
+              <label className="text-[10px] font-black uppercase tracking-wider text-(--ink-3) block mb-1">{t('common.amount')}</label>
               <div className="flex items-center gap-1.5">
                 <input
                   type="number" min="0" placeholder={`${t('tx.filterMin')} ${currencySymbol}`} value={minStr}
@@ -363,7 +363,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
         {filtered.length === 0 ? (
           <div className="rounded-[28px] bg-(--surface) p-6 text-center border border-(--line)/80 shadow-xs space-y-2">
             <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-(--surface-3) text-(--ink-3)">
-              <Search className="h-5 w-5" />
+              {transactions.length === 0 ? <ReceiptText className="h-5 w-5" /> : <Search className="h-5 w-5" />}
             </div>
             <h4 className="text-xs sm:text-sm font-black text-(--ink)">
               {transactions.length === 0 ? t('tx.noTransactions') : t('tx.nothingMatches')}

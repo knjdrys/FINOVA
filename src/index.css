@@ -53,11 +53,6 @@
 @keyframes finova-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes finova-slide-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes finova-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-@keyframes finova-shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-@keyframes finova-check-pop { 0% { transform: scale(0.7); opacity: 0; } 50% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
-@keyframes finova-shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-3px); } 40% { transform: translateX(3px); } 60% { transform: translateX(-2px); } 80% { transform: translateX(2px); } }
-@keyframes finova-badge-pop { 0% { transform: scale(0.6); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
-@keyframes finova-confetti { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-18px) scale(0.9); opacity: 0; } }
 .motion-enter { animation: finova-in var(--motion-standard) var(--motion-ease-out) both; }
 .motion-fade { animation: finova-fade var(--motion-fast) var(--motion-ease-out) both; }
 .motion-stagger > * { animation: finova-slide-up var(--motion-standard) var(--motion-ease-out) both; }
@@ -87,8 +82,10 @@
 .motion-list > .motion-row:nth-child(n+6) { animation-delay: 120ms; }
 .finova-bar { transform-origin: left; animation: finova-progress var(--motion-emphasis) var(--motion-ease-out) both; }
 .finova-chart-bar { transform-origin: left; animation: finova-progress var(--motion-emphasis) var(--motion-ease-out) both; }
-.finova-badge { animation: finova-badge-pop var(--motion-standard) var(--motion-spring) both; }
-.finova-check { animation: finova-check-pop var(--motion-standard) var(--motion-spring) both; }
-.finova-shake { animation: finova-shake var(--motion-standard) var(--motion-ease-out) both; }
 .finova-onboard-enter { animation: finova-in var(--motion-emphasis) var(--motion-ease-out) both; }
-.finova-confetti { animation: finova-confetti 700ms var(--motion-ease-out) forwards; pointer-events: none; }
+
+/* PALDO browser surfaces — the parts no component draws */
+::selection { background: #c4f042; color: #122a1e; }
+:focus-visible { outline: 2px solid #059669; outline-offset: 2px; border-radius: 6px; }
+/* Tabular numerals keep money columns from jittering as values change */
+.money, .money * { font-variant-numeric: tabular-nums; }
