@@ -41,6 +41,7 @@ export const AddCommitmentModal: React.FC<AddCommitmentModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      submittedRef.current = false;
       setTitle(editingCommitment?.title || preset?.title || '');
       setAmountStr(editingCommitment ? MoneyValue.fromMinorUnits(editingCommitment.amount, editingCommitment.currency).format({ includeSymbol: false }) : '');
       setDueDate(editingCommitment?.dueDate || DateUtils.addDaysISO(DateUtils.getTodayISO(), 7));

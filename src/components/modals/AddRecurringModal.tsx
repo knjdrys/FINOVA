@@ -41,6 +41,7 @@ export const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      submittedRef.current = false;
       setTitle(editingRecurring?.title || '');
       setAmountStr(editingRecurring ? MoneyValue.fromMinorUnits(editingRecurring.amount, editingRecurring.currency || currency).format({ includeSymbol: false }) : '');
       setType(editingRecurring?.type || 'EXPENSE');

@@ -34,6 +34,7 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onS
 
   useEffect(() => {
     if (isOpen) {
+      submittedRef.current = false;
       setName(editingGoal?.name || preset?.name || '');
       setTargetStr(editingGoal ? MoneyValue.fromMinorUnits(editingGoal.targetAmount, currency).format({ includeSymbol: false }) : '');
       setCurrentStr(editingGoal ? MoneyValue.fromMinorUnits(editingGoal.currentAmount, currency).format({ includeSymbol: false }) : '0');
