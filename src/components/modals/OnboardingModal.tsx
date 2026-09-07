@@ -261,7 +261,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
                 className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#122A1E] py-3.5 text-sm font-bold text-[#D4F63D] shadow-md hover:bg-[#183625] transition-all cursor-pointer"
               >
                 <CheckCircle2 className="h-4 w-4" />
-                <span>Start Fresh with {currencySymbol}0</span>
+                {/* Honest label: the button creates the account WITH the entered
+                    balance, so it must say the real amount — never a fixed ₱0. */}
+                <span>{t('onboard.startFresh', { amount: MoneyValue.parse(initialBalanceStr || '0', currency).format() })}</span>
               </button>
 
               <button
@@ -269,7 +271,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
                 onClick={() => handleFinish(true)}
                 className="w-full text-center py-2 text-xs font-bold text-(--ink-3) hover:text-(--ink) transition-colors cursor-pointer"
               >
-                Or explore first with Sample Demo Data
+                {t('onboard.exploreDemo')}
               </button>
             </div>
           </div>

@@ -118,7 +118,7 @@ export const AddCommitmentModal: React.FC<AddCommitmentModalProps> = ({
         </Field>
         <Field label={t('common.category')}>
           <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={inputCls}>
-            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {categories.filter((c) => c.id !== 'cat-transfer' && !c.isArchived).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </Field>
         <Field label={t('modal.priority')}>

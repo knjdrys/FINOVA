@@ -92,7 +92,7 @@ export const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
         </Field>
         <Field label={t('modal.categoriesOptional')}>
           <div className="flex flex-wrap gap-2">
-            {categories.filter((c) => c.type === 'EXPENSE').map((c) => {
+            {categories.filter((c) => c.type === 'EXPENSE' && c.id !== 'cat-transfer' && !c.isArchived).map((c) => {
               const on = categoryIds.includes(c.id);
               return (
                 <button key={c.id} type="button" onClick={() => setCategoryIds((prev) => on ? prev.filter((id) => id !== c.id) : [...prev, c.id])}
