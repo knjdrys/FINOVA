@@ -102,7 +102,7 @@ export const TOUR_STEPS: TourStep[] = [
     badge: 'Step 7 of 7 • Banks & Settings',
     title: 'Bank Accounts, Currencies & Clean Start',
     description:
-      'Add your real bank accounts (like Guagua Rural Bank, BPI, GCash, or Maya). Change your currency or start fresh with ₱0 whenever you want.',
+      'Add your real bank accounts (like GRBank, BPI, GCash, or Maya). Change your currency or start fresh with ₱0 whenever you want.',
     targetLabel: 'Bank Accounts Manager',
     keyTakeaway: "You are all set! You're ready to easily track your real money.",
   },

@@ -205,7 +205,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
             Bank Presets Supported
           </p>
           <div className="flex items-center gap-6 text-white/40 text-xs font-bold uppercase tracking-wider">
-            <span className="text-[#c4f042]/90 font-black">GRBI Rural Bank</span>
+            <span className="text-[#c4f042]/90 font-black">GRBank</span>
             <span>BPI</span>
             <span>BDO</span>
             <span>GCash</span>

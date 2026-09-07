@@ -30,7 +30,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
   const [currency, setCurrency] = useState<CurrencyCode>('PHP');
   const [budgetCycleMode, setBudgetCycleMode] = useState<BudgetCycleMode>('SEMI_MONTHLY_15_DAYS');
   const [selectedBankPresetId, setSelectedBankPresetId] = useState('grbi');
-  const [accountName, setAccountName] = useState('Guagua Rural Bank, Inc.');
+  const [accountName, setAccountName] = useState('GRBank');
   const [initialBalanceStr, setInitialBalanceStr] = useState('0');
 
   const currencySymbol = MoneyValue.zero(currency).getCurrencySymbol();

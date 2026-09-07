@@ -19,7 +19,7 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
   currency,
 }) => {
   const [selectedPresetId, setSelectedPresetId] = useState<string>('grbi');
-  const [name, setName] = useState('Guagua Rural Bank, Inc.');
+  const [name, setName] = useState('GRBank');
   const [accountType, setAccountType] = useState<AccountType>('BANK');
   const [accountNumberMask, setAccountNumberMask] = useState('•••• 1234');
   const [initialBalanceStr, setInitialBalanceStr] = useState('0');
@@ -119,7 +119,7 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Guagua Rural Bank Savings"
+              placeholder="e.g. GRBank Savings"
               className="w-full rounded-xl border border-(--line) bg-(--surface) px-3 py-2 text-xs font-bold text-(--ink) outline-none focus:border-emerald-600"
             />
           </div>

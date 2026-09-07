@@ -85,7 +85,7 @@ export interface BankPreset {
 export const POPULAR_BANKS_AND_WALLETS: BankPreset[] = [
   { id: 'bpi', name: 'BPI (Bank of the Philippine Islands)', type: 'BANK', icon: 'Building2', color: '#B91C1C', bgColor: '#FEE2E2', country: 'PH' },
   { id: 'bdo', name: 'BDO Unibank', type: 'BANK', icon: 'Building2', color: '#1D4ED8', bgColor: '#DBEAFE', country: 'PH' },
-  { id: 'grbi', name: 'Guagua Rural Bank, Inc.', type: 'BANK', icon: 'Building2', color: '#1C205E', bgColor: '#E0E7FF', logoUrl: '/assets/grbi-logo.png', country: 'PH' },
+  { id: 'grbi', name: 'GRBank', type: 'BANK', icon: 'Building2', color: '#1C205E', bgColor: '#E0E7FF', logoUrl: '/assets/grbi-logo.png', country: 'PH' },
   { id: 'gcash', name: 'GCash', type: 'E_WALLET', icon: 'Smartphone', color: '#0284C7', bgColor: '#E0F2FE', country: 'PH' },
   { id: 'maya', name: 'Maya (PayMaya)', type: 'E_WALLET', icon: 'Smartphone', color: '#16A34A', bgColor: '#DCFCE7', country: 'PH' },
   { id: 'metrobank', name: 'Metrobank', type: 'BANK', icon: 'Building2', color: '#1E40AF', bgColor: '#DBEAFE', country: 'PH' },

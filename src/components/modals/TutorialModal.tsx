@@ -167,14 +167,14 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
       id: 4,
       tag: 'BANK ACCOUNTS',
       title: 'Real Banks, Rural Banks & E-Wallets',
-      subtitle: 'Add Guagua Rural Bank, BPI, BDO, GCash, Maya, or cash.',
+      subtitle: 'Add GRBank, BPI, BDO, GCash, Maya, or cash.',
       icon: <Building2 className="h-6 w-6 text-blue-700" />,
       accentColor: '#1E40AF',
       bullets: [
         {
           icon: <Building2 className="h-4 w-4 text-blue-700" />,
           label: 'Popular Bank Presets',
-          text: 'Select Guagua Rural Bank, Inc. (GRBI), BPI, GCash, Maya, or create custom accounts.',
+          text: 'Select GRBank, BPI, GCash, Maya, or create custom accounts.',
         },
         {
           icon: <Zap className="h-4 w-4 text-blue-700" />,
@@ -190,7 +190,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
                 <GrbiLogo size={28} />
               </div>
               <div>
-                <span className="text-xs font-black text-(--ink) block">Guagua Rural Bank, Inc.</span>
+                <span className="text-xs font-black text-(--ink) block">GRBank</span>
                 <span className="text-[10px] text-(--ink-3) font-semibold">Bank • •••• 5678</span>
               </div>
             </div>

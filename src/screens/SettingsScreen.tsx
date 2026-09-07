@@ -430,7 +430,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 Bank Accounts & Wallets
               </h4>
               <p className="text-[11px] sm:text-xs text-(--ink-3)">
-                Manage GRBI, BPI, BDO, GCash, Maya, and cash
+                Manage GRBank, BPI, BDO, GCash, Maya, and cash
               </p>
             </div>
           </div>
@@ -451,7 +451,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             const money = MoneyValue.fromMinorUnits(acc.currentBalance, currentCurrency);
             const isWallet = acc.type === 'E_WALLET';
             const isCash = acc.type === 'CASH';
-            const isGrbi = acc.bankPresetId === 'grbi' || acc.name.toLowerCase().includes('guagua');
+            const isGrbi = acc.bankPresetId === 'grbi' || acc.name.toLowerCase().includes('guagua') || acc.name.toLowerCase().includes('grbank');
 
             return (
               <div
