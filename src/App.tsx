@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { I18nProvider } from './i18n';
 import { t } from './i18n/core';
 import { DialogProvider, confirmDialog, notice } from './components/ui/dialog';
@@ -210,28 +210,33 @@ export function App() {
   const currency = settings.currency || 'PHP';
 
   // Filter accounts if specific account selected
-  const activeAccounts = selectedAccountId === 'ALL'
-    ? accounts
-    : accounts.filter((a) => a.id === selectedAccountId);
-
-  // Authoritative Domain Calculations
-  // The recurring->commitment bridge, overdue recompute, and auto-post all flow through
-  // FutureFinanceEngine so every downstream screen consumes ONE resolved commitment list.
-  const resolvedCommitments = FutureFinanceEngine.resolveCommitments(
-    state.recurring,
-    state.commitments,
-    state.transactions,
-    todayISO,
-    DateUtils.addDaysISO(todayISO, 30),
-    todayISO
+  const activeAccounts = useMemo(
+    () => (selectedAccountId === 'ALL' ? accounts : accounts.filter((a) => a.id === selectedAccountId)),
+    [accounts, selectedAccountId]
   );
 
-  const safeToSpend = SafeToSpendEngine.calculateSafeToSpend(
-    activeAccounts,
-    resolvedCommitments,
-    goals,
-    settings,
-    todayISO
+  // Authoritative Domain Calculations (memoized: pure + expensive — without
+  // this every tab switch re-ran the full engine chain over all rows).
+  // The recurring->commitment bridge, overdue recompute, and auto-post all flow through
+  // FutureFinanceEngine so every downstream screen consumes ONE resolved commitment list.
+  const resolvedCommitments = useMemo(
+    () =>
+      FutureFinanceEngine.resolveCommitments(
+        state.recurring,
+        state.commitments,
+        state.transactions,
+        todayISO,
+        DateUtils.addDaysISO(todayISO, 30),
+        todayISO
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [state.recurring, state.commitments, state.transactions, todayISO]
+  );
+
+  const safeToSpend = useMemo(
+    () => SafeToSpendEngine.calculateSafeToSpend(activeAccounts, resolvedCommitments, goals, settings, todayISO),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeAccounts, resolvedCommitments, goals, settings, todayISO]
   );
 
   /**
@@ -309,48 +314,61 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todayISO]);
 
-  const timeline = TimelineEngine.generateTimeline(
-    activeAccounts,
-    transactions,
-    resolvedCommitments,
-    categories,
-    todayISO,
-    DateUtils.addDaysISO(todayISO, 30),
-    todayISO
+  const timeline = useMemo(
+    () =>
+      TimelineEngine.generateTimeline(
+        activeAccounts,
+        transactions,
+        resolvedCommitments,
+        categories,
+        todayISO,
+        DateUtils.addDaysISO(todayISO, 30),
+        todayISO
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeAccounts, transactions, resolvedCommitments, categories, todayISO]
   );
 
-  const risks = RiskEngine.detectCashFlowRisks(
-    activeAccounts,
-    timeline,
-    resolvedCommitments,
-    goals,
-    settings,
-    todayISO
+  const risks = useMemo(
+    () =>
+      RiskEngine.detectCashFlowRisks(activeAccounts, timeline, resolvedCommitments, goals, settings, todayISO),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeAccounts, timeline, resolvedCommitments, goals, settings, todayISO]
   );
 
-  const notifications = NotificationEngine.generateNotifications({
-    commitments: resolvedCommitments,
-    risks,
-    autoPostedTransactions: transactions.filter((t) => t.sourceCommitmentId),
-    transactions,
-    budgets,
-    goals,
-    recurring: state.recurring,
-    readIds: state.readNotificationIds,
-    prefs: notifPrefs,
-    referenceDateISO: todayISO,
-  });
+  const notifications = useMemo(
+    () =>
+      NotificationEngine.generateNotifications({
+        commitments: resolvedCommitments,
+        risks,
+        autoPostedTransactions: transactions.filter((t) => t.sourceCommitmentId),
+        transactions,
+        budgets,
+        goals,
+        recurring: state.recurring,
+        readIds: state.readNotificationIds,
+        prefs: notifPrefs,
+        referenceDateISO: todayISO,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [resolvedCommitments, risks, transactions, budgets, goals, state.recurring, state.readNotificationIds, notifPrefs, todayISO]
+  );
 
   // Product Brain: one shared insight list (Home calm-state line + Analytics).
-  const insights = InsightEngine.generateInsights(
-    activeAccounts,
-    transactions,
-    budgets,
-    goals,
-    resolvedCommitments,
-    categories,
-    settings,
-    todayISO
+  const insights = useMemo(
+    () =>
+      InsightEngine.generateInsights(
+        activeAccounts,
+        transactions,
+        budgets,
+        goals,
+        resolvedCommitments,
+        categories,
+        settings,
+        todayISO
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeAccounts, transactions, budgets, goals, resolvedCommitments, categories, settings, todayISO]
   );
 
   // OS dispatch: when the feed gains new HIGH/MEDIUM items and the user

@@ -32,7 +32,7 @@ vi.mock('../../src/services/supabase/supabaseClient', () => ({
   isSupabaseConfigured: true,
 }));
 
-import { CloudSyncService } from '../../src/services/supabase/cloudSyncService';
+import { CloudSyncService, toValidUuid, fromCloudCategoryId } from '../../src/services/supabase/cloudSyncService';
 import { FinovaState } from '../../src/services/storage/FinovaStorage';
 import { DateUtils } from '../../src/domain/date/DateUtils';
 
@@ -116,8 +116,12 @@ describe('Cloud Sync — round-trip persistence of ALL plans data', () => {
     const txPayload = hoisted.captured
       .find((p) => Array.isArray(p) && p[0] && 'category_id' in p[0]) as any[];
     expect(txPayload).toBeTruthy();
-    expect(txPayload[0].category_id).toBe('cat-food');
+    // Live category columns are UUID (22P02-proven): the payload carries the
+    // deterministic hashed id, never a raw slug and never null — and it maps
+    // exactly back to the local slug on load.
     expect(txPayload[0].category_id).not.toBeNull();
+    expect(txPayload[0].category_id).toBe(toValidUuid('cat-food'));
+    expect(fromCloudCategoryId(txPayload[0].category_id, 'FALLBACK')).toBe('cat-food');
   });
 
   it('syncStateToCloud writes categories and preserves category_id in commitments and recurring', async () => {
@@ -128,15 +132,22 @@ describe('Cloud Sync — round-trip persistence of ALL plans data', () => {
 
     await CloudSyncService.syncStateToCloud(s, fakeUser as any);
 
-    const catPayload = hoisted.captured.find((p) => Array.isArray(p) && p[0] && p[0].id === 'cat-custom-1') as any[];
+    const catPayload = hoisted.captured.find(
+      (p) => Array.isArray(p) && p[0] && p[0].id === toValidUuid('cat-custom-1')
+    ) as any[];
     expect(catPayload).toBeTruthy();
     expect(catPayload[0].name).toBe('Custom Category');
 
     const commPayload = hoisted.captured.find((p) => Array.isArray(p) && p[0] && 'due_date' in p[0]) as any[];
-    expect(commPayload[0].category_id).toBe('cat-custom-1');
+    expect(commPayload[0].category_id).toBe(toValidUuid('cat-custom-1'));
+    // Custom slugs have no seed entry: the guarantee is stability — the ref
+    // equals the synced category row id, so load stays internally consistent.
+    expect(commPayload[0].category_id).toBe(catPayload[0].id);
+    expect(fromCloudCategoryId(commPayload[0].category_id, 'FALLBACK')).toBe(catPayload[0].id);
 
     const recPayload = hoisted.captured.find((p) => Array.isArray(p) && p[0] && 'next_occurrence' in p[0]) as any[];
-    expect(recPayload[0].category_id).toBe('cat-custom-1');
+    expect(recPayload[0].category_id).toBe(toValidUuid('cat-custom-1'));
+    expect(recPayload[0].category_id).toBe(catPayload[0].id);
   });
 
   it('delete helper methods execute cleanly without exceptions', async () => {

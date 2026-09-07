@@ -69,63 +69,55 @@ export class CloudSyncService {
     }
 
     try {
-      // 1. Fetch User Settings
-      const { data: settingsData, error: sErr } = await supabase
-        .from('user_settings')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      // All eight selects are independent — fire them as ONE wave instead of
+      // eight sequential round trips (each costs a full RTT on mobile data).
+      const [
+        settingsRes,
+        accountsRes,
+        txRes,
+        budgetRes,
+        goalsRes,
+        commitmentsRes,
+        recurringRes,
+        categoriesRes,
+      ] = await Promise.all([
+        supabase.from('user_settings').select('*').eq('user_id', user.id).maybeSingle(),
+        supabase.from('accounts').select('*').eq('user_id', user.id).order('created_at', { ascending: true }),
+        supabase.from('transactions').select('*').eq('user_id', user.id).order('date', { ascending: false }),
+        supabase.from('budgets').select('*').eq('user_id', user.id),
+        supabase.from('savings_goals').select('*').eq('user_id', user.id),
+        supabase.from('money_commitments').select('*').eq('user_id', user.id),
+        supabase.from('recurring_transactions').select('*').eq('user_id', user.id),
+        supabase.from('categories').select('*').eq('user_id', user.id),
+      ]);
 
-      if (sErr) console.warn('Supabase settings load error:', sErr);
+      // 1. User Settings
+      const settingsData = settingsRes.data;
+      if (settingsRes.error) console.warn('Supabase settings load error:', settingsRes.error);
 
-      // 2. Fetch Accounts (ALL of them — archived accounts stay out of totals
+      // 2. Accounts (ALL of them — archived accounts stay out of totals
       // via isArchived, but their history must survive a cross-device restore)
-      const { data: accountsData, error: aErr } = await supabase
-        .from('accounts')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true });
+      const accountsData = accountsRes.data;
+      if (accountsRes.error) console.warn('Supabase accounts load error:', accountsRes.error);
 
-      if (aErr) console.warn('Supabase accounts load error:', aErr);
+      // 3. Transactions
+      const txData = txRes.data;
+      if (txRes.error) console.warn('Supabase tx load error:', txRes.error);
 
-      // 3. Fetch Transactions
-      const { data: txData, error: tErr } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('date', { ascending: false });
+      // 4. Budgets (ALL — inactive/archived budgets are history, not garbage)
+      const budgetData = budgetRes.data;
 
-      if (tErr) console.warn('Supabase tx load error:', tErr);
+      // 5. Goals (ALL — archived goals keep their contribution history)
+      const goalsData = goalsRes.data;
 
-      // 4. Fetch Budgets (ALL — inactive/archived budgets are history, not garbage)
-      const { data: budgetData } = await supabase
-        .from('budgets')
-        .select('*')
-        .eq('user_id', user.id);
+      // 6. Commitments
+      const commitmentsData = commitmentsRes.data;
 
-      // 5. Fetch Goals (ALL — archived goals keep their contribution history)
-      const { data: goalsData } = await supabase
-        .from('savings_goals')
-        .select('*')
-        .eq('user_id', user.id);
+      // 7. Recurring Transactions
+      const recurringData = recurringRes.data;
 
-      // 6. Fetch Commitments
-      const { data: commitmentsData } = await supabase
-        .from('money_commitments')
-        .select('*')
-        .eq('user_id', user.id);
-
-      // 7. Fetch Recurring Transactions
-      const { data: recurringData } = await supabase
-        .from('recurring_transactions')
-        .select('*')
-        .eq('user_id', user.id);
-
-      // 8. Fetch Categories (own rows only — RLS also enforces this server-side)
-      const { data: categoriesData } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('user_id', user.id);
+      // 8. Categories (own rows only — RLS also enforces this server-side)
+      const categoriesData = categoriesRes.data;
 
       // If user has no existing cloud data yet, return null
       if (!settingsData && (!accountsData || accountsData.length === 0) && (!txData || txData.length === 0)) {
@@ -314,18 +306,16 @@ export class CloudSyncService {
     }
 
     try {
-      // 1. Ensure Profile Exists in public.profiles
-      const { error: profErr } = await supabase.from('profiles').upsert({
+      // Wave 1 — independent rows, fired in parallel (one RTT instead of six
+      // sequential round trips). FK-holding tables go in wave 2.
+      const profilePayload = {
         id: user.id,
         email: user.email,
         full_name: user.fullName || state.settings.userName,
         avatar_url: user.avatarUrl,
         updated_at: new Date().toISOString(),
-      });
-      if (profErr) console.warn('Supabase profiles upsert warning:', profErr);
-
-      // 2. Sync User Settings
-      const { error: setErr } = await supabase.from('user_settings').upsert({
+      };
+      const settingsPayload = {
         user_id: user.id,
         currency: state.settings.currency || 'PHP',
         default_tracking_period: state.settings.defaultTrackingPeriod || 'TODAY',
@@ -338,173 +328,175 @@ export class CloudSyncService {
         budget_warning_threshold: state.settings.budgetWarningThreshold || 80,
         has_completed_onboarding: state.settings.hasCompletedOnboarding ?? true,
         updated_at: new Date().toISOString(),
-      });
-      if (setErr) console.warn('Supabase settings upsert warning:', setErr);
-
-      // 3. Sync Categories
-      if (state.categories && state.categories.length > 0) {
-        const categoryPayloads = state.categories.map((c) => ({
-          id: c.id,
-          user_id: user.id,
-          name: c.name,
-          icon: c.icon || 'Tag',
-          color: c.color || '#059669',
-          type: c.type || 'EXPENSE',
-          is_system: c.isSystem ?? false,
-          updated_at: new Date().toISOString(),
-        }));
-        const { error: catErr } = await supabase.from('categories').upsert(categoryPayloads);
-        if (catErr) console.error('Supabase categories upsert error:', catErr);
-      }
-
+      };
+      const categoryPayloads = (state.categories || []).map((c) => ({
+        id: toValidUuid(c.id),
+        user_id: user.id,
+        name: c.name,
+        icon: c.icon || 'ShoppingBag',
+        color: c.color || '#059669',
+        type: c.type || 'EXPENSE',
+        is_system: false,
+      }));
       // 4. Sync Accounts
-      let accountPayloads: any[] = [];
-      if (state.accounts.length > 0) {
-        accountPayloads = state.accounts.map((acc) => ({
-          id: toValidUuid(acc.id),
-          user_id: user.id,
-          name: acc.name,
-          bank_preset_id: acc.bankPresetId || 'grbi',
-          account_number_mask: acc.accountNumberMask,
-          type: acc.type || 'BANK',
-          currency: acc.currency || state.settings.currency || 'PHP',
-          initial_balance: acc.initialBalance,
-          current_balance: acc.currentBalance,
-          icon: acc.icon || 'Building2',
-          color: acc.color || '#1C205E',
-          include_in_total_balance: acc.includeInTotalBalance ?? true,
-          is_archived: acc.isArchived ?? false,
-          updated_at: new Date().toISOString(),
-        }));
+      const accountPayloads: any[] = state.accounts.map((acc) => ({
+        id: toValidUuid(acc.id),
+        user_id: user.id,
+        name: acc.name,
+        bank_preset_id: acc.bankPresetId || 'grbi',
+        account_number_mask: acc.accountNumberMask,
+        type: acc.type || 'BANK',
+        currency: acc.currency || state.settings.currency || 'PHP',
+        initial_balance: acc.initialBalance,
+        current_balance: acc.currentBalance,
+        icon: acc.icon || 'Building2',
+        color: acc.color || '#1C205E',
+        include_in_total_balance: acc.includeInTotalBalance ?? true,
+        is_archived: acc.isArchived ?? false,
+        updated_at: new Date().toISOString(),
+      }));
+      const budgetPayloads = state.budgets.map((b) => ({
+        id: toValidUuid(b.id),
+        user_id: user.id,
+        name: b.name,
+        amount: Math.round(b.amount),
+        currency: b.currency || state.settings.currency || 'PHP',
+        category_ids: (b.categoryIds || []).map((cid) => toCloudCategoryId(cid) || cid),
+        period: b.period || 'MONTHLY',
+        start_date: b.startDate,
+        end_date: b.endDate,
+        notify_threshold_percentage: b.notifyThresholdPercentage || 80,
+        rollover_unused: b.rolloverUnused ?? false,
+        is_active: b.isActive ?? true,
+        updated_at: new Date().toISOString(),
+      }));
+      const goalPayloads = state.goals.map((g) => ({
+        id: toValidUuid(g.id),
+        user_id: user.id,
+        name: g.name,
+        target_amount: Math.round(g.targetAmount),
+        current_amount: Math.round(g.currentAmount || 0),
+        currency: g.currency || state.settings.currency || 'PHP',
+        target_date: g.targetDate,
+        linked_account_id: g.accountId ? toValidUuid(g.accountId) : null,
+        priority: g.priority || 'ESSENTIAL',
+        status: g.status || 'ON_TRACK',
+        icon: g.icon || 'Target',
+        color: g.color || '#059669',
+        is_archived: g.isArchived ?? false,
+        updated_at: new Date().toISOString(),
+      }));
 
-        const { error: accErr } = await supabase.from('accounts').upsert(accountPayloads);
-        if (accErr) console.error('Supabase accounts upsert error:', accErr);
-      }
+      const [profRes, setRes, catRes, accRes, budRes, goalRes] = await Promise.all([
+        supabase.from('profiles').upsert(profilePayload),
+        supabase.from('user_settings').upsert(settingsPayload),
+        categoryPayloads.length > 0
+          ? supabase.from('categories').upsert(categoryPayloads)
+          : Promise.resolve({ error: null }),
+        accountPayloads.length > 0
+          ? supabase.from('accounts').upsert(accountPayloads)
+          : Promise.resolve({ error: null }),
+        budgetPayloads.length > 0
+          ? supabase.from('budgets').upsert(budgetPayloads)
+          : Promise.resolve({ error: null }),
+        goalPayloads.length > 0
+          ? supabase.from('savings_goals').upsert(goalPayloads)
+          : Promise.resolve({ error: null }),
+      ]);
+      if (profRes.error) console.warn('Supabase profiles upsert warning:', profRes.error);
+      if (setRes.error) console.warn('Supabase settings upsert warning:', setRes.error);
+      if (catRes.error) console.error('Supabase categories upsert error:', catRes.error);
+      if (accRes.error) console.error('Supabase accounts upsert error:', accRes.error);
+      if (budRes.error) console.error('Supabase budgets upsert error:', budRes.error);
+      if (goalRes.error) console.error('Supabase goals upsert error:', goalRes.error);
 
-      // 5. Sync Transactions (Ensuring account_id references an existing account)
-      if (state.transactions.length > 0 && accountPayloads.length > 0) {
-        const insertedAccountIds = new Set(accountPayloads.map((a) => a.id));
-        const fallbackAccountId = accountPayloads[0].id;
+      // Wave 2 — FK-holding rows, fired together after wave 1 lands.
+      // (Payloads are built first; the three upserts then run in parallel.)
+      const txPayloads =
+        state.transactions.length > 0 && accountPayloads.length > 0
+          ? (() => {
+              const insertedAccountIds = new Set(accountPayloads.map((a) => a.id));
+              const fallbackAccountId = accountPayloads[0].id;
+              return state.transactions.map((tx) => {
+                const targetAccId = toValidUuid(tx.accountId);
+                const validAccId = insertedAccountIds.has(targetAccId) ? targetAccId : fallbackAccountId;
+                const destTargetId = tx.destinationAccountId ? toValidUuid(tx.destinationAccountId) : null;
+                return {
+                  id: toValidUuid(tx.id),
+                  user_id: user.id,
+                  account_id: validAccId,
+                  category_id: toCloudCategoryId(tx.categoryId),
+                  to_account_id: destTargetId && insertedAccountIds.has(destTargetId) ? destTargetId : null,
+                  type: tx.type || 'EXPENSE',
+                  amount: Math.round(tx.amount),
+                  currency: tx.currency || state.settings.currency || 'PHP',
+                  merchant: tx.merchant || '',
+                  note: tx.note || '',
+                  date: tx.date || new Date().toISOString().substring(0, 10),
+                  time: tx.time || '12:00',
+                  tags: tx.tags || [],
+                  status: tx.status || 'CONFIRMED',
+                  split_parts:
+                    tx.splitParts && tx.splitParts.length > 0
+                      ? tx.splitParts.map((p) => ({ ...p, categoryId: toCloudCategoryId(p.categoryId) || p.categoryId }))
+                      : null,
+                  // Receipts stay local-only (data URLs would bloat the row); cloud syncs metadata.
+                  receipt_data_url: null,
+                  updated_at: new Date().toISOString(),
+                };
+              });
+            })()
+          : [];
+      const commitmentPayloads = state.commitments.map((c) => ({
+        id: toValidUuid(c.id),
+        user_id: user.id,
+        name: c.title,
+        amount: Math.round(c.amount),
+        currency: c.currency || state.settings.currency || 'PHP',
+        due_date: c.dueDate,
+        type: c.type || 'BILL',
+        status: c.status || 'PROJECTED',
+        priority: c.priority || 'ESSENTIAL',
+        direction: c.direction || 'OUTFLOW',
+        category_id: toCloudCategoryId(c.categoryId),
+        account_id: c.accountId ? toValidUuid(c.accountId) : null,
+        is_auto_generated: c.isAutoGenerated ?? false,
+        auto_post_enabled: c.autoPostEnabled ?? false,
+        updated_at: new Date().toISOString(),
+      }));
+      const recurringPayloads = state.recurring.map((r) => ({
+        id: toValidUuid(r.id),
+        user_id: user.id,
+        title: r.title,
+        amount: Math.round(r.amount),
+        currency: r.currency || state.settings.currency || 'PHP',
+        type: r.type || 'EXPENSE',
+        category_id: toCloudCategoryId(r.categoryId),
+        account_id: r.accountId ? toValidUuid(r.accountId) : null,
+        frequency: r.frequency || 'MONTHLY',
+        start_date: r.startDate,
+        next_occurrence: r.nextOccurrence,
+        end_date: r.endDate || null,
+        is_active: r.isActive ?? true,
+        reminder_enabled: r.reminderEnabled ?? true,
+        auto_post_enabled: r.autoPostEnabled ?? r.reminderEnabled ?? true,
+        updated_at: new Date().toISOString(),
+      }));
 
-        const txPayloads = state.transactions.map((tx) => {
-          const targetAccId = toValidUuid(tx.accountId);
-          const validAccId = insertedAccountIds.has(targetAccId) ? targetAccId : fallbackAccountId;
-          const destTargetId = tx.destinationAccountId ? toValidUuid(tx.destinationAccountId) : null;
-          return {
-            id: toValidUuid(tx.id),
-            user_id: user.id,
-            account_id: validAccId,
-            category_id: tx.categoryId || null,
-            to_account_id: destTargetId && insertedAccountIds.has(destTargetId) ? destTargetId : null,
-            type: tx.type || 'EXPENSE',
-            amount: Math.round(tx.amount),
-            currency: tx.currency || state.settings.currency || 'PHP',
-            merchant: tx.merchant || '',
-            note: tx.note || '',
-            date: tx.date || new Date().toISOString().substring(0, 10),
-            time: tx.time || '12:00',
-            tags: tx.tags || [],
-            status: tx.status || 'CONFIRMED',
-            split_parts: tx.splitParts && tx.splitParts.length > 0 ? tx.splitParts : null,
-            // Receipts stay local-only (data URLs would bloat the row); cloud syncs metadata.
-            receipt_data_url: null,
-            updated_at: new Date().toISOString(),
-          };
-        });
-
-        const { error: txErr } = await supabase.from('transactions').upsert(txPayloads);
-        if (txErr) console.error('Supabase transactions upsert error:', txErr);
-      }
-
-      // 6. Sync Budgets
-      if (state.budgets.length > 0) {
-        const budgetPayloads = state.budgets.map((b) => ({
-          id: toValidUuid(b.id),
-          user_id: user.id,
-          name: b.name,
-          amount: Math.round(b.amount),
-          currency: b.currency || state.settings.currency || 'PHP',
-          category_ids: b.categoryIds || [],
-          period: b.period || 'MONTHLY',
-          start_date: b.startDate,
-          end_date: b.endDate,
-          notify_threshold_percentage: b.notifyThresholdPercentage || 80,
-          rollover_unused: b.rolloverUnused ?? false,
-          is_active: b.isActive ?? true,
-          updated_at: new Date().toISOString(),
-        }));
-        const { error: bErr } = await supabase.from('budgets').upsert(budgetPayloads);
-        if (bErr) console.error('Supabase budgets upsert error:', bErr);
-      }
-
-      // 7. Sync Savings Goals
-      if (state.goals.length > 0) {
-        const goalPayloads = state.goals.map((g) => ({
-          id: toValidUuid(g.id),
-          user_id: user.id,
-          name: g.name,
-          target_amount: Math.round(g.targetAmount),
-          current_amount: Math.round(g.currentAmount || 0),
-          currency: g.currency || state.settings.currency || 'PHP',
-          target_date: g.targetDate,
-          linked_account_id: g.accountId ? toValidUuid(g.accountId) : null,
-          priority: g.priority || 'ESSENTIAL',
-          status: g.status || 'ON_TRACK',
-          icon: g.icon || 'Target',
-          color: g.color || '#059669',
-          is_archived: g.isArchived ?? false,
-          updated_at: new Date().toISOString(),
-        }));
-        const { error: gErr } = await supabase.from('savings_goals').upsert(goalPayloads);
-        if (gErr) console.error('Supabase goals upsert error:', gErr);
-      }
-
-      // 8. Sync Money Commitments
-      if (state.commitments.length > 0) {
-        const commitmentPayloads = state.commitments.map((c) => ({
-          id: toValidUuid(c.id),
-          user_id: user.id,
-          name: c.title,
-          amount: Math.round(c.amount),
-          currency: c.currency || state.settings.currency || 'PHP',
-          due_date: c.dueDate,
-          type: c.type || 'BILL',
-          status: c.status || 'PROJECTED',
-          priority: c.priority || 'ESSENTIAL',
-          direction: c.direction || 'OUTFLOW',
-          category_id: c.categoryId || null,
-          account_id: c.accountId ? toValidUuid(c.accountId) : null,
-          is_auto_generated: c.isAutoGenerated ?? false,
-          auto_post_enabled: c.autoPostEnabled ?? false,
-          updated_at: new Date().toISOString(),
-        }));
-        const { error: cErr } = await supabase.from('money_commitments').upsert(commitmentPayloads);
-        if (cErr) console.error('Supabase commitments upsert error:', cErr);
-      }
-
-      // 9. Sync Recurring Transactions
-      if (state.recurring.length > 0) {
-        const recurringPayloads = state.recurring.map((r) => ({
-          id: toValidUuid(r.id),
-          user_id: user.id,
-          title: r.title,
-          amount: Math.round(r.amount),
-          currency: r.currency || state.settings.currency || 'PHP',
-          type: r.type || 'EXPENSE',
-          category_id: r.categoryId || null,
-          account_id: r.accountId ? toValidUuid(r.accountId) : null,
-          frequency: r.frequency || 'MONTHLY',
-          start_date: r.startDate,
-          next_occurrence: r.nextOccurrence,
-          end_date: r.endDate || null,
-          is_active: r.isActive ?? true,
-          reminder_enabled: r.reminderEnabled ?? true,
-          auto_post_enabled: r.autoPostEnabled ?? r.reminderEnabled ?? true,
-          updated_at: new Date().toISOString(),
-        }));
-        const { error: rErr } = await supabase.from('recurring_transactions').upsert(recurringPayloads);
-        if (rErr) console.error('Supabase recurring upsert error:', rErr);
-      }
+      const [txRes, comRes, recRes] = await Promise.all([
+        txPayloads.length > 0
+          ? supabase.from('transactions').upsert(txPayloads)
+          : Promise.resolve({ error: null }),
+        commitmentPayloads.length > 0
+          ? supabase.from('money_commitments').upsert(commitmentPayloads)
+          : Promise.resolve({ error: null }),
+        recurringPayloads.length > 0
+          ? supabase.from('recurring_transactions').upsert(recurringPayloads)
+          : Promise.resolve({ error: null }),
+      ]);
+      if (txRes.error) console.error('Supabase transactions upsert error:', txRes.error);
+      if (comRes.error) console.error('Supabase commitments upsert error:', comRes.error);
+      if (recRes.error) console.error('Supabase recurring upsert error:', recRes.error);
 
       return true;
     } catch (err) {
