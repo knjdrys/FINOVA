@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { RecurringTransaction, Account, Category, CurrencyCode, TransactionType, RecurringFrequency } from '../../types';
 import { Modal } from '../ui/Modal';
 import { MoneyValue } from '../../domain/money/MoneyValue';
@@ -36,6 +36,8 @@ export const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
   // Edit-only: moving the next occurrence is how a rule is rescheduled.
   const [nextOccurrence, setNextOccurrence] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // First commit wins per open — Modal unmounts on close, so this resets naturally.
+  const submittedRef = useRef(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -63,6 +65,9 @@ export const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
     if (editingRecurring && nextOccurrence && nextOccurrence < startDate) { setError(t('modal.errNextBeforeStart')); return; }
     setError(null);
 
+    // Duplicate-submit guard: the first commit wins per open.
+    if (submittedRef.current) return;
+    submittedRef.current = true;
     onSave({
       userId: 'user-1',
       title: title.trim(),
@@ -147,7 +152,7 @@ export const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
         </label>
         <Field label={t('common.account')}>
           <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className={inputCls}>
-            {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+            {accounts.filter((a) => !a.isArchived || a.id === accountId).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
         </Field>
         <Field label={t('common.category')}>

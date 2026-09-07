@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MoneyCommitment, Account, Category, CurrencyCode, CommitmentType, CommitmentPriority } from '../../types';
 import { Modal } from '../ui/Modal';
 import { MoneyValue } from '../../domain/money/MoneyValue';
@@ -36,6 +36,8 @@ export const AddCommitmentModal: React.FC<AddCommitmentModalProps> = ({
   const [categoryId, setCategoryId] = useState('cat-bills');
   const [autoPost, setAutoPost] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // First commit wins per open — Modal unmounts on close, so this resets naturally.
+  const submittedRef = useRef(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -62,6 +64,9 @@ export const AddCommitmentModal: React.FC<AddCommitmentModalProps> = ({
     if (!accountId) { setError(t('tx.errors.accountRequired')); return; }
     setError(null);
 
+    // Duplicate-submit guard: the first commit wins per open.
+    if (submittedRef.current) return;
+    submittedRef.current = true;
     onSave({
       userId: 'user-1',
       title: title.trim(),
@@ -107,7 +112,7 @@ export const AddCommitmentModal: React.FC<AddCommitmentModalProps> = ({
         </Field>
         <Field label={t('common.account')}>
           <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className={inputCls}>
-            {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+            {accounts.filter((a) => !a.isArchived || a.id === accountId).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
         </Field>
         <Field label={t('common.category')}>

@@ -1,4 +1,4 @@
-import { Account, CurrencyCode, Transaction } from '../../types';
+import { Account, CurrencyCode, MoneyCommitment, RecurringTransaction, Transaction } from '../../types';
 import { MoneyValue } from '../money/MoneyValue';
 
 export class AccountEngine {
@@ -72,5 +72,46 @@ export class AccountEngine {
     }
 
     return balanceMap;
+  }
+
+  /**
+   * Archive rule (delete-with-history safety).
+   *
+   * Hard-deleting an account that owns transactions orphans them: balances
+   * drop but spend history stays, breaking every total. So accounts WITH
+   * history are archived instead — excluded from totals/Safe-to-Spend/
+   * pickers (every engine already filters `isArchived`) while history
+   * stays intact. Linked automation is settled so nothing can post into
+   * an archived account: pending commitments are CANCELLED (kept as
+   * history), active recurring rules are PAUSED (resumable — resume rolls
+   * forward, never dumps a backlog).
+   *
+   * Pure: returns the next slices, mutates nothing.
+   */
+  public static archiveAccount(
+    accounts: Account[],
+    commitments: MoneyCommitment[],
+    recurring: RecurringTransaction[],
+    accountId: string,
+    nowISO: string
+  ): { accounts: Account[]; commitments: MoneyCommitment[]; recurring: RecurringTransaction[] } {
+    return {
+      accounts: accounts.map((a) =>
+        a.id === accountId ? { ...a, isArchived: true, updatedAt: nowISO } : a
+      ),
+      commitments: commitments.map((c) =>
+        c.accountId === accountId && c.status !== 'COMPLETED' && c.status !== 'CANCELLED'
+          ? { ...c, status: 'CANCELLED' as const, updatedAt: nowISO }
+          : c
+      ),
+      recurring: recurring.map((r) =>
+        r.accountId === accountId && r.isActive ? { ...r, isActive: false, updatedAt: nowISO } : r
+      ),
+    };
+  }
+
+  /** An account is safe to hard-delete only when no transaction touches it. */
+  public static hasHistory(transactions: Transaction[], accountId: string): boolean {
+    return transactions.some((tx) => tx.accountId === accountId || tx.destinationAccountId === accountId);
   }
 }

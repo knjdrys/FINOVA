@@ -149,7 +149,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   }
 
   const periodTotals = TransactionEngine.calculatePeriodTotals(transactions, periodStart, periodEnd, currency, currency);
-  const totalBudgetMinor = budgets.reduce((sum, b) => sum + (b.amount || 0), 0);
+  // Header budget figure must match what Home actually tracks: active budgets
+  // in the active currency only. Summing archived or foreign-currency budgets
+  // here would corrupt the "spent of budgeted" comparison.
+  const totalBudgetMinor = budgets
+    .filter((b) => b.isActive && (b.currency || currency) === currency)
+    .reduce((sum, b) => sum + (b.amount || 0), 0);
   const totalBudgetMoney = MoneyValue.fromMinorUnits(
     totalBudgetMinor > 0 ? totalBudgetMinor : 0,
     currency

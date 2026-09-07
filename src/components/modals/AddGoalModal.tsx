@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Account, SavingsGoal, CurrencyCode, GoalPriority } from '../../types';
 import { Modal } from '../ui/Modal';
 import { MoneyValue } from '../../domain/money/MoneyValue';
@@ -27,6 +27,8 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onS
   const [accountId, setAccountId] = useState('');
   const [color, setColor] = useState(COLORS[0]);
   const [error, setError] = useState<string | null>(null);
+  // First commit wins per open — Modal unmounts on close, so this resets naturally.
+  const submittedRef = useRef(false);
 
   const sameCurrencyAccounts = accounts.filter((a) => !a.isArchived && a.currency === currency);
 
@@ -52,6 +54,9 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onS
     if (current > target) { setError(t('tx.errors.currentOverTarget')); return; }
     setError(null);
 
+    // Duplicate-submit guard: the first commit wins per open.
+    if (submittedRef.current) return;
+    submittedRef.current = true;
     onSave({
       userId: 'user-1',
       name: name.trim(),

@@ -16,6 +16,7 @@ import {
   PlansSection,
 } from './types';
 import { FinovaState, FinovaStorage } from './services/storage/FinovaStorage';
+import { AccountEngine } from './domain/account/AccountEngine';
 import { SafeToSpendEngine } from './domain/safe-to-spend/SafeToSpendEngine';
 import { RiskEngine } from './domain/risk/RiskEngine';
 import { TimelineEngine } from './domain/timeline/TimelineEngine';
@@ -397,16 +398,43 @@ export function App() {
   };
 
   // Handler: Delete Account
-  const handleDeleteAccount = (accountId: string) => {
+  const handleDeleteAccount = async (accountId: string) => {
     if (state.accounts.length <= 1) {
       notice(t('dialog.minOneAccount'));
       return;
     }
-    const nextState = {
-      ...state,
-      accounts: state.accounts.filter((a) => a.id !== accountId),
-    };
-    setState(nextState);
+    const acc = state.accounts.find((a) => a.id === accountId);
+    const hasHistory = AccountEngine.hasHistory(state.transactions, accountId);
+    // Accounts with history are ARCHIVED, never hard-deleted: hard-deleting
+    // would orphan transactions (balances drop but spend history stays,
+    // breaking every total). Archive excludes the account from totals,
+    // Safe-to-Spend, and pickers while keeping history intact.
+    if (hasHistory && acc) {
+      if (
+        !(await confirmDialog({
+          title: t('dialog.archiveAccount', { name: acc.name }),
+          message: t('dialog.archiveAccountHint'),
+          danger: true,
+          confirmLabel: t('common.confirm'),
+        }))
+      )
+        return;
+      const nowISO = new Date().toISOString();
+      const archived = AccountEngine.archiveAccount(
+        state.accounts,
+        state.commitments,
+        state.recurring,
+        accountId,
+        nowISO
+      );
+      setState((prev) => ({ ...prev, ...archived }));
+    } else {
+      const nextState = {
+        ...state,
+        accounts: state.accounts.filter((a) => a.id !== accountId),
+      };
+      setState(nextState);
+    }
     if (authUser && !authUser.isGuest) {
       getSyncManager()?.requestSync();
     }

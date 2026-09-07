@@ -336,6 +336,8 @@ export const en = {
     cancelRecurringHint: 'Past activity stays, but nothing more will be scheduled.',
     removeAccount: 'Remove account "{name}"?',
     removeAccountHint: 'This cannot be undone.',
+    archiveAccount: 'Archive account "{name}"?',
+    archiveAccountHint: 'It has history, so it will be archived instead of deleted: it leaves your totals and Safe-to-Spend, but past transactions stay intact.',
     signOut: 'Sign out of PALDO?',
     startFresh: 'Start clean with {amount}?',
     startFreshHint: 'This clears sample data so you can track your real money.',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Budget, Category, CurrencyCode } from '../../types';
 import { Modal } from '../ui/Modal';
 import { MoneyValue } from '../../domain/money/MoneyValue';
@@ -28,6 +28,8 @@ export const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [rollover, setRollover] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // First commit wins per open — Modal unmounts on close, so this resets naturally.
+  const submittedRef = useRef(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -46,6 +48,9 @@ export const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
     if (amount <= 0) { setError(t('tx.errors.amountPositive')); return; }
     setError(null);
 
+    // Duplicate-submit guard: the first commit wins per open.
+    if (submittedRef.current) return;
+    submittedRef.current = true;
     const start = DateUtils.getTodayISO();
     const end = period === 'MONTHLY' ? DateUtils.getMonthEndISO(start)
       : period === 'WEEKLY' ? DateUtils.addDaysISO(start, 6)

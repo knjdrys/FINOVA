@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Modal } from '../ui/Modal';
 import { Account, AccountType, CurrencyCode, POPULAR_BANKS_AND_WALLETS } from '../../types';
 import { MoneyValue } from '../../domain/money/MoneyValue';
@@ -24,6 +24,8 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
   const [accountNumberMask, setAccountNumberMask] = useState('•••• 1234');
   const [initialBalanceStr, setInitialBalanceStr] = useState('0');
   const [includeInTotalBalance, setIncludeInTotalBalance] = useState(true);
+  // First commit wins per open — Modal unmounts on close, so this resets naturally.
+  const submittedRef = useRef(false);
 
   const currencySymbol = MoneyValue.zero(currency).getCurrencySymbol();
 
@@ -38,6 +40,9 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Duplicate-submit guard: the first commit wins per open.
+    if (submittedRef.current) return;
+    submittedRef.current = true;
     const money = MoneyValue.parse(initialBalanceStr, currency);
     const preset = POPULAR_BANKS_AND_WALLETS.find((p) => p.id === selectedPresetId);
 

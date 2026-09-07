@@ -345,6 +345,8 @@ export const fil = {
     cancelRecurringHint: 'Mananatili ang nakaraang aktibidad, pero wala nang susunod na maiiskedyul.',
     removeAccount: 'Alisin ang account na "{name}"?',
     removeAccountHint: 'Hindi na ito maibabalik.',
+    archiveAccount: 'I-archive ang account na "{name}"?',
+    archiveAccountHint: 'May history ito, kaya i-archive sa halip na burahin: aalisin ito sa totals at Safe-to-Spend, pero mananatili ang mga dating transaksyon.',
     signOut: 'Mag-sign out sa PALDO?',
     startFresh: 'Magsimulang malinis sa {amount}?',
     startFreshHint: 'Mabubura nito ang sample data para masubaybayan ang tunay mong pera.',

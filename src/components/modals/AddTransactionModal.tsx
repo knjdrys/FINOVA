@@ -105,6 +105,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   // Repeat switch (create-only, Expense/Income): also creates a recurring rule.
   const [repeat, setRepeat] = useState<RepeatOption>('OFF');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Duplicate-submit guard (Phase 8): double-clicking Save fires handleSubmit
+  // twice before React unmounts the modal. The first commit wins per open.
+  const submittedRef = useRef(false);
 
   const currencySymbol = MoneyValue.zero(currency).getCurrencySymbol();
   const filteredCategories = categories.filter(
@@ -118,6 +121,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     setError(null);
+    submittedRef.current = false;
     if (editingTx) {
       setType(editingTx.type);
       setAmountStr(toDecimal(editingTx.amount, editingTx.currency));
@@ -183,7 +187,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   );
   const splitRemaining = amountMinor - splitMinor;
 
-  const destinationOptions = accounts.filter((a) => a.id !== accountId);
+  const destinationOptions = accounts.filter((a) => a.id !== accountId && !a.isArchived);
+  // Archived accounts stay visible only when editing a transaction that used them.
+  const visibleAccounts = accounts.filter((a) => !a.isArchived || a.id === accountId);
 
   const enableSplit = () => {
     setSplitMode(true);
@@ -253,6 +259,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Second click of a double-tap: the first submit already committed.
+    if (submittedRef.current) return;
     setError(null);
 
     if (amountMinor <= 0) {
@@ -286,6 +294,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         setError(plannedError);
         return;
       }
+      submittedRef.current = true;
       onSaveCommitment(
         UnifiedEntry.buildPlannedPayload({
           title: fallbackTitle,
@@ -337,6 +346,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     const resolvedCategoryId =
       txType === 'TRANSFER' ? 'cat-transfer' : splitParts ? splitParts[0].categoryId : categoryId;
 
+    submittedRef.current = true;
     onSave({
       userId: editingTx?.userId || 'user-1',
       type: txType,
@@ -467,7 +477,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               <div>
                 <label className="text-xs font-bold text-(--ink-2) block mb-1.5">From</label>
                 <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className={selectCls} aria-label="Source account">
-                  {accounts.map((acc) => (
+                  {visibleAccounts.map((acc) => (
                     <option key={acc.id} value={acc.id}>
                       {acc.name} · {MoneyValue.fromMinorUnits(acc.currentBalance, acc.currency).format()}
                     </option>
@@ -517,7 +527,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             <div>
               <label className="text-xs font-bold text-(--ink-2) block mb-1.5">Account</label>
               <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className={selectCls} aria-label="Account">
-                {accounts.map((acc) => (
+                {visibleAccounts.map((acc) => (
                   <option key={acc.id} value={acc.id}>
                     {acc.name} · {MoneyValue.fromMinorUnits(acc.currentBalance, acc.currency).format()}
                   </option>
