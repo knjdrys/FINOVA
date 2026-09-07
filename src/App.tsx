@@ -234,64 +234,78 @@ export function App() {
 
   /**
    * Auto-post lifecycle: once per session, settle due commitments that opted in.
-   * The engine is idempotent (skips anything already posted via sourceCommitmentId),
-   * and the ref guard prevents double roll-forward under StrictMode re-runs.
-   * Recurring rules whose occurrence was posted advance to their next occurrence.
+   * Everything is computed INSIDE the functional updater from `prev` (never
+   * from the render-scope closure): a second invocation — StrictMode remount,
+   * Fast Refresh, effect re-fire — sees the first run's AUTO_POSTED statuses
+   * and posted transactions, posts nothing, and returns `prev` unchanged.
+   * Computing outside the updater double-advanced recurring rules (Sep 15 →
+   * Nov 15), permanently skipping October's occurrence with no record.
    */
   const autoPostRanRef = useRef(false);
   useEffect(() => {
     if (autoPostRanRef.current) return;
     autoPostRanRef.current = true;
 
-    const due = resolvedCommitments.filter(
-      (c) =>
-        c.autoPostEnabled &&
-        c.dueDate <= todayISO &&
-        c.status !== 'COMPLETED' &&
-        c.status !== 'CANCELLED' &&
-        c.status !== 'AUTO_POSTED'
-    );
-    if (due.length === 0) return;
+    setState((prev) => {
+      const resolved = FutureFinanceEngine.resolveCommitments(
+        prev.recurring,
+        prev.commitments,
+        prev.transactions,
+        todayISO,
+        DateUtils.addDaysISO(todayISO, 30),
+        todayISO
+      );
+      const due = resolved.filter(
+        (c) =>
+          c.autoPostEnabled &&
+          c.dueDate <= todayISO &&
+          c.status !== 'COMPLETED' &&
+          c.status !== 'CANCELLED' &&
+          c.status !== 'AUTO_POSTED'
+      );
+      if (due.length === 0) return prev;
 
-    const result = FutureFinanceEngine.autoPostDueCommitments(
-      due,
-      state.accounts,
-      state.transactions,
-      todayISO
-    );
-    if (result.postedCount === 0) return;
+      const result = FutureFinanceEngine.autoPostDueCommitments(
+        due,
+        prev.accounts,
+        prev.transactions,
+        todayISO
+      );
+      if (result.postedCount === 0) return prev;
 
-    const postedIds = new Set(result.commitments.filter((c) => c.status === 'AUTO_POSTED').map((c) => c.id));
-    const postedRecurringIds = new Set(
-      result.commitments
-        .filter((c) => postedIds.has(c.id) && c.relatedRecurringTransactionId)
-        .map((c) => c.relatedRecurringTransactionId as string)
-    );
+      const postedIds = new Set(result.commitments.filter((c) => c.status === 'AUTO_POSTED').map((c) => c.id));
+      const postedRecurringIds = new Set(
+        result.commitments
+          .filter((c) => postedIds.has(c.id) && c.relatedRecurringTransactionId)
+          .map((c) => c.relatedRecurringTransactionId as string)
+      );
 
-    setState((prev) => ({
-      ...prev,
-      accounts: result.accounts,
-      transactions: result.transactions,
-      // Persist settled status for manual commitments (generated ones re-derive).
-      commitments: prev.commitments.map((c) =>
-        postedIds.has(c.id) ? { ...c, status: 'AUTO_POSTED' as const, updatedAt: todayISO } : c
-      ),
-      // Roll recurring rules forward so the posted occurrence is not regenerated.
-      recurring: prev.recurring.map((r) =>
-        postedRecurringIds.has(r.id)
-          ? {
-              ...r,
-              nextOccurrence: FutureFinanceEngine.advanceOccurrence(
-                r.nextOccurrence && r.nextOccurrence >= r.startDate ? r.nextOccurrence : r.startDate,
-                r.frequency
-              ),
-              updatedAt: new Date().toISOString(),
-            }
-          : r
-      ),
-    }));
+      return {
+        ...prev,
+        accounts: result.accounts,
+        transactions: result.transactions,
+        // Persist settled status for manual commitments (generated ones re-derive
+        // from the posted transactions, which are already in result.transactions).
+        commitments: prev.commitments.map((c) =>
+          postedIds.has(c.id) ? { ...c, status: 'AUTO_POSTED' as const, updatedAt: todayISO } : c
+        ),
+        // Roll recurring rules forward so the posted occurrence is not regenerated.
+        recurring: prev.recurring.map((r) =>
+          postedRecurringIds.has(r.id)
+            ? {
+                ...r,
+                nextOccurrence: FutureFinanceEngine.advanceOccurrence(
+                  r.nextOccurrence && r.nextOccurrence >= r.startDate ? r.nextOccurrence : r.startDate,
+                  r.frequency
+                ),
+                updatedAt: new Date().toISOString(),
+              }
+            : r
+        ),
+      };
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolvedCommitments, todayISO]);
+  }, [todayISO]);
 
   const timeline = TimelineEngine.generateTimeline(
     activeAccounts,
