@@ -91,7 +91,7 @@ export const TOUR_STEPS: TourStep[] = [
     badge: 'Step 6 of 7 • Payday Setup',
     title: 'Twice-a-Month Payday (15-Day Cycle)',
     description:
-      'If you get paid twice a month (like the 15th and end of the month), FINOVA splits your budget into two 15-day halves so you do not run out of money before payday.',
+      'If you get paid twice a month (like the 15th and end of the month), PALDO splits your budget into two 15-day halves so you do not run out of money before payday.',
     targetLabel: '15-Day Payday Setup',
     keyTakeaway: 'Your daily safe spending matches your next payday.',
   },

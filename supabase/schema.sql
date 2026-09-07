@@ -1,5 +1,5 @@
 -- ======================================================================================
--- FINOVA — POSTGRESQL DATABASE SCHEMA & ROW LEVEL SECURITY (SUPABASE)
+-- PALDO — POSTGRESQL DATABASE SCHEMA & ROW LEVEL SECURITY (SUPABASE)
 -- VERSION: 2.0
 -- AUTHORITATIVE FINANCIAL DATA CONTRACT: INTEGER MINOR UNITS (ZERO FLOATING DRIFT)
 -- ======================================================================================

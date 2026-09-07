@@ -316,7 +316,7 @@ export const en = {
     tipsSubtitle: 'Based on your numbers',
     emptyTitle: 'No spending yet this month',
     emptyHint: 'Add a transaction and your category breakdown will appear here.',
-    noTips: 'No tips yet. Keep recording transactions and FINOVA will find patterns in your money.',
+    noTips: 'No tips yet. Keep recording transactions and PALDO will find patterns in your money.',
     other: 'Other',
   },
 
@@ -336,7 +336,7 @@ export const en = {
     cancelRecurringHint: 'Past activity stays, but nothing more will be scheduled.',
     removeAccount: 'Remove account "{name}"?',
     removeAccountHint: 'This cannot be undone.',
-    signOut: 'Sign out of FINOVA?',
+    signOut: 'Sign out of PALDO?',
     startFresh: 'Start clean with {amount}?',
     startFreshHint: 'This clears sample data so you can track your real money.',
     loadSample: 'Load sample data for testing?',
@@ -439,7 +439,7 @@ export const en = {
     light: 'Light',
     dark: 'Dark',
     language: 'Language',
-    languageHint: 'Choose how FINOVA talks to you.',
+    languageHint: 'Choose how PALDO talks to you.',
     currency: 'Default currency',
     notifications: 'Notifications',
     notificationsEnabled: 'Enable notifications',
@@ -477,8 +477,8 @@ export const en = {
     goalBehindTitle: '{name} is behind pace',
     goalBody: '{current} saved of {target} so far — target date is {date}.',
     moreTitle: 'More things need your attention',
-    moreBody: '{count} more alert waiting in FINOVA.',
-    moreBody_other: '{count} more alerts waiting in FINOVA.',
+    moreBody: '{count} more alert waiting in PALDO.',
+    moreBody_other: '{count} more alerts waiting in PALDO.',
   },
 
   notifSet: {
@@ -500,7 +500,7 @@ export const en = {
     cooldown24: '24 hours',
     cooldown48: '48 hours',
     os: 'Device notifications',
-    osLimit: 'FINOVA can alert you while the app is open (including in a background tab). True offline push alerts need a server this app does not have — the in-app feed always works, even offline.',
+    osLimit: 'PALDO can alert you while the app is open (including in a background tab). True offline push alerts need a server this app does not have — the in-app feed always works, even offline.',
     osUnsupported: 'This browser does not support device notifications. The in-app feed still works.',
     osDenied: 'Notifications are blocked in your browser settings. Allow them for this site to turn this on.',
   },
@@ -519,8 +519,8 @@ export const en = {
   },
 
   onboard: {
-    welcome: 'Welcome to FINOVA',
-    tagline: 'Simple & Smart Money Tracker ✨ — Track your real money with daily spending limits and easy budgets.',
+    welcome: 'Welcome to PALDO',
+    tagline: 'Make every peso count. ✨ — See your money clearly with daily spending limits and easy budgets.',
     namePrompt: 'What is your name?',
     namePlaceholder: 'Your Name (e.g. Juan Dela Cruz, Maria, Alex)',
     currencyPrompt: 'Choose your Currency (Default: PHP ₱)',

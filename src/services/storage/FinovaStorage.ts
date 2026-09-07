@@ -270,7 +270,7 @@ export const CLEAN_ZERO_STATE: FinovaState = {
   readNotificationIds: [],
   settings: {
     userId: 'user-1',
-    userName: 'Finova User',
+    userName: 'PALDO User',
     currency: 'PHP',
     language: 'en',
     defaultTrackingPeriod: 'TODAY',
@@ -365,7 +365,7 @@ export class FinovaStorage {
     }
   }
 
-  public static resetToCleanSlate(currency: CurrencyCode = 'PHP', userName: string = 'Finova User'): FinovaState {
+  public static resetToCleanSlate(currency: CurrencyCode = 'PHP', userName: string = 'PALDO User'): FinovaState {
     const clean: FinovaState = {
       ...CLEAN_ZERO_STATE,
       accounts: [

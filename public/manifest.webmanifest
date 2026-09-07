@@ -1,7 +1,7 @@
 {
-  "name": "FINOVA — Personal Finance",
-  "short_name": "FINOVA",
-  "description": "Simple & Smart Money Tracker — safe-to-spend, budgets, goals, and bills in one calm place.",
+  "name": "PALDO — Personal Finance",
+  "short_name": "PALDO",
+  "description": "Make every peso count. Safe-to-spend, budgets, goals, and bills in one calm place.",
   "id": "/",
   "start_url": "/",
   "scope": "/",

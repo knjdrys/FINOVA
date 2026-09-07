@@ -161,7 +161,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `finova_transactions_${DateUtils.getTodayISO()}.csv`);
+    link.setAttribute('download', `paldo_transactions_${DateUtils.getTodayISO()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

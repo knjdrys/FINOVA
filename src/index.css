@@ -72,7 +72,7 @@
   .motion-enter, .motion-fade, .motion-stagger > * { animation: finova-fade var(--motion-fast) var(--motion-ease-out) both !important; transform: none !important; }
 }
 
-/* FINOVA premium surface entrances - subtle */
+/* PALDO premium surface entrances - subtle */
 [data-tour="wave-card"] { animation: finova-in var(--motion-emphasis) var(--motion-ease-out) both; }
 [data-tour="timeframe-filters"] { animation: finova-fade var(--motion-standard) var(--motion-ease-out) both; }
 [data-tour="safe-to-spend"] { animation: finova-slide-up var(--motion-standard) var(--motion-ease-out) both; animation-delay: 80ms; }

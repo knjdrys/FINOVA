@@ -156,7 +156,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `finova_export_${currentCurrency}_${todayISO}.csv`);
+    link.setAttribute('download', `paldo_export_${currentCurrency}_${todayISO}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

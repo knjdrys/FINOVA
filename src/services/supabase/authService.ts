@@ -299,7 +299,7 @@ export class AuthService {
   public static startGuestSession(): AuthUserProfile {
     const guestUser: AuthUserProfile = {
       id: 'guest-user-session',
-      email: 'guest@finova.local',
+      email: 'guest@paldo.local',
       fullName: 'Juan Dela Cruz (Guest)',
       isGuest: true,
     };

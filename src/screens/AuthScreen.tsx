@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AuthService, AuthUserProfile } from '../services/supabase/authService';
 import { t } from '../i18n/core';
 import { notice } from '../components/ui/dialog';
+import { PaldoLogo } from '../components/ui/PaldoLogo';
 import {
   Mail,
   Lock,
@@ -115,29 +116,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
           }}
         />
 
-        {/* Top: Geometric Logo Lockup */}
+        {/* Top: PALDO wordmark lockup */}
         <div className="relative z-10">
           <div className="flex flex-col items-start gap-4 sm:gap-6">
-            {/* Geometric Icon: Three interconnected white nodes with lime connections */}
+            {/* PALDO mark: ascending growth bars over a rising pathway */}
             <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 relative flex items-center justify-center bg-white/5 rounded-2xl border border-white/10 shadow-lg p-2">
-              <svg viewBox="0 0 100 100" className="w-full h-full" aria-hidden="true">
-                {/* Connecting lines */}
-                <line x1="30" y1="35" x2="70" y2="35" stroke="#c4f042" strokeWidth="4" strokeLinecap="round" />
-                <line x1="30" y1="35" x2="50" y2="70" stroke="#c4f042" strokeWidth="4" strokeLinecap="round" />
-                <line x1="70" y1="35" x2="50" y2="70" stroke="#c4f042" strokeWidth="4" strokeLinecap="round" />
-                {/* Nodes */}
-                <circle cx="30" cy="35" r="10" fill="white" stroke="#1a3a2e" strokeWidth="1.5" />
-                <circle cx="70" cy="35" r="10" fill="white" stroke="#1a3a2e" strokeWidth="1.5" />
-                <circle cx="50" cy="70" r="10" fill="white" stroke="#1a3a2e" strokeWidth="1.5" />
-              </svg>
+              <PaldoLogo className="w-full h-full" />
             </div>
 
             <div className="flex flex-col gap-0.5">
               <span className="text-3xl md:text-4xl font-black tracking-tighter text-white">
-                FINOVA
+                PALDO
               </span>
               <span className="text-[10px] md:text-xs font-extrabold tracking-[0.35em] text-[#c4f042] uppercase">
-                Personal Finance OS
+                Personal Finance
               </span>
             </div>
           </div>
@@ -155,7 +147,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                 </span>
               </h1>
               <p className="text-emerald-100/80 text-base sm:text-lg max-w-lg mb-8 font-medium leading-relaxed">
-                All your accounts, one operating system. No tabs. No chaos. Just mathematical clarity.
+                All your accounts in one place. Track spending. Plan ahead. Understand your money.
               </p>
             </div>
           ) : (
@@ -168,7 +160,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                 </span>
               </h1>
               <p className="text-emerald-100/80 text-base sm:text-lg max-w-lg mb-8 font-medium leading-relaxed">
-                Join users building real wealth. Safe-to-Spend™, payday cycles, and zero math drift await.
+                Make every peso count. See your money clearly with Safe-to-Spend and payday budgeting.
               </p>
             </div>
           )}
@@ -180,8 +172,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                 <Zap className="h-5 w-5 stroke-[2.5]" />
               </div>
               <div>
-                <p className="font-extrabold text-white text-sm">Safe-to-Spend™ Engine</p>
-                <p className="text-xs text-emerald-200/70">Authoritative daily limit protecting bills and savings.</p>
+                <p className="font-extrabold text-white text-sm">Safe-to-Spend</p>
+                <p className="text-xs text-emerald-200/70">A clear daily limit that protects your bills and savings.</p>
               </div>
             </div>
 
@@ -200,8 +192,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                 <ShieldCheck className="h-5 w-5 stroke-[2.5]" />
               </div>
               <div>
-                <p className="font-extrabold text-white text-sm">Zero Math Drift & RLS Security</p>
-                <p className="text-xs text-emerald-200/70">Integer minor units standard with Row Level Security.</p>
+                <p className="font-extrabold text-white text-sm">Accurate &amp; private by design</p>
+                <p className="text-xs text-emerald-200/70">Built for accurate, private money management.</p>
               </div>
             </div>
           </div>
@@ -270,8 +262,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
               </h2>
               <p className="text-xs sm:text-sm text-(--ink-3) font-medium mt-1">
                 {mode === 'SIGN_IN'
-                  ? 'Access your personal finance operating system'
-                  : 'Start your journey to complete financial clarity'}
+                  ? 'Pick up where you left off.'
+                  : 'Personal finance, made clear.'}
               </p>
             </div>
 
@@ -439,7 +431,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                   <div className="h-4 w-4 border-2 border-[#1a3a2e] border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <span>{mode === 'SIGN_IN' ? 'Sign in to FINOVA' : 'Create FINOVA Account'}</span>
+                    <span>{mode === 'SIGN_IN' ? 'Sign in to PALDO' : 'Create a PALDO account'}</span>
                     <ArrowRight className="h-4 w-4 stroke-[2.5]" />
                   </>
                 )}
@@ -453,13 +445,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                 onClick={handleGuestSession}
                 className="w-full py-2.5 px-4 rounded-xl bg-(--surface-2) border border-(--line) text-(--ink-2) font-bold text-xs hover:bg-(--surface-3) hover:text-(--ink) transition-colors cursor-pointer"
               >
-                Try FINOVA as Guest (Offline Mode)
+                Try PALDO as Guest (Offline Mode)
               </button>
             </div>
 
             {/* Footnote */}
             <p className="text-[10px] text-(--ink-3) text-center leading-relaxed max-w-[320px] mx-auto pt-2">
-              Protected by FINOVA Zero Math Drift engine. By continuing, you agree to our Terms of Service and Privacy Policy.
+              Built for accurate, private money management. By continuing, you agree to our Terms of Service and Privacy Policy.
             </p>
           </div>
         </div>

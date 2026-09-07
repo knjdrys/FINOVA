@@ -325,7 +325,7 @@ export const fil = {
     tipsSubtitle: 'Batay sa mga numero mo',
     emptyTitle: 'Wala pang gastos ngayong buwan',
     emptyHint: 'Magdagdag ng transaksyon at lalabas dito ang breakdown ng mga kategorya mo.',
-    noTips: 'Wala pang payo. Ituloy ang pag-record ng transaksyon at makikita ng FINOVA ang mga pattern ng pera mo.',
+    noTips: 'Wala pang payo. Ituloy ang pag-record ng transaksyon at makikita ng PALDO ang mga pattern ng pera mo.',
     other: 'Iba pa',
   },
 
@@ -345,7 +345,7 @@ export const fil = {
     cancelRecurringHint: 'Mananatili ang nakaraang aktibidad, pero wala nang susunod na maiiskedyul.',
     removeAccount: 'Alisin ang account na "{name}"?',
     removeAccountHint: 'Hindi na ito maibabalik.',
-    signOut: 'Mag-sign out sa FINOVA?',
+    signOut: 'Mag-sign out sa PALDO?',
     startFresh: 'Magsimulang malinis sa {amount}?',
     startFreshHint: 'Mabubura nito ang sample data para masubaybayan ang tunay mong pera.',
     loadSample: 'Ikarga ang sample data para sa testing?',
@@ -448,7 +448,7 @@ export const fil = {
     light: 'Maliwanag',
     dark: 'Madilim',
     language: 'Wika',
-    languageHint: 'Piliin kung paano kausapin ka ng FINOVA.',
+    languageHint: 'Piliin kung paano kausapin ka ng PALDO.',
     currency: 'Default na pera',
     notifications: 'Mga Abiso',
     notificationsEnabled: 'Paganahin ang abiso',
@@ -486,8 +486,8 @@ export const fil = {
     goalBehindTitle: '{name} naghuhuli sa target',
     goalBody: 'Nakatipid ka na ng {current} sa {target} — deadline {date}.',
     moreTitle: 'May iba pang abiso',
-    moreBody: '{count} pang abiso ang naghihintay sa FINOVA.',
-    moreBody_other: '{count} pang abiso ang naghihintay sa FINOVA.',
+    moreBody: '{count} pang abiso ang naghihintay sa PALDO.',
+    moreBody_other: '{count} pang abiso ang naghihintay sa PALDO.',
   },
 
   notifSet: {
@@ -509,7 +509,7 @@ export const fil = {
     cooldown24: '24 oras',
     cooldown48: '48 oras',
     os: 'Device notifications',
-    osLimit: 'Kayang mag-abiso ang FINOVA habang bukas ang app (kahit background tab). Ang tunay na push notification habang sarado ang app ay nangangailangan ng server na wala ang app na ito — pero laging gumagana ang in-app feed, kahit offline.',
+    osLimit: 'Kayang mag-abiso ang PALDO habang bukas ang app (kahit background tab). Ang tunay na push notification habang sarado ang app ay nangangailangan ng server na wala ang app na ito — pero laging gumagana ang in-app feed, kahit offline.',
     osUnsupported: 'Hindi supported ng browser na ito ang device notifications. Gumagana pa rin ang in-app feed.',
     osDenied: 'Naka-block ang notifications sa browser settings mo. I-allow muna para sa site na ito.',
   },
@@ -528,8 +528,8 @@ export const fil = {
   },
 
   onboard: {
-    welcome: 'Welcome sa FINOVA',
-    tagline: 'Simple & Smart Money Tracker ✨ — Subaybayan ang tunay mong pera araw-araw, may safe-to-spend at madaling budget.',
+    welcome: 'Welcome sa PALDO',
+    tagline: 'Sulitin ang bawat piso. ✨ — Suriin ang pera mo nang malinaw, may daily limit at madaling budget.',
     namePrompt: 'Ano ang pangalan mo?',
     namePlaceholder: 'Ang Pangalan Mo (hal. Juan Dela Cruz, Maria, Alex)',
     currencyPrompt: 'Piliin ang Currency (Default: PHP ₱)',

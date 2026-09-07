@@ -1,12 +1,12 @@
-# FINOVA — Supabase & Vercel Setup Guide
+# PALDO — Supabase & Vercel Setup Guide
 
-Follow this guide to connect FINOVA to Supabase (PostgreSQL with Row Level Security) and deploy to Vercel.
+Follow this guide to connect PALDO to Supabase (PostgreSQL with Row Level Security) and deploy to Vercel.
 
 ---
 
 ## 1. Supabase Setup (PostgreSQL Database & Auth)
 
-1. Go to [https://supabase.com](https://supabase.com) and create a new project (e.g. `finova-prod`).
+1. Go to [https://supabase.com](https://supabase.com) and create a new project (e.g. `paldo-prod`).
 2. Open your project dashboard and navigate to **SQL Editor**.
 3. Create a new query, paste the entire contents of [`supabase/schema.sql`](./schema.sql), and click **Run**.
    - This creates all tables (`profiles`, `user_settings`, `accounts`, `categories`, `transactions`, `budgets`, `savings_goals`, `money_commitments`).
@@ -37,7 +37,7 @@ Follow this guide to connect FINOVA to Supabase (PostgreSQL with Row Level Secur
 
 1. Push your repository to GitHub.
 2. Go to [https://vercel.com](https://vercel.com) and click **Add New Project**.
-3. Select your `finova` repository.
+3. Select your repository.
 4. Under **Environment Variables**, add:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
