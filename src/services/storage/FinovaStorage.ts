@@ -105,6 +105,20 @@ export function buildDemoState(todayISO: string = DateUtils.getTodayISO()): Fino
       ? [{ id: 'dt-salary-cur', type: 'INCOME' as const, amount: 4_500_000, categoryId: 'cat-salary', accountId: bpi, merchant: 'Monthly Salary', subtitle: 'Payroll — Acme Holdings', note: '15th payroll', date: on(0, 15), time: '08:00', tags: ['salary'] }]
       : []) as DemoTxSpec[]),
     { id: 'dt-freelance', type: 'INCOME', amount: 850_000, categoryId: 'cat-freelance', accountId: gcash, merchant: 'Freelance Payout', subtitle: 'Brand logo project', date: day(-5), time: '16:20', tags: ['freelance'] },
+    // Two complete months of history (salary + essentials each month) so the
+    // emergency fund, cash-flow trend, and month-over-month insights have
+    // real data on first load. Last month is covered by the 30-day window
+    // below — adding it again would double-book salary and utility bills.
+    // Balances derive from this ledger, so everything still adds up.
+    { id: 'dt-salary-m2', type: 'INCOME', amount: 4_500_000, categoryId: 'cat-salary', accountId: bpi, merchant: 'Monthly Salary', subtitle: 'Payroll — Acme Holdings', date: on(-2, 15), time: '08:00', tags: ['salary'] },
+    { id: 'dt-meralco-m2', type: 'EXPENSE', amount: 142_0000, categoryId: 'cat-bills', accountId: bpi, merchant: 'Meralco', subtitle: 'Power bill', date: on(-2, 20), time: '11:25', tags: ['bills', 'utility'] },
+    { id: 'dt-fiber-m2', type: 'EXPENSE', amount: 9_0100, categoryId: 'cat-bills', accountId: gcash, merchant: 'Globe Home Fiber', subtitle: 'Monthly internet', date: on(-2, 12), time: '09:15', tags: ['bills', 'utility'] },
+    { id: 'dt-grocery-m2', type: 'EXPENSE', amount: 31_0000, categoryId: 'cat-groceries', accountId: bpi, merchant: 'Puregold Market', subtitle: 'Weekly groceries', date: on(-2, 9), time: '18:20', tags: ['groceries'] },
+    { id: 'dt-shopee-m2', type: 'EXPENSE', amount: 22_0000, categoryId: 'cat-shopping', accountId: gcash, merchant: 'Shopee', subtitle: 'Home essentials', date: on(-2, 25), time: '21:40', tags: ['shopping'] },
+    { id: 'dt-salary-m3', type: 'INCOME', amount: 4_500_000, categoryId: 'cat-salary', accountId: bpi, merchant: 'Monthly Salary', subtitle: 'Payroll — Acme Holdings', date: on(-3, 15), time: '08:00', tags: ['salary'] },
+    { id: 'dt-meralco-m3', type: 'EXPENSE', amount: 135_0000, categoryId: 'cat-bills', accountId: bpi, merchant: 'Meralco', subtitle: 'Power bill', date: on(-3, 20), time: '11:25', tags: ['bills', 'utility'] },
+    { id: 'dt-fiber-m3', type: 'EXPENSE', amount: 9_0100, categoryId: 'cat-bills', accountId: gcash, merchant: 'Globe Home Fiber', subtitle: 'Monthly internet', date: on(-3, 12), time: '09:15', tags: ['bills', 'utility'] },
+    { id: 'dt-grocery-m3', type: 'EXPENSE', amount: 29_5000, categoryId: 'cat-groceries', accountId: bpi, merchant: 'Viva Merchandising', subtitle: 'Monthly staples', date: on(-3, 10), time: '16:30', tags: ['groceries'] },
     // Today — so the Today view is never empty on first load
     { id: 'dt-coffee', type: 'EXPENSE', amount: 320_00, categoryId: 'cat-food', accountId: bpi, merchant: 'Third Wave Coffee', subtitle: 'Morning coffee & pastry', date: day(0), time: '09:05', tags: ['food'] },
     { id: 'dt-lunch', type: 'EXPENSE', amount: 185_00, categoryId: 'cat-food', accountId: gcash, merchant: 'Jollibee', subtitle: 'Lunch', date: day(0), time: '12:40', tags: ['food', 'lunch'] },
@@ -170,7 +184,7 @@ export function buildDemoState(todayISO: string = DateUtils.getTodayISO()): Fino
       color: '#B91C1C',
       includeInTotalBalance: true,
       isArchived: false,
-      createdAt: day(-30),
+      createdAt: day(-100),
       updatedAt: nowISO,
     },
     {
@@ -187,7 +201,7 @@ export function buildDemoState(todayISO: string = DateUtils.getTodayISO()): Fino
       color: '#0284C7',
       includeInTotalBalance: true,
       isArchived: false,
-      createdAt: day(-30),
+      createdAt: day(-100),
       updatedAt: nowISO,
     },
   ];

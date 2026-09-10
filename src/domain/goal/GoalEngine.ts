@@ -94,6 +94,34 @@ export class GoalEngine {
   }
 
   /**
+   * How much of a withdrawal request the goal can actually return: clamped to
+   * what has actually been saved so a withdrawal can never create negative
+   * savings. Callers must move exactly this amount (or refuse when zero).
+   */
+  public static withdrawableAmount(goal: SavingsGoal, amount: number): number {
+    if (amount <= 0) return 0;
+    return Math.min(amount, Math.max(0, goal.currentAmount));
+  }
+
+  /**
+   * Pure withdrawal logic — the exact inverse of contribute. Clamped at zero;
+   * a COMPLETED goal that drops below target reverts to ON_TRACK (risk
+   * re-evaluation happens in getGoalInsight on the next render).
+   */
+  public static withdraw(goal: SavingsGoal, amount: number): SavingsGoal {
+    if (amount <= 0) return goal;
+    const nextCurrent = Math.max(0, goal.currentAmount - amount);
+    const stillCompleted = goal.targetAmount > 0 && nextCurrent >= goal.targetAmount;
+    const status: GoalStatus = stillCompleted ? 'COMPLETED' : (goal.status === 'COMPLETED' ? 'ON_TRACK' : goal.status);
+    return {
+      ...goal,
+      currentAmount: nextCurrent,
+      status,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  /**
    * Planned-vs-actual tracking + goal risk detection.
    * "Planned" = even pace required (target / total span since creation).
    * "Actual" = currentAmount. Variance and paceRatio surface whether the user is on track,

@@ -4,6 +4,7 @@ import { Account, Category, CurrencyCode, MoneyCommitment, RecurringTransaction,
 import { DateUtils } from '../../domain/date/DateUtils';
 import { MoneyValue } from '../../domain/money/MoneyValue';
 import { TransactionEngine } from '../../domain/transaction/TransactionEngine';
+import { suggestCategoryForMerchant, findPossibleDuplicate } from '../../domain/transaction/MerchantCategorizer';
 import { UnifiedEntry, EntryMode, RepeatOption } from '../../domain/entry/UnifiedEntry';
 import { t } from '../../i18n/core';
 import { ReceiptService, ReceiptSuggestion } from '../../services/receipt/ReceiptService';
@@ -41,6 +42,8 @@ interface AddTransactionModalProps {
   accounts: Account[];
   categories: Category[];
   currency: CurrencyCode;
+  /** All confirmed transactions — powers merchant history + duplicate hints. */
+  transactions: Transaction[];
   /** When set, the modal edits this transaction instead of creating one. */
   editingTx?: Transaction | null;
   /** Opening mode for creates (FAB defaults to EXPENSE; checklist can open Income). */
@@ -77,6 +80,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   accounts,
   categories,
   currency = 'PHP',
+  transactions = [],
   editingTx = null,
   initialMode = 'EXPENSE',
 }) => {
@@ -109,6 +113,35 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   // twice before React unmounts the modal. The first commit wins per open.
   const submittedRef = useRef(false);
 
+  // Merchant smart categorization: the suggestion auto-fills the category
+  // until the user touches the picker (then it is never applied again).
+  const merchantTouchedRef = useRef(false);
+  const [suggestedCat, setSuggestedCat] = useState<{ categoryId: string; count: number } | null>(null);
+
+  // Recompute the suggestion whenever merchant/type/currency changes.
+  React.useEffect(() => {
+    if (!isOpen || editingTx) {
+      setSuggestedCat(null);
+      return;
+    }
+    if (type !== 'EXPENSE' && type !== 'INCOME') {
+      setSuggestedCat(null);
+      return;
+    }
+    const key = merchant.trim().toLowerCase().replace(/\s+/g, ' ');
+    if (key.length < 3) {
+      setSuggestedCat(null);
+      return;
+    }
+    const sug = suggestCategoryForMerchant(merchant, transactions, type, currency);
+    setSuggestedCat(sug ? { categoryId: sug.categoryId, count: sug.matchCount } : null);
+    // Only auto-fill until the user has picked a category themselves.
+    if (sug && !merchantTouchedRef.current) {
+      setCategoryId(sug.categoryId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [merchant, type, currency, transactions, isOpen, editingTx]);
+
   const currencySymbol = MoneyValue.zero(currency).getCurrencySymbol();
   const filteredCategories = categories.filter(
     (c) =>
@@ -122,6 +155,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     if (!isOpen) return;
     setError(null);
     submittedRef.current = false;
+    merchantTouchedRef.current = false;
+    setSuggestedCat(null);
     if (editingTx) {
       setType(editingTx.type);
       setAmountStr(toDecimal(editingTx.amount, editingTx.currency));
@@ -186,6 +221,14 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     [splitRows, currency]
   );
   const splitRemaining = amountMinor - splitMinor;
+
+  // Duplicate hint: same merchant + amount + day already logged.
+  const duplicateTx = React.useMemo(() => {
+    if (!isOpen || editingTx) return null;
+    if (type !== 'EXPENSE' && type !== 'INCOME') return null;
+    if (amountMinor <= 0 || merchant.trim().length < 3) return null;
+    return findPossibleDuplicate({ merchant, amount: amountMinor, date }, transactions);
+  }, [isOpen, editingTx, type, merchant, amountMinor, date, transactions]);
 
   const destinationOptions = accounts.filter((a) => a.id !== accountId && !a.isArchived);
   // Archived accounts stay visible only when editing a transaction that used them.
@@ -416,6 +459,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               aria-selected={type === m}
               onClick={() => {
                 setType(m);
+                merchantTouchedRef.current = false; // a type switch is a fresh categorization context
                 if (m !== 'EXPENSE') setSplitMode(false);
                 if (m === 'EXPENSE' || m === 'PLANNED') setCategoryId('cat-food');
                 if (m === 'INCOME') setCategoryId('cat-salary');
@@ -581,7 +625,14 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         {(type === 'EXPENSE' || type === 'PLANNED' || type === 'INCOME') && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-(--ink-2)">Category</label>
+              <span className="flex items-center gap-1.5">
+                <label className="text-xs font-bold text-(--ink-2)">Category</label>
+                {suggestedCat && categoryId === suggestedCat.categoryId && (
+                  <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800">
+                    {t('modal.historyChip', { n: suggestedCat.count })}
+                  </span>
+                )}
+              </span>
               {type === 'EXPENSE' && (
               <button
                 type="button"
@@ -608,7 +659,11 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                     <button
                       key={cat.id}
                       type="button"
-                      onClick={() => setCategoryId(cat.id)}
+                      onClick={() => {
+                        merchantTouchedRef.current = true;
+                        setSuggestedCat(null);
+                        setCategoryId(cat.id);
+                      }}
                       className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
                         isSelected
                           ? 'border-emerald-700 bg-emerald-50/50 shadow-sm ring-1 ring-emerald-700'
@@ -636,7 +691,11 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                   <div key={idx} className="flex items-center gap-2">
                     <select
                       value={row.categoryId}
-                      onChange={(e) => updateRow(idx, { categoryId: e.target.value })}
+                      onChange={(e) => {
+                        merchantTouchedRef.current = true;
+                        setSuggestedCat(null);
+                        updateRow(idx, { categoryId: e.target.value });
+                      }}
                       className={selectCls + ' flex-1'}
                       aria-label={`Split ${idx + 1} category`}
                     >
@@ -853,6 +912,16 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           )}
         </div>
         )}
+
+        {duplicateTx ? (
+          <p className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-800" role="note">
+            {t('modal.duplicateHint', {
+              merchant: merchant.trim(),
+              amount: MoneyValue.fromMinorUnits(duplicateTx.amount, currency).format(),
+              date: DateUtils.formatDisplayDate(duplicateTx.date),
+            })}
+          </p>
+        ) : null}
 
         {error ? (
           <p className="rounded-xl bg-rose-50 border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700" role="alert">

@@ -174,7 +174,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   // First-run checklist: three guided wins (income → budget → emergency fund).
   // Retires itself once all are done or the user dismisses it — never nags.
-  const hasIncome = transactions.some((tx) => tx.type === 'INCOME');
+  const hasIncome = transactions.some((tx) => tx.type === 'INCOME' && !TransactionEngine.isGoalWithdrawal(tx));
   const hasBudget = budgets.length > 0;
   const hasGoal = goals.some((g) => !g.isArchived);
   const showChecklist =

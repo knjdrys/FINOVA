@@ -24,6 +24,7 @@ import { SafeToSpendEngine } from './domain/safe-to-spend/SafeToSpendEngine';
 import { RiskEngine } from './domain/risk/RiskEngine';
 import { TimelineEngine } from './domain/timeline/TimelineEngine';
 import { TransactionEngine } from './domain/transaction/TransactionEngine';
+import { MoneyValue } from './domain/money/MoneyValue';
 import type { EntryMode } from './domain/entry/UnifiedEntry';
 import { GoalEngine } from './domain/goal/GoalEngine';
 import { FutureFinanceEngine } from './domain/future-finance/FutureFinanceEngine';
@@ -714,6 +715,73 @@ export function App() {
   };
 
   /**
+   * Withdraw from a goal — the exact mirror of funding.
+   * - Goal with a usable linked account (same currency as destination): a
+   *   true TRANSFER linked account → destination. Both balances move.
+   * - Goal without one: a reservation reversal — the destination balance
+   *   rises and goal progress drops, recorded as a `goal-withdraw` INCOME
+   *   row that every income aggregate excludes (it is saved money moving
+   *   home, not earned income).
+   * Either way: account delta + goal delta == -amount, income delta == 0.
+   */
+  const handleWithdrawFromGoal = (goalId: string, amount: number, toAccountId: string) => {
+    const goal = state.goals.find((g) => g.id === goalId);
+    if (!goal) return;
+    if (amount <= 0) { notice(t('tx.errors.amountPositive')); return; }
+    const withdrawable = GoalEngine.withdrawableAmount(goal, amount);
+    if (withdrawable <= 0) { notice(t('plans.withdrawEmpty')); return; }
+    const dest = state.accounts.find((a) => a.id === toAccountId);
+    if (!dest || dest.isArchived) { notice(t('tx.errors.accountRequired')); return; }
+    const goalCurrency = goal.currency || currency;
+    if (dest.currency !== goalCurrency) { notice(t('dialog.currencyMismatch')); return; }
+    const linked = state.accounts.find((a) => a.id === goal.accountId);
+    const useTransfer = Boolean(
+      linked && !linked.isArchived && linked.id !== dest.id && linked.currency === dest.currency
+    );
+    const nowIso = new Date().toISOString();
+    const wTx: Transaction = useTransfer
+      ? {
+          id: `tx-${Date.now()}`,
+          userId: 'user-1',
+          type: 'TRANSFER',
+          amount: withdrawable,
+          currency: goalCurrency,
+          categoryId: 'cat-transfer',
+          accountId: (linked as Account).id,
+          destinationAccountId: dest.id,
+          merchant: `Withdraw: ${goal.name}`,
+          note: `Withdrew from ${goal.name} to ${dest.name}`,
+          date: todayISO,
+          time: DateUtils.getCurrentTimeString(),
+          tags: ['goal-withdraw'],
+          status: 'CONFIRMED',
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        }
+      : {
+          id: `tx-${Date.now()}`,
+          userId: 'user-1',
+          type: 'INCOME',
+          amount: withdrawable,
+          currency: goalCurrency,
+          categoryId: 'cat-transfer',
+          accountId: dest.id,
+          merchant: `Withdraw: ${goal.name}`,
+          note: `Withdrew from ${goal.name} — tracked as savings progress, not income`,
+          date: todayISO,
+          time: DateUtils.getCurrentTimeString(),
+          tags: ['goal-withdraw'],
+          status: 'CONFIRMED',
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        };
+    const updatedAccounts = TransactionEngine.applyTransactionToAccounts(wTx, state.accounts);
+    const updatedGoals = state.goals.map((g) => (g.id === goalId ? GoalEngine.withdraw(g, withdrawable) : g));
+    mutatePlans({ accounts: updatedAccounts, goals: updatedGoals, transactions: [wTx, ...state.transactions] });
+    notice(t('plans.withdrawDone', { amount: MoneyValue.fromMinorUnits(withdrawable, goalCurrency).format() }));
+  };
+
+  /**
    * Home-screen funding path: the Fund Goal modal asks only for an amount, so we resolve
    * the source account here — the goal's linked account when usable, otherwise the first
    * account whose currency matches and can cover the contribution.
@@ -1153,6 +1221,7 @@ export function App() {
               commitments={resolvedCommitments}
               recurring={state.recurring}
               settings={settings}
+              onUpdateSettings={(s) => setState((prev) => ({ ...prev, settings: s }))}
               onOpenAddGoal={() => { setEditingGoal(null); setGoalPreset(null); setIsAddGoalOpen(true); }}
               onOpenAddEmergencyFund={() => { setEditingGoal(null); setGoalPreset({ name: 'Emergency Fund' }); setIsAddGoalOpen(true); }}
               onOpenAddCommitment={() => { setEditingCommitment(null); setCommitmentPreset(null); setIsAddCommitmentOpen(true); }}
@@ -1176,6 +1245,7 @@ export function App() {
               onCancelCommitment={handleCancelCommitment}
               onRescheduleCommitment={handleRescheduleCommitment}
               onFundGoal={handleFundGoal}
+              onWithdrawGoal={handleWithdrawFromGoal}
               onNavigateToTab={(t) => setCurrentTab(t as NavTab)}
               initialSection={plansInitialSection}
               sectionNonce={plansSectionNonce}
@@ -1245,6 +1315,7 @@ export function App() {
         accounts={accounts}
         categories={categories}
         currency={currency}
+        transactions={transactions}
         editingTx={editingTx}
         initialMode={quickAddMode}
       />

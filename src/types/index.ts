@@ -554,4 +554,10 @@ export interface UserSettings {
   /** First-run checklist dismissed (device-local guidance, not cloud-synced). */
   hasDismissedChecklist?: boolean;
   lastBackupDate?: string;
+  /**
+   * Emergency-fund parameters (see EmergencyFundEngine). Both optional — the
+   * engine applies defaults (3 months; bills + groceries as essentials).
+   */
+  emergencyFundMonths?: number;
+  essentialCategoryIds?: string[];
 }

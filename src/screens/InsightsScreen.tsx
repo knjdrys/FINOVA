@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Account,
   Budget,
@@ -12,7 +12,8 @@ import { InsightEngine } from '../domain/insight/InsightEngine';
 import { MoneyValue } from '../domain/money/MoneyValue';
 import { DateUtils } from '../domain/date/DateUtils';
 import { TransactionEngine } from '../domain/transaction/TransactionEngine';
-import { t, categoryName } from '../i18n';
+import { t, categoryName, monthAbbr } from '../i18n';
+import { buildCashFlowTrend, hasTrendData } from '../domain/insight/CashFlowTrend';
 import {
   PieChart,
   Repeat,
@@ -108,6 +109,14 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
     })
     .sort((a, b) => b.amount - a.amount);
 
+  // Cash-flow trend: last 6 months, income vs expense (reservation-aware).
+  const trend = useMemo(() => buildCashFlowTrend(transactions, currency), [transactions, currency]);
+  const trendHasData = hasTrendData(trend);
+  const trendMax = Math.max(1, ...trend.flatMap((p) => [p.incomeMinor, p.expenseMinor]));
+  const trendIncomeTotal = trend.reduce((s, p) => s + p.incomeMinor, 0);
+  const trendExpenseTotal = trend.reduce((s, p) => s + p.expenseMinor, 0);
+  const trendNet = trendIncomeTotal - trendExpenseTotal;
+
   // Subscriptions: active recurring subscriptions (same currency), by due date.
   const activeSubs = commitments
     .filter((c) => c.type === 'SUBSCRIPTION')
@@ -200,6 +209,75 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
                   </div>
                 </div>
               ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Cash-flow trend — income vs expense, last 6 months.
+          Only rendered with real data (Phase 12: never a fabricated chart). */}
+      <div className="rounded-[24px] sm:rounded-[28px] bg-(--surface) p-5 sm:p-6 shadow-sm border border-(--line-soft) space-y-3.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-800" />
+            <h4 className="text-xs sm:text-sm font-black text-(--ink) uppercase tracking-wider">
+              {t('analytics.trendTitle')}
+            </h4>
+          </div>
+          <span className={`text-xs sm:text-sm font-bold ${trendNet >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+            {t('analytics.trendNet', { net: MoneyValue.fromMinorUnits(trendNet, currency).format() })}
+          </span>
+        </div>
+
+        {!trendHasData ? (
+          <div className="flex flex-col items-center gap-1.5 py-6 text-center">
+            <Inbox className="h-6 w-6 text-slate-300" aria-hidden="true" />
+            <p className="text-sm font-bold text-(--ink-2)">{t('analytics.trendEmptyTitle')}</p>
+            <p className="text-xs text-(--ink-3) max-w-xs">{t('analytics.trendEmptyHint')}</p>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-6 gap-2 sm:gap-3">
+              {trend.map((pt) => (
+                <div key={pt.monthLabel} className="flex flex-col items-center gap-1">
+                  <div
+                    className={`flex h-24 sm:h-28 w-full items-end justify-center gap-1 rounded-lg bg-(--surface-2) px-1 ${
+                      pt.complete ? '' : 'border border-dashed border-(--line-2)'
+                    }`}
+                    role="img"
+                    aria-label={`${pt.monthLabel}: income ${pt.incomeMinor}, expense ${pt.expenseMinor}`}
+                  >
+                    <div
+                      className="w-1/3 max-w-[14px] rounded-t bg-emerald-500 finova-chart-bar"
+                      style={{ height: `${Math.max(pt.incomeMinor > 0 ? 4 : 0, (pt.incomeMinor / trendMax) * 100)}%` }}
+                      title={MoneyValue.fromMinorUnits(pt.incomeMinor, currency).format()}
+                    />
+                    <div
+                      className="w-1/3 max-w-[14px] rounded-t bg-rose-400 finova-chart-bar"
+                      style={{ height: `${Math.max(pt.expenseMinor > 0 ? 4 : 0, (pt.expenseMinor / trendMax) * 100)}%` }}
+                      title={MoneyValue.fromMinorUnits(pt.expenseMinor, currency).format()}
+                    />
+                  </div>
+                  <span className={`text-[10px] font-bold ${pt.complete ? 'text-(--ink-3)' : 'text-amber-700'}`}>
+                    {monthAbbr(Number(pt.monthLabel.slice(5, 7)) - 1)}
+                  </span>
+                  {!pt.complete && (
+                    <span className="text-[8px] font-bold uppercase tracking-wide text-amber-600">
+                      {t('analytics.trendPartial')}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-center gap-4 text-[11px] font-semibold text-(--ink-2)">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-sm bg-emerald-500" aria-hidden="true" />
+                {t('analytics.trendIncome')} {MoneyValue.fromMinorUnits(trendIncomeTotal, currency).format()}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-sm bg-rose-400" aria-hidden="true" />
+                {t('analytics.trendExpense')} {MoneyValue.fromMinorUnits(trendExpenseTotal, currency).format()}
+              </span>
             </div>
           </>
         )}

@@ -19,6 +19,7 @@ import { GoalEngine } from '../domain/goal/GoalEngine';
 import { BudgetEngine } from '../domain/budget/BudgetEngine';
 import { TimelineEngine } from '../domain/timeline/TimelineEngine';
 import { t } from '../i18n/core';
+import EmergencyFundCard from '../components/EmergencyFundCard';
 import {
   Shield,
   Calendar,
@@ -41,6 +42,7 @@ interface PlansScreenProps {
   commitments: MoneyCommitment[];
   recurring: RecurringTransaction[];
   settings: UserSettings;
+  onUpdateSettings: (s: UserSettings) => void;
   onOpenAddGoal: () => void;
   onOpenAddEmergencyFund: () => void;
   onOpenAddCommitment: () => void;
@@ -64,6 +66,7 @@ interface PlansScreenProps {
   onCancelCommitment: (id: string) => void;
   onRescheduleCommitment: (id: string, newDueDate: string) => void;
   onFundGoal: (goalId: string, amount: number, fromAccountId: string) => void;
+  onWithdrawGoal: (goalId: string, amount: number, toAccountId: string) => void;
   onNavigateToTab: (tab: string) => void;
   /** Deep-link from Home alerts: which section to show on arrival. */
   initialSection?: PlansSection;
@@ -81,6 +84,7 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({
   commitments,
   recurring,
   settings,
+  onUpdateSettings,
   onOpenAddGoal,
   onOpenAddEmergencyFund,
   onOpenAddCommitment,
@@ -104,6 +108,7 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({
   onCancelCommitment,
   onRescheduleCommitment,
   onFundGoal,
+  onWithdrawGoal,
   initialSection,
   sectionNonce,
 }) => {
@@ -156,16 +161,25 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({
       )}
 
       {subTab === 'GOALS' && (
-        <GoalsView
+        <div className="space-y-4">
+          <EmergencyFundCard
+            settings={settings}
+            transactions={transactions}
+            categories={categories}
+            onUpdateSettings={onUpdateSettings}
+          />
+          <GoalsView
           goals={goals}
           onOpenAdd={onOpenAddGoal}
           onOpenEmergencyFund={onOpenAddEmergencyFund}
           onEdit={onEditGoal}
           onDelete={onDeleteGoal}
-          onFund={onFundGoal}
-          accounts={accounts}
-          currency={currency}
-        />
+            onFund={onFundGoal}
+            onWithdraw={onWithdrawGoal}
+            accounts={accounts}
+            currency={currency}
+          />
+        </div>
       )}
 
       {subTab === 'BILLS' && (
@@ -425,11 +439,15 @@ const GoalsView: React.FC<{
   onEdit: (g: SavingsGoal) => void;
   onDelete: (id: string) => void;
   onFund: (goalId: string, amount: number, fromAccountId: string) => void;
+  onWithdraw: (goalId: string, amount: number, toAccountId: string) => void;
   accounts: Account[];
   currency: CurrencyCode;
-}> = ({ goals, onOpenAdd, onOpenEmergencyFund, onEdit, onDelete, onFund, accounts, currency }) => {
+}> = ({ goals, onOpenAdd, onOpenEmergencyFund, onEdit, onDelete, onFund, onWithdraw, accounts, currency }) => {
   const todayISO = DateUtils.getTodayISO();
   const [fundingId, setFundingId] = useState<string | null>(null);
+  const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawDest, setWithdrawDest] = useState('');
   const [fundAmount, setFundAmount] = useState('');
   const [fundSource, setFundSource] = useState('');
 
@@ -582,17 +600,80 @@ const GoalsView: React.FC<{
                   </div>
                 </div>
               ) : (
-                <button type="button" onClick={() => {
-                  setFundingId(goal.id);
-                  // Pre-select a source so Fund never silently no-ops: the goal's
-                  // linked account first, else the first same-currency account.
-                  const goalCurrency = goal.currency || currency;
-                  const linked = accounts.find((a) => a.id === goal.accountId && a.currency === goalCurrency && !a.isArchived);
-                  const fallback = accounts.find((a) => a.currency === goalCurrency && !a.isArchived);
-                  setFundSource(linked?.id || fallback?.id || '');
-                }} className="w-full rounded-xl border border-emerald-200 bg-emerald-50 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100">
-                  {t('plans.fundThisGoal')}
-                </button>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => {
+                    setFundingId(goal.id);
+                    // Pre-select a source so Fund never silently no-ops: the goal's
+                    // linked account first, else the first same-currency account.
+                    const goalCurrency = goal.currency || currency;
+                    const linked = accounts.find((a) => a.id === goal.accountId && a.currency === goalCurrency && !a.isArchived);
+                    const fallback = accounts.find((a) => a.currency === goalCurrency && !a.isArchived);
+                    setFundSource(linked?.id || fallback?.id || '');
+                  }} className="flex-1 rounded-xl border border-emerald-200 bg-emerald-50 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100">
+                    {t('plans.fundThisGoal')}
+                  </button>
+                  {goal.currentAmount > 0 && (
+                    <button type="button" onClick={() => {
+                      setWithdrawingId(goal.id);
+                      // Pre-select a destination so Withdraw never silently no-ops:
+                      // the linked account first, else the first same-currency account.
+                      const goalCurrency = goal.currency || currency;
+                      const linked = accounts.find((a) => a.id === goal.accountId && a.currency === goalCurrency && !a.isArchived);
+                      const fallback = accounts.find((a) => a.currency === goalCurrency && !a.isArchived);
+                      setWithdrawDest(linked?.id || fallback?.id || '');
+                    }} className="flex-1 rounded-xl border border-amber-200 bg-amber-50 py-2 text-xs font-bold text-amber-800 hover:bg-amber-100">
+                      {t('plans.withdrawThisGoal')}
+                    </button>
+                  )}
+                </div>
+              )}
+              {withdrawingId === goal.id && (
+                <div className="space-y-2 rounded-xl bg-amber-50/60 p-3 border border-amber-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const mult = CURRENCY_CONFIGS[currency]?.minorUnitMultiplier ?? 100;
+                      setWithdrawAmount(String(goal.currentAmount / mult));
+                    }}
+                    className="rounded-full border border-amber-200 bg-(--surface) px-2.5 py-1 text-[11px] font-bold text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer"
+                  >
+                    {t('plans.withdrawAll', { amount: currMoney.format() })}
+                  </button>
+                  <input
+                    type="number"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    placeholder={t('plans.withdrawAmountPh')}
+                    className="w-full rounded-lg border border-(--line) px-3 py-2 text-sm"
+                  />
+                  <select value={withdrawDest} onChange={(e) => setWithdrawDest(e.target.value)} className="w-full rounded-lg border border-(--line) px-3 py-2 text-sm">
+                    <option value="">{t('plans.withdrawToAccount')}</option>
+                    {accounts.filter((a) => a.currency === (goal.currency || currency) && !a.isArchived).map((a) => (
+                      <option key={a.id} value={a.id}>{a.name} ({MoneyValue.fromMinorUnits(a.currentBalance, a.currency).format()})</option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] font-medium text-amber-700/80">{t('plans.withdrawHint')}</p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const amt = MoneyValue.parse(withdrawAmount, goal.currency || currency).getMinorUnits();
+                        if (amt > 0 && withdrawDest) {
+                          onWithdraw(goal.id, amt, withdrawDest);
+                          setWithdrawingId(null);
+                          setWithdrawAmount('');
+                          setWithdrawDest('');
+                        }
+                      }}
+                      className="flex-1 rounded-lg bg-amber-500 px-3 py-2 text-xs font-bold text-white"
+                    >
+                      {t('plans.withdrawBtn')}
+                    </button>
+                    <button type="button" onClick={() => { setWithdrawingId(null); setWithdrawAmount(''); setWithdrawDest(''); }} className="rounded-lg bg-(--line) px-3 py-2 text-xs font-bold text-(--ink-2)">
+                      {t('common.cancel')}
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           );

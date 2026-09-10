@@ -27,6 +27,16 @@ export class TransactionEngine {
   }
 
   /**
+   * Goal-withdrawal reservation — the exact mirror of a funding reservation.
+   * Money comes BACK to an account, so account balances must count it, but
+   * every income aggregate (period summaries, trends, onboarding checks)
+   * MUST exclude it: it is saved money moving home, not earned income.
+   */
+  public static isGoalWithdrawal(tx: Pick<Transaction, 'tags'>): boolean {
+    return Boolean(tx.tags && tx.tags.includes('goal-withdraw'));
+  }
+
+  /**
    * Single source of truth for category attribution.
    * A split expense contributes to each of its categories by the allocated amount;
    * a normal expense contributes its full amount to its single category.
@@ -200,6 +210,7 @@ export class TransactionEngine {
     for (const tx of transactions) {
       if (tx.status === 'PENDING') continue;
       if (TransactionEngine.isGoalFunding(tx)) continue; // reservations are not spending
+      if (TransactionEngine.isGoalWithdrawal(tx)) continue; // saved money coming home, not income
       if (currencyFilter && tx.currency !== currencyFilter) continue; // never mix currencies
       if (!DateUtils.isDateInRange(tx.date, startDate, endDate)) continue;
 

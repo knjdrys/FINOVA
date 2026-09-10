@@ -122,7 +122,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
   // Goal-funding reservations are excluded: they are savings, not spending.
   const isSpend = (t: Transaction) => t.type === 'EXPENSE' && !TransactionEngine.isGoalFunding(t);
   const expenseMinor = filtered.filter(isSpend).reduce((s, t) => s + t.amount, 0);
-  const incomeMinor = filtered.filter((t) => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0);
+  const incomeMinor = filtered.filter((t) => t.type === 'INCOME' && !TransactionEngine.isGoalWithdrawal(t)).reduce((s, t) => s + t.amount, 0);
   const transferMinor = filtered.filter((t) => t.type === 'TRANSFER').reduce((s, t) => s + t.amount, 0);
   const summary =
     typeFilter === 'EXPENSE'
@@ -141,7 +141,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
     const existing = groupedDatesMap.get(tx.date) || { transactions: [], net: 0 };
     existing.transactions.push(tx);
     if (tx.type === 'EXPENSE' && !TransactionEngine.isGoalFunding(tx)) existing.net -= tx.amount;
-    if (tx.type === 'INCOME') existing.net += tx.amount;
+    if (tx.type === 'INCOME' && !TransactionEngine.isGoalWithdrawal(tx)) existing.net += tx.amount;
     groupedDatesMap.set(tx.date, existing);
   }
   const sortedDates =
