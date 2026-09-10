@@ -12,7 +12,8 @@ import {
 } from '../types';
 import { MoneyValue } from '../domain/money/MoneyValue';
 import { DateUtils } from '../domain/date/DateUtils';
-import { FinovaStorage } from '../services/storage/FinovaStorage';
+import { FinovaStorage, FinovaState } from '../services/storage/FinovaStorage';
+import { parseBackup, ParseBackupResult } from '../services/storage/BackupService';
 import { AddAccountModal } from '../components/modals/AddAccountModal';
 import { TutorialModal } from '../components/modals/TutorialModal';
 import { GrbiLogo } from '../components/ui/GrbiLogo';
@@ -43,6 +44,8 @@ import {
   Sun,
   Moon,
   Palette,
+  Database,
+  Upload,
 } from 'lucide-react';
 import { t, SUPPORTED_LANGS } from '../i18n';
 import { confirmDialog, notice } from '../components/ui/dialog';
@@ -63,6 +66,8 @@ interface SettingsScreenProps {
   categories: Category[];
   budgets: Budget[];
   onResetToCleanSlate: () => void;
+  onBackup: () => void;
+  onRestoreBackup: (state: FinovaState) => void;
   onLoadDemoData: () => void;
   onStartAppTour: () => void;
   authUser?: AuthUserProfile | null;
@@ -90,6 +95,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   categories,
   budgets,
   onResetToCleanSlate,
+  onBackup,
+  onRestoreBackup,
   onLoadDemoData,
   onStartAppTour,
   authUser,
@@ -98,6 +105,42 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [osPerm, setOsPerm] = useState<OsPermission>(() => osPermission());
+  const restoreInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Restore: read the file, validate, then confirm before replacing anything.
+  const handleRestoreFile = (file: File | undefined) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = typeof reader.result === 'string' ? reader.result : '';
+      const res: ParseBackupResult = parseBackup(text);
+      if (!res.ok) {
+        const msg =
+          res.error === 'PARSE' ? t('dialog.backupInvalidParse')
+          : res.error === 'KIND' ? t('dialog.backupInvalidKind')
+          : res.error === 'VERSION' ? t('dialog.backupInvalidVersion')
+          : t('dialog.backupInvalidShape');
+        notice(msg);
+        return;
+      }
+      const s = res.state;
+      void confirmDialog({
+        title: t('dialog.restoreBackup'),
+        message: t('dialog.restoreBackupHint', {
+          tx: s.transactions.length,
+          acc: s.accounts.length,
+          b: s.budgets.length,
+          g: s.goals.length,
+        }),
+        danger: true,
+        confirmLabel: t('settings.restoreBackup'),
+      }).then((ok) => {
+        if (ok) onRestoreBackup(s);
+      });
+    };
+    reader.onerror = () => notice(t('dialog.backupInvalidParse'));
+    reader.readAsText(file);
+  };
   // App lock (PIN) — local state mirrors the lock service, which is the source of truth.
   const [lockOn, setLockOn] = useState(() => AppLockService.isConfigured());
   const [showPinForm, setShowPinForm] = useState(false);
@@ -945,6 +988,43 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             <Download className="h-4 w-4 text-emerald-700" />
             <span>{t('settings.exportAll', { currency: currentCurrency })}</span>
           </button>
+
+          {/* Full backup / restore — the "move to a new phone" pair */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={onBackup}
+              title={t('settings.backupHint')}
+              className="flex items-center justify-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 py-2.5 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition-colors cursor-pointer"
+            >
+              <Database className="h-4 w-4 text-emerald-700" />
+              <span>{t('settings.backupFull')}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => restoreInputRef.current?.click()}
+              title={t('settings.restoreHint')}
+              className="flex items-center justify-center gap-2 rounded-xl bg-(--surface-2) border border-(--line) py-2.5 text-xs font-bold text-(--ink-2) hover:bg-(--surface-3) transition-colors cursor-pointer"
+            >
+              <Upload className="h-4 w-4 text-(--ink-2)" />
+              <span>{t('settings.restoreBackup')}</span>
+            </button>
+            <input
+              ref={restoreInputRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={(e) => {
+                handleRestoreFile(e.target.files?.[0]);
+                e.target.value = '';
+              }}
+            />
+          </div>
+          {settings.lastBackupDate && (
+            <p className="text-[11px] font-semibold text-(--ink-3) text-center">
+              {t('settings.lastBackup', { date: DateUtils.formatDisplayDate(settings.lastBackupDate.slice(0, 10), { fullYear: true }) })}
+            </p>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
             {/* Load Sample Demo Data — moved next to Export (non-destructive) */}

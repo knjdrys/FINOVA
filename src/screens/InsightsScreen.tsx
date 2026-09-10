@@ -15,6 +15,7 @@ import { TransactionEngine } from '../domain/transaction/TransactionEngine';
 import { t, categoryName } from '../i18n';
 import {
   PieChart,
+  Repeat,
   Sparkles,
   TrendingDown,
   TrendingUp,
@@ -107,6 +108,15 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
     })
     .sort((a, b) => b.amount - a.amount);
 
+  // Subscriptions: active recurring subscriptions (same currency), by due date.
+  const activeSubs = commitments
+    .filter((c) => c.type === 'SUBSCRIPTION')
+    .filter((c) => c.status !== 'COMPLETED' && c.status !== 'CANCELLED' && c.status !== 'AUTO_POSTED')
+    .filter((c) => c.currency === currency)
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  const subsTotal = activeSubs.reduce((sum, c) => sum + c.amount, 0);
+  const nextSub = activeSubs.find((c) => c.dueDate >= todayISO) ?? activeSubs[0] ?? null;
+
   return (
     <div className="space-y-4 sm:space-y-5 pb-6">
       {/* What-If Simulator Action Card */}
@@ -194,6 +204,55 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
           </>
         )}
       </div>
+
+      {/* Subscriptions intelligence — the recurring drain, quantified */}
+      {activeSubs.length > 0 && (
+        <div className="rounded-[24px] sm:rounded-[28px] bg-(--surface) p-5 sm:p-6 shadow-sm border border-(--line-soft) space-y-3.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Repeat className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-800" />
+              <h4 className="text-xs sm:text-sm font-black text-(--ink) uppercase tracking-wider">
+                {t('analytics.subsTitle')}
+              </h4>
+            </div>
+            <span className="text-xs sm:text-sm font-bold text-(--ink-3)">
+              {t('analytics.subsMonthly', {
+                amount: MoneyValue.fromMinorUnits(subsTotal, currency).format(),
+                count: activeSubs.length,
+              })}
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {activeSubs.slice(0, 4).map((s) => (
+              <div key={s.id} className="flex items-center justify-between gap-3 text-xs sm:text-sm">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-emerald-600 shrink-0" aria-hidden="true" />
+                  <span className="font-bold text-(--ink-2) truncate">{s.title}</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="font-semibold text-(--ink-3)">
+                    {DateUtils.formatDisplayDate(s.dueDate, { fullYear: true })}
+                  </span>
+                  <span className="font-black text-(--ink)">
+                    {MoneyValue.fromMinorUnits(s.amount, currency).format()}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {nextSub && (
+            <p className="text-[11px] sm:text-xs font-semibold text-(--ink-3)">
+              {t('analytics.subsNext', {
+                title: nextSub.title,
+                date: DateUtils.formatDisplayDate(nextSub.dueDate, { fullYear: true }),
+                amount: MoneyValue.fromMinorUnits(nextSub.amount, currency).format(),
+              })}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Smart Money Tips List */}
       <div className="space-y-3">

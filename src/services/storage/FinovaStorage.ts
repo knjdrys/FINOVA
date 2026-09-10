@@ -256,6 +256,19 @@ export function buildDemoState(todayISO: string = DateUtils.getTodayISO()): Fino
       createdAt: nowISO, updatedAt: nowISO,
     },
     {
+      id: 'dt-comm-netflix', userId: 'user-1', title: 'Netflix', type: 'SUBSCRIPTION',
+      amount: 615_00, currency: 'PHP', direction: 'OUTFLOW', status: 'PROJECTED',
+      dueDate: day(24), accountId: bpi, categoryId: 'cat-subscription', priority: 'OPTIONAL',
+      relatedRecurringTransactionId: 'dt-rec-netflix',
+      createdAt: nowISO, updatedAt: nowISO,
+    },
+    {
+      id: 'dt-comm-spotify', userId: 'user-1', title: 'Spotify Premium', type: 'SUBSCRIPTION',
+      amount: 485_00, currency: 'PHP', direction: 'OUTFLOW', status: 'PROJECTED',
+      dueDate: day(9), accountId: gcash, categoryId: 'cat-subscription', priority: 'OPTIONAL',
+      createdAt: nowISO, updatedAt: nowISO,
+    },
+    {
       id: 'dt-comm-payday', userId: 'user-1', title: 'Payday — 15th payroll', type: 'EXPECTED_INCOME',
       amount: 4_500_000, currency: 'PHP', direction: 'INFLOW', status: 'PROJECTED',
       dueDate: nextPayday, accountId: bpi, categoryId: 'cat-salary', priority: 'ESSENTIAL',

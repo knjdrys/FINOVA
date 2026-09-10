@@ -7,8 +7,10 @@ import { DateUtils } from '../domain/date/DateUtils';
 import { MoneyValue } from '../domain/money/MoneyValue';
 import { TransactionEngine, TransactionFilterOptions } from '../domain/transaction/TransactionEngine';
 import { groupByCategory } from '../domain/transaction/DayGrouping';
-import { ChevronLeft, Download, Search, SlidersHorizontal, X, ReceiptText } from 'lucide-react';
+import { ChevronLeft, Download, Search, SlidersHorizontal, X, ReceiptText, Upload } from 'lucide-react';
 import { FinovaStorage } from '../services/storage/FinovaStorage';
+import { parseTransactionsCSV, ParseResult, ImportableRow } from '../services/storage/CSVImportService';
+import { ImportTransactionsModal } from '../components/modals/ImportTransactionsModal';
 import { t } from '../i18n/core';
 import { notice } from '../components/ui/dialog';
 
@@ -19,6 +21,7 @@ interface AllExpensesScreenProps {
   settings: UserSettings;
   onBackToHome: () => void;
   onSelectTransaction: (tx: Transaction) => void;
+  onImportTransactions: (rows: ImportableRow[]) => number;
 }
 
 type PeriodFilter = 'ALL' | 'THIS_MONTH' | 'LAST_MONTH' | 'CUSTOM';
@@ -41,6 +44,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
   settings,
   onBackToHome,
   onSelectTransaction,
+  onImportTransactions,
 }) => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,6 +59,10 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
   const [showAdvanced, setShowAdvanced] = useState(false);
   // Long-list guard: render day groups up to this many rows, then offer more.
   const [visibleLimit, setVisibleLimit] = useState(120);
+  // CSV import preview (nothing is applied until the user confirms).
+  const [importResult, setImportResult] = useState<ParseResult | null>(null);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const importInputRef = React.useRef<HTMLInputElement>(null);
 
   const categoryMap = new Map(categories.map((c) => [c.id, c]));
   const accountMap = new Map(accounts.map((a) => [a.id, a]));
@@ -154,6 +162,24 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
   });
   const hiddenRows = filtered.length - Math.min(filtered.length, renderedRows);
 
+  const handleImportFile = (file: File | undefined) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = typeof reader.result === 'string' ? reader.result : '';
+      const result = parseTransactionsCSV(text, {
+        categories,
+        accounts,
+        currency,
+        existingTx: transactions,
+      });
+      setImportResult(result);
+      setIsImportOpen(true);
+    };
+    reader.onerror = () => notice(t('dialog.importReadFail'));
+    reader.readAsText(file);
+  };
+
   const handleExport = () => {
     if (filtered.length === 0) {
       notice(t('dialog.exportEmpty'));
@@ -190,15 +216,36 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
           {t('tx.title')}
         </h2>
 
-        <button
-          type="button"
-          onClick={handleExport}
-          title={t('tx.exportCsv')}
-          aria-label={t('tx.exportCsv')}
-          className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-2xl bg-(--surface) text-(--ink) shadow-xs border border-(--line)/80 hover:bg-(--surface-2) transition-colors cursor-pointer"
-        >
-          <Download className="h-4 w-4 sm:h-5 sm:w-5 stroke-[2.2]" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => importInputRef.current?.click()}
+            title={t('tx.importCsv')}
+            aria-label={t('tx.importCsv')}
+            className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-2xl bg-(--surface) text-(--ink) shadow-xs border border-(--line)/80 hover:bg-(--surface-2) transition-colors cursor-pointer"
+          >
+            <Upload className="h-4 w-4 sm:h-5 sm:w-5 stroke-[2.2]" />
+          </button>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(e) => {
+              handleImportFile(e.target.files?.[0]);
+              e.target.value = '';
+            }}
+          />
+          <button
+            type="button"
+            onClick={handleExport}
+            title={t('tx.exportCsv')}
+            aria-label={t('tx.exportCsv')}
+            className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-2xl bg-(--surface) text-(--ink) shadow-xs border border-(--line)/80 hover:bg-(--surface-2) transition-colors cursor-pointer"
+          >
+            <Download className="h-4 w-4 sm:h-5 sm:w-5 stroke-[2.2]" />
+          </button>
+        </div>
       </div>
 
       {/* 2. Adaptive Summary WaveCard */}
@@ -468,6 +515,23 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
           </button>
         )}
       </div>
+
+      {/* CSV import preview — confirm here before anything is applied */}
+      <ImportTransactionsModal
+        isOpen={isImportOpen}
+        result={importResult}
+        currency={currency}
+        onClose={() => {
+          setIsImportOpen(false);
+          setImportResult(null);
+        }}
+        onConfirm={(rows) => {
+          const count = onImportTransactions(rows);
+          setIsImportOpen(false);
+          setImportResult(null);
+          notice(t('tx.importDone', { count }));
+        }}
+      />
     </div>
   );
 };

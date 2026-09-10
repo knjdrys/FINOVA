@@ -13,9 +13,12 @@ import {
   SavingsGoal,
   Transaction,
   UserSettings,
+  Category,
   PlansSection,
 } from './types';
 import { FinovaState, FinovaStorage, INITIAL_CATEGORIES } from './services/storage/FinovaStorage';
+import { ImportableRow, createCatchAllCategory } from './services/storage/CSVImportService';
+import { serializeBackup, downloadBackupText } from './services/storage/BackupService';
 import { AccountEngine } from './domain/account/AccountEngine';
 import { SafeToSpendEngine } from './domain/safe-to-spend/SafeToSpendEngine';
 import { RiskEngine } from './domain/risk/RiskEngine';
@@ -97,6 +100,25 @@ export function App() {
   const [commitmentPreset, setCommitmentPreset] = useState<{ type: CommitmentType; title?: string } | null>(null);
   const [editingRecurring, setEditingRecurring] = useState<RecurringTransaction | null>(null);
   const [selectedTxForDetail, setSelectedTxForDetail] = useState<Transaction | null>(null);
+
+  // ---- Undo (snackbar) for destructive actions ----
+  // A 6-second window to take back a delete / reset. The perform callback
+  // restores the exact pre-action snapshot, then re-syncs cloud users.
+  interface UndoEntry {
+    id: number;
+    message: string;
+    perform: () => void;
+  }
+  const [undoEntry, setUndoEntry] = useState<UndoEntry | null>(null);
+  const undoTimerRef = useRef<number | null>(null);
+  const pushUndo = (message: string, perform: () => void) => {
+    if (undoTimerRef.current) window.clearTimeout(undoTimerRef.current);
+    setUndoEntry({ id: Date.now(), message, perform });
+    undoTimerRef.current = window.setTimeout(() => setUndoEntry(null), 6000);
+  };
+  useEffect(() => () => {
+    if (undoTimerRef.current) window.clearTimeout(undoTimerRef.current);
+  }, []);
 
   // ---- Offline / sync plumbing ----
   // Latest state snapshot for the queue flush (avoids stale closures).
@@ -549,6 +571,10 @@ export function App() {
     const tx = state.transactions.find((t) => t.id === txId);
     if (!tx) return;
 
+    // Snapshot for the undo window: balances + ledger exactly as they were.
+    const snapshotAccounts = state.accounts;
+    const snapshotTransactions = state.transactions;
+
     const updatedAccounts = TransactionEngine.reverseTransactionFromAccounts(tx, state.accounts);
     const updatedTransactions = state.transactions.filter((t) => t.id !== txId);
 
@@ -561,6 +587,17 @@ export function App() {
     if (authUser && !authUser.isGuest) {
       getSyncManager()?.requestDelete(txId);
     }
+
+    pushUndo(t('undo.deleteTx'), () => {
+      setState((prev) => ({
+        ...prev,
+        accounts: snapshotAccounts,
+        transactions: snapshotTransactions,
+      }));
+      // Cloud users: re-push the restored row (queued after the pending
+      // delete op, so the ledger converges back to the restored state).
+      if (authUser && !authUser.isGuest) getSyncManager()?.requestSync();
+    });
 
     setSelectedTxForDetail(null);
   };
@@ -850,14 +887,87 @@ export function App() {
 
   // Handler: Reset to Clean 0 Slate (For Real Life)
   const handleResetToCleanSlate = () => {
+    const previous = state; // full snapshot for the undo window
     const clean = FinovaStorage.resetToCleanSlate(currency, authUser?.fullName || settings.userName);
     setState(clean);
+    pushUndo(t('undo.resetDone'), () => {
+      setState(previous);
+      if (authUser && !authUser.isGuest) getSyncManager()?.requestSync();
+    });
   };
 
   // Handler: Load Demo Showcase Data
   const handleLoadDemoData = () => {
     const demo = FinovaStorage.loadDemoShowcaseData();
     setState(demo);
+  };
+
+  // Handler: Full JSON backup (Settings → Data).
+  const handleBackup = () => {
+    const text = serializeBackup(state);
+    downloadBackupText(text, `finova_backup_${DateUtils.getTodayISO()}.json`);
+    setState((prev) => ({
+      ...prev,
+      settings: { ...prev.settings, lastBackupDate: new Date().toISOString() },
+    }));
+    notice(t('dialog.backupDone'));
+  };
+
+  // Handler: Full JSON restore — the validated state replaces everything.
+  const handleRestoreBackup = (restored: FinovaState) => {
+    setState(restored);
+    if (authUser && !authUser.isGuest) getSyncManager()?.requestSync();
+    notice(t('dialog.restoreDone'));
+  };
+
+  // Handler: CSV import — appends the validated rows, keeps round-trip IDs,
+  // applies them to account balances through the same engine as manual adds.
+  const handleImportTransactions = (rows: ImportableRow[]): number => {
+    if (rows.length === 0) return 0;
+    const nowIso = new Date().toISOString();
+    const userId = state.settings.userId;
+
+    // Catch-all categories ("Other"/"Other Income") materialize once.
+    const newCategories: Category[] = [];
+    for (const row of rows) {
+      if (row.categoryCreated && !state.categories.some((c) => c.id === row.categoryId)) {
+        newCategories.push(createCatchAllCategory(row.categoryId, row.categoryName, row.type, userId));
+      }
+    }
+
+    const imported: Transaction[] = rows.map((row, i) => {
+      const tx: Transaction = {
+        id: row.id ?? `imp-${Date.now().toString(36)}-${i}`,
+        userId,
+        type: row.type,
+        amount: row.amountMinor,
+        currency: row.currency,
+        categoryId: row.categoryId,
+        accountId: row.accountId,
+        date: row.date,
+        tags: ['imported'],
+        status: 'CONFIRMED',
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+      if (row.time) tx.time = row.time;
+      if (row.merchant) tx.merchant = row.merchant;
+      if (row.note) tx.note = row.note;
+      if (row.destinationAccountId) tx.destinationAccountId = row.destinationAccountId;
+      return tx;
+    });
+
+    let accounts = state.accounts;
+    for (const tx of imported) accounts = TransactionEngine.applyTransactionToAccounts(tx, accounts);
+
+    setState((prev) => ({
+      ...prev,
+      categories: [...prev.categories, ...newCategories],
+      accounts,
+      transactions: [...prev.transactions, ...imported],
+    }));
+    if (authUser && !authUser.isGuest) getSyncManager()?.requestSync();
+    return imported.length;
   };
 
   // Handler: Sign Out
@@ -1010,6 +1120,7 @@ export function App() {
 
           {currentTab === 'ALL_EXPENSES' && (
             <AllExpensesScreen
+              onImportTransactions={handleImportTransactions}
               accounts={activeAccounts}
               transactions={transactions}
               categories={categories}
@@ -1088,6 +1199,8 @@ export function App() {
               categories={categories}
               budgets={budgets}
               onResetToCleanSlate={handleResetToCleanSlate}
+              onBackup={handleBackup}
+              onRestoreBackup={handleRestoreBackup}
               onLoadDemoData={handleLoadDemoData}
               onStartAppTour={() => setIsTourOpen(true)}
               authUser={authUser}
@@ -1225,6 +1338,26 @@ export function App() {
         }}
         onDelete={handleDeleteTransaction}
       />
+
+      {/* 6. Undo snackbar — the take-back window for destructive actions */}
+      {undoEntry && (
+        <div
+          role="status"
+          className="fixed bottom-24 sm:bottom-28 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-3 rounded-2xl bg-[#0B1220]/95 px-4 py-3 shadow-2xl border border-white/10 max-w-[92vw] backdrop-blur"
+        >
+          <span className="text-xs sm:text-sm font-bold text-slate-100 truncate">{undoEntry.message}</span>
+          <button
+            type="button"
+            onClick={() => {
+              undoEntry.perform();
+              setUndoEntry(null);
+            }}
+            className="shrink-0 text-xs sm:text-sm font-black text-[#D4F63D] hover:underline cursor-pointer"
+          >
+            {t('common.undo')}
+          </button>
+        </div>
+      )}
     </div>
     </AppLockGuard>
     </DialogProvider>
