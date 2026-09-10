@@ -11,6 +11,12 @@ export interface AuthUserProfile {
 
 const LOCAL_GUEST_USER_KEY = 'finova_guest_session_v2';
 
+/** Normalize an unknown thrown value into an Error (never re-throws). */
+export function asError(err: unknown): Error {
+  if (err instanceof Error) return err;
+  return new Error(typeof err === 'string' ? err : 'Unexpected error');
+}
+
 export class AuthService {
   /**
    * Check if user is currently logged in (via Supabase or local Guest session)
@@ -118,8 +124,8 @@ export class AuthService {
       }
 
       return { error: null };
-    } catch (err: any) {
-      return { error: err };
+    } catch (err) {
+      return { error: asError(err) };
     }
   }
 
@@ -178,8 +184,8 @@ export class AuthService {
       };
 
       return { user: profile, error: null };
-    } catch (err: any) {
-      return { user: null, error: err };
+    } catch (err) {
+      return { user: null, error: asError(err) };
     }
   }
 
@@ -203,8 +209,8 @@ export class AuthService {
         return { error };
       }
       return { error: null, message: `Confirmation link re-sent to ${email.trim()}. Check your inbox (and spam folder).` };
-    } catch (err: any) {
-      return { error: err };
+    } catch (err) {
+      return { error: asError(err) };
     }
   }
 
@@ -288,8 +294,8 @@ export class AuthService {
       }
 
       return { user: null, error: null };
-    } catch (err: any) {
-      return { user: null, error: err };
+    } catch (err) {
+      return { user: null, error: asError(err) };
     }
   }
 
@@ -299,7 +305,7 @@ export class AuthService {
   public static startGuestSession(): AuthUserProfile {
     const guestUser: AuthUserProfile = {
       id: 'guest-user-session',
-      email: 'guest@paldo.local',
+      email: 'guest@finova.local',
       fullName: 'Juan Dela Cruz (Guest)',
       isGuest: true,
     };

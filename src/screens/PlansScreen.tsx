@@ -23,6 +23,7 @@ import {
   Shield,
   Calendar,
   CheckCircle2,
+  EyeOff,
   Plus,
   Pencil,
   Trash2,
@@ -106,7 +107,10 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({
   initialSection,
   sectionNonce,
 }) => {
-  const [subTab, setSubTab] = useState<PlansSubTab>(initialSection || 'TIMELINE');
+  // Default lands on Budgets — the first thing a new user creates. Timeline
+  // (derived projection) comes last because it only makes sense once the
+  // other sections have data.
+  const [subTab, setSubTab] = useState<PlansSubTab>(initialSection || 'BUDGETS');
   // Deep-link: when Home sends us to a section, honor it even if already mounted.
   useEffect(() => {
     if (initialSection) setSubTab(initialSection);
@@ -126,13 +130,15 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({
 
   return (
     <div className="space-y-4 pb-20">
-      {/* Internal segments — no new top-level navigation tab */}
+      {/* Internal segments — no new top-level navigation tab.
+          Order = the order a user builds their money plan: budgets → goals →
+          bills → recurring → the timeline that ties them together. */}
       <div className="flex rounded-xl bg-(--surface-3) p-1 text-[10px] font-bold">
-        <Seg label={t('plans.timeline')} active={subTab === 'TIMELINE'} onClick={() => setSubTab('TIMELINE')} />
         <Seg label={t('plans.budgets')} active={subTab === 'BUDGETS'} onClick={() => setSubTab('BUDGETS')} />
         <Seg label={t('plans.goals')} active={subTab === 'GOALS'} onClick={() => setSubTab('GOALS')} />
         <Seg label={t('plans.bills')} active={subTab === 'BILLS'} onClick={() => setSubTab('BILLS')} />
         <Seg label={t('plans.recurring')} active={subTab === 'RECURRING'} onClick={() => setSubTab('RECURRING')} />
+        <Seg label={t('plans.timeline')} active={subTab === 'TIMELINE'} onClick={() => setSubTab('TIMELINE')} />
       </div>
 
       {subTab === 'TIMELINE' && <TimelineView timeline={timeline} settings={settings} currency={currency} />}
@@ -214,8 +220,8 @@ const TimelineView: React.FC<{ timeline: TimelineDay[]; settings: UserSettings; 
   return (
   <div className="space-y-3 motion-stagger">
     <div className="flex items-center justify-between px-1">
-      <span className="text-xs font-extrabold text-(--ink) uppercase tracking-wider">30-Day Cash Flow Projection</span>
-      <span className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300">Running Projected Balances</span>
+      <span className="text-xs font-extrabold text-(--ink) uppercase tracking-wider">{t('plans.timelineTitle')}</span>
+      <span className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300">{t('plans.timelineBadge')}</span>
     </div>
     <p className="px-1 text-[10px] font-medium text-(--ink-3)">
       {t('plans.timelineLegend')}
@@ -261,7 +267,7 @@ const TimelineView: React.FC<{ timeline: TimelineDay[]; settings: UserSettings; 
                 <span className="text-xs font-bold text-(--ink)">{day.dayLabel}</span>
               </div>
               <div className="text-right">
-                <span className="text-[10px] text-(--ink-3) font-semibold block">Projected Balance</span>
+                <span className="text-[10px] text-(--ink-3) font-semibold block">{t('plans.projectedBalance')}</span>
                 <span className={`text-xs font-extrabold ${day.projectedEndOfDayBalance < settings.minimumReserve ? 'text-rose-600' : 'text-(--ink)'}`}>
                   {projMoney.format()}
                 </span>
@@ -297,7 +303,7 @@ const TimelineView: React.FC<{ timeline: TimelineDay[]; settings: UserSettings; 
                 })}
               </div>
             ) : (
-              <p className="mt-2 text-[11px] text-(--ink-3) italic">No scheduled transactions or bills.</p>
+              <p className="mt-2 text-[11px] text-(--ink-3) italic">{t('plans.noScheduledEvents')}</p>
             )}
           </div>
         );
@@ -323,12 +329,12 @@ const BudgetsView: React.FC<{
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between px-1">
-        <span className="text-xs font-extrabold text-(--ink) uppercase tracking-wider">Budgets</span>
+        <span className="text-xs font-extrabold text-(--ink) uppercase tracking-wider">{t('plans.budgets')}</span>
         <button type="button" onClick={onOpenAdd} className="flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-emerald-950">
-          <Plus className="h-3.5 w-3.5" /> <span>New Budget</span>
+          <Plus className="h-3.5 w-3.5" /> <span>{t('plans.newBudget')}</span>
         </button>
       </div>
-      {budgets.length === 0 && <EmptyHint text="No budgets yet. Tap New Budget above to set a spending limit." />}
+      {budgets.length === 0 && <EmptyHint text={t('plans.noBudgetsHintAdd')} />}
       <div className="space-y-3">
         {activeBudgets.map((b) => {
           const insight = BudgetEngine.getBudgetInsight(b, transactions, todayISO);
@@ -427,19 +433,23 @@ const GoalsView: React.FC<{
   const [fundAmount, setFundAmount] = useState('');
   const [fundSource, setFundSource] = useState('');
 
-  const activeGoals = goals.filter((g) => !g.isArchived);
+  // Most-urgent goals first: earliest target date on top so the goal that
+  // needs attention is the one a new user sees (and funds) first.
+  const activeGoals = goals
+    .filter((g) => !g.isArchived)
+    .sort((a, b) => (a.targetDate < b.targetDate ? -1 : a.targetDate > b.targetDate ? 1 : 0));
   const hasEmergencyFund = activeGoals.some((g) => /emergency/i.test(g.name));
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between px-1">
-        <span className="text-xs font-extrabold text-(--ink) uppercase tracking-wider">Savings Goals</span>
+        <span className="text-xs font-extrabold text-(--ink) uppercase tracking-wider">{t('plans.savingsGoals')}</span>
         <button type="button" onClick={onOpenAdd} className="flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-emerald-950">
-          <Plus className="h-3.5 w-3.5" /> <span>New Goal</span>
+          <Plus className="h-3.5 w-3.5" /> <span>{t('plans.newGoal')}</span>
         </button>
       </div>
       {activeGoals.length === 0 && (
         <div className="space-y-2">
-          <EmptyHint text="No goals yet. Tap New Goal above to start saving toward something." />
+          <EmptyHint text={t('plans.noGoalsHintAdd')} />
           <button
             type="button"
             onClick={onOpenEmergencyFund}
@@ -495,7 +505,7 @@ const GoalsView: React.FC<{
                         <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${riskBadge.cls}`}>{riskBadge.text}</span>
                       )}
                     </div>
-                    <p className="text-[11px] font-medium text-(--ink-3)">Target: {DateUtils.formatDisplayDate(goal.targetDate, { fullYear: true })}</p>
+                    <p className="text-[11px] font-medium text-(--ink-3)">{t('plans.targetLabel', { date: DateUtils.formatDisplayDate(goal.targetDate, { fullYear: true }) })}</p>
                     {goal.accountId && (
                       <p className="text-[10px] font-bold text-emerald-700">
                         {t('plans.savingInto', { name: accounts.find((a) => a.id === goal.accountId)?.name || 'linked account' })}
@@ -515,8 +525,8 @@ const GoalsView: React.FC<{
                 </div>
               </div>
               <div className="rounded-xl bg-(--surface-2) p-2.5 text-[11px] font-medium text-(--ink-2) flex items-center justify-between">
-                <span>Required Velocity:</span>
-                <span className="font-bold text-(--ink)">{monthlyRequired.format()}/mo</span>
+                <span>{t('plans.requiredVelocity')}:</span>
+                <span className="font-bold text-(--ink)">{monthlyRequired.format()}{t('plans.perMonth')}</span>
               </div>
               {insight.variance < 0 && remaining > 0 && (
                 <p className="text-[11px] font-semibold text-amber-700">
@@ -545,7 +555,7 @@ const GoalsView: React.FC<{
                     className="w-full rounded-lg border border-(--line) px-3 py-2 text-sm"
                   />
                   <select value={fundSource} onChange={(e) => setFundSource(e.target.value)} className="w-full rounded-lg border border-(--line) px-3 py-2 text-sm">
-                    <option value="">From account…</option>
+                    <option value="">{t('plans.fromAccount')}</option>
                     {accounts.filter((a) => a.currency === (goal.currency || currency)).map((a) => (
                       <option key={a.id} value={a.id}>{a.name} ({MoneyValue.fromMinorUnits(a.currentBalance, a.currency).format()})</option>
                     ))}
@@ -564,10 +574,10 @@ const GoalsView: React.FC<{
                       }}
                       className="flex-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white"
                     >
-                      Fund
+                      {t('plans.fundBtn')}
                     </button>
                     <button type="button" onClick={() => setFundingId(null)} className="rounded-lg bg-(--line) px-3 py-2 text-xs font-bold text-(--ink-2)">
-                      Cancel
+                      {t('common.cancel')}
                     </button>
                   </div>
                 </div>
@@ -581,7 +591,7 @@ const GoalsView: React.FC<{
                   const fallback = accounts.find((a) => a.currency === goalCurrency && !a.isArchived);
                   setFundSource(linked?.id || fallback?.id || '');
                 }} className="w-full rounded-xl border border-emerald-200 bg-emerald-50 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100">
-                  Fund this goal
+                  {t('plans.fundThisGoal')}
                 </button>
               )}
             </div>
@@ -606,56 +616,90 @@ const BillsView: React.FC<{
   const [reschedDate, setReschedDate] = useState('');
   const [menuId, setMenuId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'ALL' | 'OUT' | 'PLANNED' | 'IN'>('ALL');
+  // What a new user needs to see first is what is still OWED. Paid,
+  // auto-posted, and cancelled items hide behind a toggle by default.
+  const [hideSettled, setHideSettled] = useState(true);
+
+  const isSettled = (c: MoneyCommitment) =>
+    c.status === 'COMPLETED' || c.status === 'AUTO_POSTED' || c.status === 'CANCELLED';
 
   const visible = commitments.filter((c) => {
+    if (hideSettled && isSettled(c)) return false;
     if (filter === 'OUT') return c.direction === 'OUTFLOW' && c.type !== 'PLANNED_EXPENSE';
     if (filter === 'PLANNED') return c.type === 'PLANNED_EXPENSE';
     if (filter === 'IN') return c.direction === 'INFLOW';
     return true;
   });
-  const sorted = [...visible].sort((a, b) => (a.dueDate < b.dueDate ? -1 : 1));
+  // Unsettled first, by due date (overdue naturally rises to the top);
+  // settled items — when shown — sink to the bottom.
+  const sorted = [...visible].sort((a, b) => {
+    const sa = isSettled(a) ? 1 : 0;
+    const sb = isSettled(b) ? 1 : 0;
+    if (sa !== sb) return sa - sb;
+    return a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : 0;
+  });
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between px-1">
-        <span className="text-xs font-extrabold text-(--ink) uppercase tracking-wider">Upcoming Bills & Liabilities</span>
+        <span className="text-xs font-extrabold text-(--ink) uppercase tracking-wider">{t('plans.upcomingBills')}</span>
         <div className="flex items-center gap-2">
           <button type="button" onClick={onOpenPayday} className="flex items-center gap-1 text-xs font-bold text-(--ink-3) hover:text-emerald-700 transition-colors cursor-pointer">
             <Plus className="h-3.5 w-3.5" /> <span>{t('plans.paydayBtn')}</span>
           </button>
           <button type="button" onClick={onOpenAdd} className="flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-emerald-950">
-            <Plus className="h-3.5 w-3.5" /> <span>Add Bill</span>
+            <Plus className="h-3.5 w-3.5" /> <span>{t('plans.addBill')}</span>
           </button>
         </div>
       </div>
-      <div className="flex gap-1.5 px-1" role="tablist" aria-label="Filter commitments">
-        {([['ALL', t('plans.billFilterAll')], ['OUT', t('plans.billFilterBills')], ['PLANNED', t('plans.billFilterPlanned')], ['IN', t('plans.billFilterIncome')]] as const).map(([v, label]) => (
+      <div className="flex flex-wrap items-center gap-1.5 px-1">
+        <div className="flex gap-1.5" role="tablist" aria-label="Filter commitments">
+          {([['ALL', t('plans.billFilterAll')], ['OUT', t('plans.billFilterBills')], ['PLANNED', t('plans.billFilterPlanned')], ['IN', t('plans.billFilterIncome')]] as const).map(([v, label]) => (
+            <button
+              key={v}
+              type="button"
+              role="tab"
+              aria-selected={filter === v}
+              onClick={() => setFilter(v)}
+              className={`rounded-full px-2.5 py-1 text-[10px] font-bold transition-colors cursor-pointer ${
+                filter === v ? 'bg-slate-900 text-white' : 'bg-(--surface-3) text-(--ink-3) hover:text-(--ink)'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {commitments.some(isSettled) && (
           <button
-            key={v}
             type="button"
-            role="tab"
-            aria-selected={filter === v}
-            onClick={() => setFilter(v)}
-            className={`rounded-full px-2.5 py-1 text-[10px] font-bold transition-colors cursor-pointer ${
-              filter === v ? 'bg-slate-900 text-white' : 'bg-(--surface-3) text-(--ink-3) hover:text-(--ink)'
-            }`}
+            onClick={() => setHideSettled((v) => !v)}
+            className="ml-auto flex items-center gap-1.5 rounded-full border border-(--line) bg-(--surface) px-2.5 py-1 text-[10px] font-bold text-(--ink-3) hover:text-(--ink) transition-colors cursor-pointer"
           >
-            {label}
+            <EyeOff className={`h-3 w-3 ${hideSettled ? '' : 'opacity-40'}`} />
+            {hideSettled ? t('plans.showSettled') : t('plans.hideSettled')}
           </button>
-        ))}
+        )}
       </div>
-      {sorted.length === 0 && <EmptyHint text="No bills yet. Tap + Add Bill above to add a recurring obligation." />}
+      {sorted.length === 0 && (
+        <EmptyHint
+          text={
+            commitments.length === 0
+              ? t('plans.noBillsHintAdd')
+              : t('plans.noBillsMatch')
+          }
+        />
+      )}
       <div className="space-y-2">
         {sorted.map((comm) => {
           const isCompleted = comm.status === 'COMPLETED' || comm.status === 'AUTO_POSTED';
           const isCancelled = comm.status === 'CANCELLED';
           const isOverdue = comm.status === 'OVERDUE';
           const statusBadge = isCompleted
-            ? { text: 'PAID', cls: 'bg-emerald-100 text-emerald-800' }
+            ? { text: t('plans.stPaid'), cls: 'bg-emerald-100 text-emerald-800' }
             : isCancelled
-            ? { text: 'CANCELLED', cls: 'bg-(--line) text-(--ink-3)' }
+            ? { text: t('plans.stCancelled'), cls: 'bg-(--line) text-(--ink-3)' }
             : isOverdue
-            ? { text: 'OVERDUE', cls: 'bg-rose-100 text-rose-800' }
+            ? { text: t('plans.stOverdue'), cls: 'bg-rose-100 text-rose-800' }
             : { text: comm.status, cls: 'bg-amber-100 text-amber-800' };
           return (
             <div key={comm.id} className={`rounded-2xl p-4 border transition-all ${isCompleted ? 'bg-(--surface-2)/70 border-(--line)/60 opacity-60' : isCancelled ? 'bg-(--surface-2)/40 border-(--line)/40 opacity-50' : 'bg-(--surface) border-(--line-soft) shadow-sm'}`}>
@@ -666,7 +710,7 @@ const BillsView: React.FC<{
                     onClick={() => onToggle(comm.id)}
                     disabled={isCancelled}
                     className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors ${isCompleted ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-(--line-2) hover:border-emerald-600 disabled:opacity-40'}`}
-                    aria-label={comm.direction === 'INFLOW' ? 'Mark received' : 'Mark paid'}
+                    aria-label={comm.direction === 'INFLOW' ? t('plans.markReceived') : t('plans.markPaid')}
                   >
                     {isCompleted && <CheckCircle2 className="h-4 w-4" />}
                   </button>
@@ -675,12 +719,12 @@ const BillsView: React.FC<{
                       <h4 className={`text-xs font-bold text-(--ink) truncate ${isCompleted || isCancelled ? 'line-through' : ''}`}>{comm.title}</h4>
                       <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${statusBadge.cls}`}>{statusBadge.text}</span>
                     </div>
-                    <p className="text-[11px] font-medium text-(--ink-3)">Due: {DateUtils.formatDisplayDate(comm.dueDate, { fullYear: true })} • {comm.priority}{comm.autoPostEnabled ? ' • auto' : ''}</p>
+                    <p className="text-[11px] font-medium text-(--ink-3)">{t('plans.dueMeta', { date: DateUtils.formatDisplayDate(comm.dueDate, { fullYear: true }), priority: comm.priority.toLowerCase() })}{comm.autoPostEnabled ? ` • ${t('plans.autoBadge')}` : ''}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   <span className="text-xs font-extrabold text-(--ink)">{MoneyValue.fromMinorUnits(comm.amount, comm.currency).format()}</span>
-                  <button type="button" onClick={() => onEdit(comm)} className="p-1.5 rounded-lg text-(--ink-3) hover:text-(--ink-2) hover:bg-(--surface-3)" aria-label="Edit">
+                  <button type="button" onClick={() => onEdit(comm)} className="p-1.5 rounded-lg text-(--ink-3) hover:text-(--ink-2) hover:bg-(--surface-3)" aria-label={t('common.edit')}>
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
                   <RowMenu
@@ -712,8 +756,8 @@ const BillsView: React.FC<{
                     type="button"
                     onClick={() => { if (reschedDate) { onReschedule(comm.id, reschedDate); setReschedId(null); } }}
                     className="rounded-lg bg-amber-600 px-2 py-1 text-[10px] font-bold text-white"
-                  >Save</button>
-                  <button type="button" onClick={() => setReschedId(null)} className="rounded-lg bg-(--line) px-2 py-1 text-[10px] font-bold text-(--ink-2)">X</button>
+                  >{t('common.save')}</button>
+                  <button type="button" onClick={() => setReschedId(null)} className="rounded-lg bg-(--line) px-2 py-1 text-[10px] font-bold text-(--ink-2)" aria-label={t('common.close')}>{t('common.closeX')}</button>
                 </div>
               )}
             </div>
@@ -739,17 +783,25 @@ const RecurringView: React.FC<{
   const [reschedDate, setReschedDate] = useState('');
   const [menuId, setMenuId] = useState<string | null>(null);
   const todayISO = DateUtils.getTodayISO();
+  // Nearest next occurrence first — the item about to charge is the one that
+  // matters today. Paused/ended rules sink below active ones.
+  const sortedRecurring = [...recurring].sort((a, b) => {
+    const aActive = a.isActive ? 0 : 1;
+    const bActive = b.isActive ? 0 : 1;
+    if (aActive !== bActive) return aActive - bActive;
+    return a.nextOccurrence < b.nextOccurrence ? -1 : a.nextOccurrence > b.nextOccurrence ? 1 : 0;
+  });
   return (
   <div className="space-y-3">
     <div className="flex items-center justify-between px-1">
-      <span className="text-xs font-extrabold text-(--ink) uppercase tracking-wider">Recurring Transactions</span>
+      <span className="text-xs font-extrabold text-(--ink) uppercase tracking-wider">{t('plans.recurringTitle')}</span>
       <button type="button" onClick={onOpenAdd} className="flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-emerald-950">
-        <Plus className="h-3.5 w-3.5" /> <span>Add Recurring</span>
+        <Plus className="h-3.5 w-3.5" /> <span>{t('plans.addRecurring')}</span>
       </button>
     </div>
-    {recurring.length === 0 && <EmptyHint text="No recurring items. Tap + Add Recurring above to automate a bill or income." />}
+    {recurring.length === 0 && <EmptyHint text={t('plans.noRecurringHint')} />}
     <div className="space-y-2">
-      {recurring.map((r) => {
+      {sortedRecurring.map((r) => {
         const rMoney = MoneyValue.fromMinorUnits(r.amount, r.currency || currency);
         const ended = Boolean(r.endDate && r.endDate < todayISO);
         const auto = (r.autoPostEnabled ?? r.reminderEnabled) === true;
@@ -770,7 +822,7 @@ const RecurringView: React.FC<{
                     <h4 className="text-xs font-bold text-(--ink) truncate">{r.title}</h4>
                     <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${badge.cls}`}>{badge.text}</span>
                   </div>
-                  <p className="text-[11px] font-medium text-(--ink-3)">{r.frequency} • {r.type} • Next: {DateUtils.formatDisplayDate(r.nextOccurrence, { fullYear: true })}{auto && r.isActive ? ` • ${t('plans.autoBadge')}` : ''}</p>
+                  <p className="text-[11px] font-medium text-(--ink-3)">{t('plans.recurringMeta', { frequency: r.frequency.toLowerCase(), type: r.type.toLowerCase(), next: DateUtils.formatDisplayDate(r.nextOccurrence, { fullYear: true }) })}{auto && r.isActive ? ` • ${t('plans.autoBadge')}` : ''}</p>
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
@@ -783,7 +835,7 @@ const RecurringView: React.FC<{
                 >
                   {r.isActive ? t('plans.pauseBtn') : t('plans.resumeBtn')}
                 </button>
-                <button type="button" onClick={() => onEdit(r)} className="p-1.5 rounded-lg text-(--ink-3) hover:text-(--ink-2) hover:bg-(--surface-3)" aria-label="Edit">
+                <button type="button" onClick={() => onEdit(r)} className="p-1.5 rounded-lg text-(--ink-3) hover:text-(--ink-2) hover:bg-(--surface-3)" aria-label={t('common.edit')}>
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
                 <RowMenu
@@ -809,8 +861,8 @@ const RecurringView: React.FC<{
                 <input
                   type="date"
                   value={reschedDate}
-                  onChange={(e) => setReschedDate(e.target.value)}
-                  aria-label="New next-occurrence date"
+                    onChange={(e) => setReschedDate(e.target.value)}
+                    aria-label={t('plans.nextOccurrenceAria')}
                   className="rounded-lg border border-(--line) px-2 py-1 text-xs"
                 />
                 <button
@@ -832,10 +884,10 @@ const RecurringView: React.FC<{
 
 const RowActions: React.FC<{ onEdit: () => void; onDelete: () => void }> = ({ onEdit, onDelete }) => (
   <div className="flex items-center gap-1 shrink-0">
-    <button type="button" onClick={onEdit} className="p-1.5 rounded-lg text-(--ink-3) hover:text-(--ink-2) hover:bg-(--surface-3)" aria-label="Edit">
+    <button type="button" onClick={onEdit} className="p-1.5 rounded-lg text-(--ink-3) hover:text-(--ink-2) hover:bg-(--surface-3)" aria-label={t('common.edit')}>
       <Pencil className="h-3.5 w-3.5" />
     </button>
-    <button type="button" onClick={onDelete} className="p-1.5 rounded-lg text-(--ink-3) hover:text-rose-600 hover:bg-rose-50" aria-label="Delete">
+    <button type="button" onClick={onDelete} className="p-1.5 rounded-lg text-(--ink-3) hover:text-rose-600 hover:bg-rose-50" aria-label={t('common.delete')}>
       <Trash2 className="h-3.5 w-3.5" />
     </button>
   </div>

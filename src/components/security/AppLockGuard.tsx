@@ -10,6 +10,9 @@ import { t } from '../../i18n/core';
 
 const TIMEOUT_KEY = 'FINOVA_APP_LOCK_TIMEOUT_MS';
 
+// Lock gate component + the auto-lock-duration helpers used by Settings
+// (mixed exports intentional).
+/* eslint-disable react/only-export-components */
 export function getAutoLockMs(): number {
   const raw = Number(localStorage.getItem(TIMEOUT_KEY) || '60000');
   return Number.isFinite(raw) && raw >= 0 ? raw : 60000;
@@ -68,6 +71,21 @@ export const AppLockGuard: React.FC<{ children: React.ReactNode }> = ({ children
     return undefined;
   }, [locked, lock]);
 
+  const submit = useCallback(async () => {
+    if (checking) return;
+    setChecking(true);
+    const res = await AppLockService.verify(pin);
+    setChecking(false);
+    if (res.ok) {
+      setLocked(false);
+      setPin('');
+      setError(null);
+    } else {
+      setError(res.error || t('security.wrongPin'));
+      setPin('');
+    }
+  }, [checking, pin]);
+
   // Physical keyboard PIN entry when locked
   useEffect(() => {
     if (!locked) return;
@@ -85,22 +103,7 @@ export const AppLockGuard: React.FC<{ children: React.ReactNode }> = ({ children
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [locked, pin, checking]);
-
-  const submit = async () => {
-    if (checking) return;
-    setChecking(true);
-    const res = await AppLockService.verify(pin);
-    setChecking(false);
-    if (res.ok) {
-      setLocked(false);
-      setPin('');
-      setError(null);
-    } else {
-      setError(res.error || t('security.wrongPin'));
-      setPin('');
-    }
-  };
+  }, [locked, pin, checking, submit]);
 
   const press = (d: string) => {
     setError(null);

@@ -98,7 +98,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
         {
           icon: <Zap className="h-4 w-4 text-emerald-700" />,
           label: 'Overspending Warnings',
-          text: 'If your upcoming bills are higher than your money, PALDO warns you right away so you can adjust.',
+          text: 'If your upcoming bills are higher than your money, FINOVA warns you right away so you can adjust.',
         },
       ],
       interactivePreview: (sym) => (
@@ -329,7 +329,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
             </div>
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
-                PALDO Guide
+                FINOVA Guide
               </span>
               <h3 className="text-sm sm:text-base font-black text-(--ink)">
                 Part {currentStepIndex + 1} of {steps.length}

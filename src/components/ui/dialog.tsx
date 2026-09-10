@@ -12,6 +12,9 @@
  * functions fall back to the native dialogs so nothing ever silently no-ops.
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+// Dialog surface + the imperative confirm/notice helpers that screens
+// call directly. Mixed exports are intentional (one dialog system).
+/* eslint-disable react/only-export-components */
 import { AlertTriangle } from 'lucide-react';
 import { Modal } from './Modal';
 import { t } from '../../i18n/core';

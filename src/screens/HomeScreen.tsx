@@ -19,6 +19,7 @@ import { TransactionItem } from '../components/ui/TransactionItem';
 import { DateUtils } from '../domain/date/DateUtils';
 import { MoneyValue } from '../domain/money/MoneyValue';
 import { TransactionEngine } from '../domain/transaction/TransactionEngine';
+import { groupByCategory } from '../domain/transaction/DayGrouping';
 import { PlanningService } from '../services/planning/PlanningService';
 import { BudgetProgressCard, FundGoalModal, GoalProgressCard, PlanDetailModal } from '../components/planning/PlanningWidgets';
 import { ShieldCheck, ChevronRight, Calendar, Plus, Sparkles, Bell, Check, X } from 'lucide-react';
@@ -184,6 +185,56 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     { key: 'ef', label: t('home.checkEmergencyFund'), done: hasGoal, action: onAddEmergencyFund },
   ];
 
+  // First-run checklist card. For a brand-new user (no transactions at all)
+  // it is promoted to the top of Home — right under the balance card — so the
+  // very first thing a new user does is guided instead of staring at ₱0
+  // cards. Once any activity exists it settles into the activity slot below.
+  const checklistCard = showChecklist ? (
+    <div className="rounded-[28px] bg-(--surface) p-5 text-center border border-(--line)/80 shadow-xs space-y-3">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <h4 className="text-sm sm:text-base font-black text-(--ink)">
+            {t('home.checklistTitle')}
+          </h4>
+          <p className="text-xs text-(--ink-3) mt-0.5 font-medium">
+            {t('home.checklistDone', { done: checklistItems.filter((i) => i.done).length })}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onDismissChecklist}
+          aria-label={t('home.checklistDismiss')}
+          className="flex h-7 w-7 items-center justify-center rounded-full text-(--ink-3) hover:text-(--ink-2) hover:bg-(--surface-3) transition-colors cursor-pointer shrink-0"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="space-y-2 text-left">
+        {checklistItems.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            onClick={item.action}
+            className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-colors cursor-pointer ${
+              item.done
+                ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-800/60 dark:bg-emerald-950/40'
+                : 'border-(--line) bg-(--surface) hover:border-emerald-300'
+            }`}
+          >
+            <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
+              item.done ? 'bg-emerald-600 text-white' : 'border border-(--line-2) text-transparent'
+            }`}>
+              <Check className="h-3.5 w-3.5" />
+            </span>
+            <span className={`text-xs font-bold ${item.done ? 'text-(--ink-3) line-through' : 'text-(--ink)'}`}>
+              {item.label}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div className="space-y-4 sm:space-y-5 pb-6">
       {/* 1. Time Filter Segmented Control */}
@@ -211,6 +262,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           metaText={totalBudgetMinor > 0 ? t('home.budgetMeta', { amount: totalBudgetMoney.format() }) : t('home.noBudgetSet')}
         />
       </div>
+
+      {/* First-run: guided setup before any ₱0 cards (see checklistCard note) */}
+      {!hasTransactions && checklistCard}
 
       {/* Product Brain — single alert surface, ranked by priority.
           Focal item carries a contextual action; the rest stay compact.
@@ -345,51 +399,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {/* 3. Transaction Timeline Section */}
       <div className="space-y-4 pt-1">
-        {showChecklist ? (
-          /* First-run checklist: 3 guided wins, then it retires itself. */
-          <div className="rounded-[28px] bg-(--surface) p-5 text-center border border-(--line)/80 shadow-xs space-y-3">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <h4 className="text-sm sm:text-base font-black text-(--ink)">
-                  {t('home.checklistTitle')}
-                </h4>
-                <p className="text-xs text-(--ink-3) mt-0.5 font-medium">
-                  {t('home.checklistDone', { done: checklistItems.filter((i) => i.done).length })}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={onDismissChecklist}
-                aria-label={t('home.checklistDismiss')}
-                className="flex h-7 w-7 items-center justify-center rounded-full text-(--ink-3) hover:text-(--ink-2) hover:bg-(--surface-3) transition-colors cursor-pointer shrink-0"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="space-y-2 text-left">
-              {checklistItems.map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={item.action}
-                  className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-colors cursor-pointer ${
-                    item.done
-                      ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-800/60 dark:bg-emerald-950/40'
-                      : 'border-(--line) bg-(--surface) hover:border-emerald-300'
-                  }`}
-                >
-                  <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
-                    item.done ? 'bg-emerald-600 text-white' : 'border border-(--line-2) text-transparent'
-                  }`}>
-                    <Check className="h-3.5 w-3.5" />
-                  </span>
-                  <span className={`text-xs font-bold ${item.done ? 'text-(--ink-3) line-through' : 'text-(--ink)'}`}>
-                    {item.label}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
+        {hasTransactions && checklistCard ? (
+          /* Checklist with partial progress lives in the activity slot. */
+          checklistCard
         ) : !hasTransactions ? (
           /* Clean Zero-State Card when starting fresh */
           <div className="rounded-[28px] bg-(--surface) p-6 text-center border border-(--line)/80 shadow-xs space-y-3">
@@ -430,8 +442,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </div>
 
             {sortedDates.slice(0, 4).map((dateStr) => {
-              const dayTxList = groupedTxMap.get(dateStr) || [];
+              const dayTxList = [...(groupedTxMap.get(dateStr) || [])].sort((a, b) =>
+                b.date === a.date ? (b.time ?? '').localeCompare(a.time ?? '') : b.date.localeCompare(a.date)
+              );
               const dateLabel = DateUtils.formatDisplayDate(dateStr);
+              const dayGroups = groupByCategory(dayTxList);
 
               return (
                 <div key={dateStr} className="space-y-2 motion-stagger">
@@ -440,19 +455,41 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                       {dateLabel}
                     </span>
                   </div>
-                  {dayTxList.map((tx) => (
-                    <TransactionItem
-                      key={tx.id}
-                      transaction={tx}
-                      category={categoryMap.get(tx.categoryId)}
-                      accountName={accountMap.get(tx.accountId)?.name}
-                      destinationAccountName={
-                        tx.destinationAccountId ? accountMap.get(tx.destinationAccountId)?.name : undefined
-                      }
-                      categories={categories}
-                      onClick={onSelectTransaction}
-                    />
-                  ))}
+                  {dayGroups.map((g) => {
+                    const groupCat = categoryMap.get(g.categoryId);
+                    return (
+                      <div key={g.categoryId} className="space-y-2">
+                        {/* Category sub-header only when it actually groups items */}
+                        {g.items.length > 1 && (
+                          <div className="flex items-center justify-between px-1">
+                            <span className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-(--ink-3)">
+                              <span aria-hidden="true">{groupCat?.emoji}</span>
+                              <span>{groupCat?.name || t('tx.generic')}</span>
+                              <span className="rounded-full bg-(--surface-3) px-1.5 py-0.5 text-[9px] font-black text-(--ink-2)">
+                                {g.items.length}
+                              </span>
+                            </span>
+                            <span className="text-[10px] sm:text-[11px] font-black text-(--ink-2)">
+                              {MoneyValue.fromMinorUnits(g.totalMinor, currency).format()}
+                            </span>
+                          </div>
+                        )}
+                        {g.items.map((tx) => (
+                          <TransactionItem
+                            key={tx.id}
+                            transaction={tx}
+                            category={categoryMap.get(tx.categoryId)}
+                            accountName={accountMap.get(tx.accountId)?.name}
+                            destinationAccountName={
+                              tx.destinationAccountId ? accountMap.get(tx.destinationAccountId)?.name : undefined
+                            }
+                            categories={categories}
+                            onClick={onSelectTransaction}
+                          />
+                        ))}
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}

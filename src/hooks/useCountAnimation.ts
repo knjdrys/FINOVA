@@ -37,9 +37,11 @@ export function useCountAnimation(targetMinor: number, opts?: { duration?: numbe
     };
   }, [targetMinor, reduced, opts?.duration]);
 
-  // Keep from in sync after mount
+  // Keep from in sync after mount — intentionally captures the initial value
+  // once (empty deps), so the first tween animates from the pre-mount figure.
   useEffect(() => {
     fromRef.current = display;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return display;

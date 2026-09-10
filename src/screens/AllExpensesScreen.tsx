@@ -6,6 +6,7 @@ import { TransactionItem } from '../components/ui/TransactionItem';
 import { DateUtils } from '../domain/date/DateUtils';
 import { MoneyValue } from '../domain/money/MoneyValue';
 import { TransactionEngine, TransactionFilterOptions } from '../domain/transaction/TransactionEngine';
+import { groupByCategory } from '../domain/transaction/DayGrouping';
 import { ChevronLeft, Download, Search, SlidersHorizontal, X, ReceiptText } from 'lucide-react';
 import { FinovaStorage } from '../services/storage/FinovaStorage';
 import { t } from '../i18n/core';
@@ -60,7 +61,9 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
   const currency = settings.currency || 'PHP';
   const currencySymbol = MoneyValue.zero(currency).getCurrencySymbol();
 
-  const today = new Date();
+  // Stable for the life of this page visit — period boundaries shouldn't
+  // recompute on every render (today's date doesn't change mid-session).
+  const today = useMemo(() => new Date(), []);
   const periodBounds = useMemo(() => {
     if (period === 'THIS_MONTH') return monthBounds(today, 0);
     if (period === 'LAST_MONTH') return monthBounds(today, -1);
@@ -68,7 +71,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
       return { start: customStart || '0000-01-01', end: customEnd || '9999-12-31' };
     }
     return undefined;
-  }, [period, customStart, customEnd]);
+  }, [period, customStart, customEnd, today]);
 
   const minMinor = minStr ? MoneyValue.parse(minStr, currency).getMinorUnits() : undefined;
   const maxMinor = maxStr ? MoneyValue.parse(maxStr, currency).getMinorUnits() : undefined;
@@ -161,7 +164,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `paldo_transactions_${DateUtils.getTodayISO()}.csv`);
+    link.setAttribute('download', `finova_transactions_${DateUtils.getTodayISO()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -389,6 +392,12 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
             const dayAbbr = DateUtils.getDayAbbreviation(dateStr);
             const dateDisplay = DateUtils.formatDisplayDate(dateStr, { fullYear: true });
             const dayNetMoney = MoneyValue.fromMinorUnits(Math.abs(group.net), currency);
+            // Keep similar items (same category) together on date sorts. On
+            // amount sorts the engine's amount order is the point, so stay flat.
+            const dateSorted = sortBy === 'NEWEST' || sortBy === 'OLDEST';
+            const dayGroups = dateSorted
+              ? groupByCategory([...group.transactions].sort((a, b) => (b.time ?? '').localeCompare(a.time ?? '')))
+              : group.transactions.map((tx) => ({ categoryId: tx.categoryId, items: [tx], totalMinor: tx.amount }));
 
             return (
               <div key={dateStr} className="space-y-2">
@@ -411,20 +420,38 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
                   </span>
                 </div>
 
-                {/* Day Transactions */}
+                {/* Day Transactions (category-grouped on date sorts) */}
                 <div className="space-y-2">
-                  {group.transactions.map((tx) => (
-                    <TransactionItem
-                      key={tx.id}
-                      transaction={tx}
-                      category={categoryMap.get(tx.categoryId)}
-                      accountName={accountMap.get(tx.accountId)?.name}
-                      destinationAccountName={
-                        tx.destinationAccountId ? accountMap.get(tx.destinationAccountId)?.name : undefined
-                      }
-                      categories={categories}
-                      onClick={onSelectTransaction}
-                    />
+                  {dayGroups.map((g) => (
+                    <div key={g.categoryId} className="space-y-2">
+                      {dateSorted && g.items.length > 1 && (
+                        <div className="flex items-center justify-between px-1">
+                          <span className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-(--ink-3)">
+                            <span aria-hidden="true">{categoryMap.get(g.categoryId)?.emoji}</span>
+                            <span>{categoryMap.get(g.categoryId)?.name || t('tx.generic')}</span>
+                            <span className="rounded-full bg-(--surface-3) px-1.5 py-0.5 text-[9px] font-black text-(--ink-2)">
+                              {g.items.length}
+                            </span>
+                          </span>
+                          <span className="text-[10px] sm:text-[11px] font-black text-(--ink-2)">
+                            {MoneyValue.fromMinorUnits(g.totalMinor, currency).format()}
+                          </span>
+                        </div>
+                      )}
+                      {g.items.map((tx) => (
+                        <TransactionItem
+                          key={tx.id}
+                          transaction={tx}
+                          category={categoryMap.get(tx.categoryId)}
+                          accountName={accountMap.get(tx.accountId)?.name}
+                          destinationAccountName={
+                            tx.destinationAccountId ? accountMap.get(tx.destinationAccountId)?.name : undefined
+                          }
+                          categories={categories}
+                          onClick={onSelectTransaction}
+                        />
+                      ))}
+                    </div>
                   ))}
                 </div>
               </div>

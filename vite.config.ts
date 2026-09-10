@@ -5,6 +5,10 @@ import tailwindcss from '@tailwindcss/vite';
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  server: {
+    // Dev server only: allow the sandbox/preview proxy hostnames.
+    allowedHosts: true,
+  },
   build: {
     rollupOptions: {
       output: {

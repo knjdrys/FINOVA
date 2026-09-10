@@ -1,6 +1,8 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const metaEnv = (import.meta as any).env || {};
+// Typed via ImportMetaEnv (see vite-env.d.ts). Fields are optional because the
+// app must run fully offline when no Supabase backend is configured.
+const metaEnv = import.meta.env;
 let rawUrl = (metaEnv.VITE_SUPABASE_URL || '').trim();
 
 // Sanitize URL if user entered the full REST endpoint

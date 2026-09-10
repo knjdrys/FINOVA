@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { AuthService, AuthUserProfile } from '../services/supabase/authService';
+import { AuthService, AuthUserProfile, asError } from '../services/supabase/authService';
+import { isSupabaseConfigured } from '../services/supabase/supabaseClient';
 import { t } from '../i18n/core';
 import { notice } from '../components/ui/dialog';
 import { PaldoLogo } from '../components/ui/PaldoLogo';
@@ -39,13 +40,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
     try {
       const { error } = await AuthService.signInWithGoogle();
       if (error) {
-        setErrorMessage(error.message || 'Google sign-in failed');
+        setErrorMessage(error.message || t('auth.errGoogle'));
       } else {
         const { user } = await AuthService.getInitialSession();
         if (user) onAuthenticated(user);
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Google sign-in failed');
+    } catch (err) {
+      setErrorMessage(asError(err).message || t('auth.errGoogle'));
     } finally {
       setIsLoading(false);
     }
@@ -55,7 +56,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      setErrorMessage('Please enter both email and password.');
+      setErrorMessage(t('auth.errBothRequired'));
       return;
     }
 
@@ -68,7 +69,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
         const { user, error } = await AuthService.signInWithEmail(email, password);
         if (error) {
           setNeedsConfirm(/confirm your email/i.test(error.message));
-          setErrorMessage(error.message || 'Sign in failed. Check your credentials.');
+          setErrorMessage(error.message || t('auth.errSignIn'));
         } else if (user) {
           onAuthenticated(user);
         }
@@ -79,17 +80,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
           fullName || 'Juan Dela Cruz'
         );
         if (error) {
-          setErrorMessage(error.message || 'Registration failed.');
+          setErrorMessage(error.message || t('auth.errSignUp'));
         } else if (user) {
-          setSuccessMessage(message || 'Account created successfully! Logging you in...');
+          setSuccessMessage(message || t('auth.successSignUp'));
           setTimeout(() => onAuthenticated(user), 600);
         } else if (message) {
           setSuccessMessage(message);
           setMode('SIGN_IN');
         }
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Authentication error');
+    } catch (err) {
+      setErrorMessage(asError(err).message || t('auth.errAuth'));
     } finally {
       setIsLoading(false);
     }
@@ -116,20 +117,20 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
           }}
         />
 
-        {/* Top: PALDO wordmark lockup */}
+        {/* Top: FINOVA wordmark lockup */}
         <div className="relative z-10">
           <div className="flex flex-col items-start gap-4 sm:gap-6">
-            {/* PALDO mark: ascending growth bars over a rising pathway */}
+            {/* FINOVA mark: ascending growth bars over a rising pathway */}
             <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 relative flex items-center justify-center bg-white/5 rounded-2xl border border-white/10 shadow-lg p-2">
               <PaldoLogo className="w-full h-full" />
             </div>
 
             <div className="flex flex-col gap-0.5">
               <span className="text-3xl md:text-4xl font-black tracking-tighter text-white">
-                PALDO
+                FINOVA
               </span>
               <span className="text-[10px] md:text-xs font-extrabold tracking-[0.35em] text-[#c4f042] uppercase">
-                Personal Finance
+                {t('auth.brandSub')}
               </span>
             </div>
           </div>
@@ -140,27 +141,27 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
           {mode === 'SIGN_IN' ? (
             <div>
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black leading-[1.08] text-white mb-6 tracking-tight">
-                Your money, your rules, one{' '}
+                {t('auth.heroSignIn1')}{' '}
                 <span className="relative inline-block z-1">
-                  <span className="relative z-10">place.</span>
+                  <span className="relative z-10">{t('auth.heroSignIn2')}</span>
                   <span className="absolute left-0 bottom-1.5 w-full h-3 bg-[#c4f042] -rotate-1 rounded-xs -z-0 opacity-90" />
                 </span>
               </h1>
               <p className="text-emerald-100/80 text-base sm:text-lg max-w-lg mb-8 font-medium leading-relaxed">
-                All your accounts in one place. Track spending. Plan ahead. Understand your money.
+                {t('auth.heroSignInSub')}
               </p>
             </div>
           ) : (
             <div>
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black leading-[1.08] text-white mb-6 tracking-tight">
-                Take control in minutes, not{' '}
+                {t('auth.heroSignUp1')}{' '}
                 <span className="relative inline-block z-1">
-                  <span className="relative z-10">months.</span>
+                  <span className="relative z-10">{t('auth.heroSignUp2')}</span>
                   <span className="absolute left-0 bottom-1.5 w-full h-3 bg-[#c4f042] -rotate-1 rounded-xs -z-0 opacity-90" />
                 </span>
               </h1>
               <p className="text-emerald-100/80 text-base sm:text-lg max-w-lg mb-8 font-medium leading-relaxed">
-                Make every peso count. See your money clearly with Safe-to-Spend and payday budgeting.
+                {t('auth.heroSignUpSub')}
               </p>
             </div>
           )}
@@ -172,8 +173,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                 <Zap className="h-5 w-5 stroke-[2.5]" />
               </div>
               <div>
-                <p className="font-extrabold text-white text-sm">Safe-to-Spend</p>
-                <p className="text-xs text-emerald-200/70">A clear daily limit that protects your bills and savings.</p>
+                <p className="font-extrabold text-white text-sm">{t('auth.vp1Title')}</p>
+                <p className="text-xs text-emerald-200/70">{t('auth.vp1Body')}</p>
               </div>
             </div>
 
@@ -182,8 +183,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                 <Rocket className="h-5 w-5 stroke-[2.5]" />
               </div>
               <div>
-                <p className="font-extrabold text-white text-sm">Twice-a-Month Payday Cycles</p>
-                <p className="text-xs text-emerald-200/70">15-day semi-monthly payroll budgeting that matches your real pay.</p>
+                <p className="font-extrabold text-white text-sm">{t('auth.vp2Title')}</p>
+                <p className="text-xs text-emerald-200/70">{t('auth.vp2Body')}</p>
               </div>
             </div>
 
@@ -192,8 +193,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                 <ShieldCheck className="h-5 w-5 stroke-[2.5]" />
               </div>
               <div>
-                <p className="font-extrabold text-white text-sm">Accurate &amp; private by design</p>
-                <p className="text-xs text-emerald-200/70">Built for accurate, private money management.</p>
+                <p className="font-extrabold text-white text-sm">{t('auth.vp3Title')}</p>
+                <p className="text-xs text-emerald-200/70">{t('auth.vp3Body')}</p>
               </div>
             </div>
           </div>
@@ -202,7 +203,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
         {/* Bottom: Trust Row */}
         <div className="relative z-10 pt-6 border-t border-white/10 hidden md:block">
           <p className="text-[10px] font-extrabold tracking-[0.25em] text-emerald-300/60 mb-2 uppercase">
-            Bank Presets Supported
+            {t('auth.bankPresets')}
           </p>
           <div className="flex items-center gap-6 text-white/40 text-xs font-bold uppercase tracking-wider">
             <span className="text-[#c4f042]/90 font-black">GRBank</span>
@@ -222,7 +223,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
         <div className="p-6 lg:p-10 flex justify-end text-xs sm:text-sm">
           {mode === 'SIGN_IN' ? (
             <p className="text-(--ink-3) font-medium">
-              New here?{' '}
+              {t('auth.newHere')}{' '}
               <button
                 type="button"
                 onClick={() => {
@@ -232,12 +233,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                 }}
                 className="text-[#1a3a2e] font-black underline decoration-[#c4f042] decoration-2 underline-offset-4 hover:text-[#0f2420] transition-colors cursor-pointer"
               >
-                Create account
+                {t('auth.createAccountLink')}
               </button>
             </p>
           ) : (
             <p className="text-(--ink-3) font-medium">
-              Already have an account?{' '}
+              {t('auth.alreadyHave')}{' '}
               <button
                 type="button"
                 onClick={() => {
@@ -247,7 +248,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                 }}
                 className="text-[#1a3a2e] font-black underline decoration-[#c4f042] decoration-2 underline-offset-4 hover:text-[#0f2420] transition-colors cursor-pointer"
               >
-                Sign in
+                {t('auth.signInLink')}
               </button>
             </p>
           )}
@@ -258,14 +259,32 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
           <div className="w-full max-w-[420px] space-y-6">
             <div className="text-center lg:text-left">
               <h2 className="text-2xl sm:text-3xl font-black text-(--ink) tracking-tight">
-                {mode === 'SIGN_IN' ? 'Welcome back' : 'Create your account'}
+                {mode === 'SIGN_IN' ? t('auth.welcomeBack') : t('auth.createAccount')}
               </h2>
               <p className="text-xs sm:text-sm text-(--ink-3) font-medium mt-1">
                 {mode === 'SIGN_IN'
-                  ? 'Pick up where you left off.'
-                  : 'Personal finance, made clear.'}
+                  ? t('auth.welcomeBackSub')
+                  : t('auth.createSub')}
               </p>
             </div>
+
+            {/* No-account path — promoted to the TOP when the cloud backend
+                is not configured, because it is the fastest real start. */}
+            {!isSupabaseConfigured && (
+              <div className="space-y-1.5">
+                <button
+                  type="button"
+                  onClick={handleGuestSession}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-[#122A1E] text-[#D4F63D] font-black text-xs sm:text-sm shadow-md hover:bg-[#183625] active:scale-[0.98] transition-all cursor-pointer"
+                >
+                  <Rocket className="h-4 w-4" />
+                  <span>{t('auth.guestCta')}</span>
+                </button>
+                <p className="text-[10px] text-(--ink-3) text-center leading-relaxed max-w-[320px] mx-auto">
+                  {t('auth.guestHint')}
+                </p>
+              </div>
+            )}
 
             {/* SSO Grid */}
             <div className="space-y-3">
@@ -293,7 +312,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                   />
                 </svg>
-                <span>Continue with Google</span>
+                <span>{t('auth.continueGoogle')}</span>
               </button>
             </div>
 
@@ -301,7 +320,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
             <div className="relative flex items-center my-2">
               <div className="flex-grow border-t border-(--line)"></div>
               <span className="flex-shrink mx-3 text-[10px] font-extrabold text-(--ink-3) uppercase tracking-widest">
-                or with email
+                {t('auth.orEmail')}
               </span>
               <div className="flex-grow border-t border-(--line)"></div>
             </div>
@@ -334,7 +353,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                 }}
                 className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-(--line) bg-(--surface) text-[#1a3a2e] font-bold text-xs hover:bg-(--surface-2) active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
               >
-                {resending ? 'Re-sending…' : "Didn't get the email? Resend confirmation link"}
+                {resending ? t('auth.resending') : t('auth.resendLink')}
               </button>
             )}
 
@@ -343,7 +362,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
               {mode === 'SIGN_UP' && (
                 <div>
                   <label className="block text-xs font-bold text-(--ink) mb-1.5">
-                    Your Full Name
+                    {t('auth.fullName')}
                   </label>
                   <div className="relative">
                     <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-(--ink-3) h-4 w-4" />
@@ -361,7 +380,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
 
               <div>
                 <label className="block text-xs font-bold text-(--ink) mb-1.5">
-                  Email Address
+                  {t('auth.emailLabel')}
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-(--ink-3) h-4 w-4" />
@@ -378,7 +397,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
 
               <div>
                 <label className="block text-xs font-bold text-(--ink) mb-1.5">
-                  Password
+                  {t('auth.passwordLabel')}
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-(--ink-3) h-4 w-4" />
@@ -395,7 +414,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] font-extrabold uppercase text-[#1a3a2e] hover:text-[#0f2420] transition-colors cursor-pointer"
                   >
-                    {showPassword ? 'Hide' : 'Show'}
+                    {showPassword ? t('auth.hide') : t('auth.show')}
                   </button>
                 </div>
               </div>
@@ -409,14 +428,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                       onChange={(e) => setKeepSignedIn(e.target.checked)}
                       className="h-4 w-4 rounded border-(--line-2) text-[#1a3a2e] focus:ring-[#c4f042]"
                     />
-                    <span>Keep me signed in</span>
+                    <span>{t('auth.keepSignedIn')}</span>
                   </label>
                   <button
                     type="button"
                     onClick={() => notice(t('dialog.resetPassword'))}
                     className="text-xs font-bold text-[#1a3a2e] hover:underline"
                   >
-                    Forgot password?
+                    {t('auth.forgotPassword')}
                   </button>
                 </div>
               )}
@@ -431,27 +450,29 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                   <div className="h-4 w-4 border-2 border-[#1a3a2e] border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <span>{mode === 'SIGN_IN' ? 'Sign in to PALDO' : 'Create a PALDO account'}</span>
+                    <span>{mode === 'SIGN_IN' ? t('auth.signInCta') : t('auth.createCta')}</span>
                     <ArrowRight className="h-4 w-4 stroke-[2.5]" />
                   </>
                 )}
               </button>
             </form>
 
-            {/* Offline Guest Mode Fallback */}
-            <div className="pt-2 border-t border-(--line-soft) text-center">
-              <button
-                type="button"
-                onClick={handleGuestSession}
-                className="w-full py-2.5 px-4 rounded-xl bg-(--surface-2) border border-(--line) text-(--ink-2) font-bold text-xs hover:bg-(--surface-3) hover:text-(--ink) transition-colors cursor-pointer"
-              >
-                Try PALDO as Guest (Offline Mode)
-              </button>
-            </div>
+            {/* Offline Guest Mode Fallback (hidden when already promoted above) */}
+            {isSupabaseConfigured && (
+              <div className="pt-2 border-t border-(--line-soft) text-center">
+                <button
+                  type="button"
+                  onClick={handleGuestSession}
+                  className="w-full py-2.5 px-4 rounded-xl bg-(--surface-2) border border-(--line) text-(--ink-2) font-bold text-xs hover:bg-(--surface-3) hover:text-(--ink) transition-colors cursor-pointer"
+                >
+                  {t('auth.guestCta')}
+                </button>
+              </div>
+            )}
 
             {/* Footnote */}
             <p className="text-[10px] text-(--ink-3) text-center leading-relaxed max-w-[320px] mx-auto pt-2">
-              Built for accurate, private money management. By continuing, you agree to our Terms of Service and Privacy Policy.
+              {t('auth.footnote')}
             </p>
           </div>
         </div>

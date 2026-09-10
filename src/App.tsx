@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { I18nProvider } from './i18n';
 import { t } from './i18n/core';
 import { DialogProvider, confirmDialog, notice } from './components/ui/dialog';
@@ -40,12 +40,22 @@ import type { SyncStatus } from './services/sync/syncQueue';
 // Navigation & Screens
 import { Header } from './components/navigation/Header';
 import { BottomNavigation, NavTab } from './components/navigation/BottomNavigation';
-import { HomeScreen } from './screens/HomeScreen';
-import { AllExpensesScreen } from './screens/AllExpensesScreen';
-import { InsightsScreen } from './screens/InsightsScreen';
-import { PlansScreen } from './screens/PlansScreen';
-import { SettingsScreen } from './screens/SettingsScreen';
 import { AuthScreen } from './screens/AuthScreen';
+
+// Screens are code-split: first paint only ships Home (the tab the app
+// opens on); the rest load on demand so the bundle stays fast.
+const HomeScreen = lazy(() => import('./screens/HomeScreen').then((m) => ({ default: m.HomeScreen })));
+const AllExpensesScreen = lazy(() => import('./screens/AllExpensesScreen').then((m) => ({ default: m.AllExpensesScreen })));
+const InsightsScreen = lazy(() => import('./screens/InsightsScreen').then((m) => ({ default: m.InsightsScreen })));
+const PlansScreen = lazy(() => import('./screens/PlansScreen').then((m) => ({ default: m.PlansScreen })));
+const SettingsScreen = lazy(() => import('./screens/SettingsScreen').then((m) => ({ default: m.SettingsScreen })));
+
+/** Tiny fallback shown while a lazily-loaded screen chunk arrives. */
+const ScreenLoading = () => (
+  <div className="min-h-[40vh] flex items-center justify-center">
+    <div className="h-8 w-8 border-4 border-[#D4F63D] border-t-transparent rounded-full animate-spin" aria-label="Loading" />
+  </div>
+);
 
 // Modals & Tours
 import { AddTransactionModal } from './components/modals/AddTransactionModal';
@@ -162,7 +172,9 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authUser?.id, authUser?.isGuest]);
 
-  // Load data from Supabase Cloud whenever user logs in
+  // Load data from Supabase Cloud whenever the logged-in identity changes.
+  // Keys on identity fields (not the authUser object) so re-renders with a
+  // fresh object for the same user do not re-pull cloud state.
   useEffect(() => {
     if (authUser) {
       const userNameToSet = authUser.fullName || authUser.email.split('@')[0] || 'User';
@@ -195,7 +207,9 @@ export function App() {
         });
       }
     }
-  }, [authUser?.id, authUser?.fullName, authUser?.isGuest]);
+    // Intentional: key on identity fields, not the authUser object (see above)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser?.id, authUser?.fullName, authUser?.email, authUser?.isGuest]);
 
   // Sync state to local storage & queue the cloud push
   useEffect(() => {
@@ -964,6 +978,7 @@ export function App() {
 
         {/* Main Content Area */}
         <main className="flex-1 w-full mt-1 sm:mt-2">
+          <Suspense fallback={<ScreenLoading />}>
           {currentTab === 'HOME' && (
             <HomeScreen
               accounts={activeAccounts}
@@ -1079,6 +1094,7 @@ export function App() {
               onSignOut={handleSignOut}
             />
           )}
+          </Suspense>
         </main>
       </div>
 

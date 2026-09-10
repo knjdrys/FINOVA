@@ -9,7 +9,7 @@ interface PaldoLogoProps {
 }
 
 /**
- * PALDO mark — abstract growth + flow, no literal money imagery.
+ * FINOVA mark — abstract growth + flow, no literal money imagery.
  * Three ascending rounded bars (momentum) over a rising pathway arc.
  * Reads at 16px favicon through hero sizes; works on light and dark.
  */
