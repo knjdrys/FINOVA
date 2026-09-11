@@ -52,16 +52,18 @@ export class SafeToSpendEngine {
     const liquidAccounts = accounts.filter((a) => a.includeInTotalBalance && !a.isArchived && a.currency === currency);
     const totalAvailableBalance = liquidAccounts.reduce((sum, a) => sum + a.currentBalance, 0);
 
-    // 2. Essential upcoming commitments due between today and period end — SAME currency only.
+    // 2. Essential outstanding commitments due on/before period end — SAME currency only.
+    // OVERDUE bills count: past-due money is still owed, and excluding it
+    // overstates safety. AUTO_POSTED bills do NOT count: their money already
+    // left the balance above, so counting them would deduct twice.
     let essentialCommitments = 0;
     for (const c of commitments) {
       if (c.currency !== currency) continue; // never mix currencies
       if (c.direction !== 'OUTFLOW') continue;
-      if (c.status === 'COMPLETED' || c.status === 'CANCELLED') continue;
+      if (c.status === 'COMPLETED' || c.status === 'CANCELLED' || c.status === 'AUTO_POSTED') continue;
       if (c.priority !== 'ESSENTIAL' && c.priority !== 'IMPORTANT') continue;
-      if (DateUtils.isDateInRange(c.dueDate, todayISO, periodEndDate)) {
-        essentialCommitments += c.amount;
-      }
+      if (c.dueDate > periodEndDate) continue;
+      essentialCommitments += c.amount;
     }
 
     // 3. Reserved goal contributions (pro-rated for 15-day cycle if active).
@@ -100,7 +102,7 @@ export class SafeToSpendEngine {
         label: 'Upcoming Essential Bills & Commitments',
         amount: essentialCommitments,
         isDeduction: true,
-        description: `Obligations due before ${DateUtils.formatDisplayDate(periodEndDate, { fullYear: true })}`,
+        description: `Obligations due on/before ${DateUtils.formatDisplayDate(periodEndDate, { fullYear: true })} (including overdue)`,
       },
       {
         label: is15DayMode ? '15-Day Goal Savings Allocation' : 'Reserved Savings for Goals',

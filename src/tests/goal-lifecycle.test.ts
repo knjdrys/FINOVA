@@ -85,6 +85,7 @@ describe('bookkeeping classification', () => {
 describe('budget forecast currency isolation', () => {
   const budget = (over: Partial<Budget> = {}): Budget => ({
     id: 'b1', userId: 'user-1', name: 'Shop', amount: P(1000), currency: 'PHP',
+    period: 'MONTHLY',
     categoryIds: [], startDate: '2026-09-01', endDate: '2026-09-30',
     isActive: true, rolloverUnused: false, notifyThresholdPercentage: 80,
     createdAt: '2026-09-01', updatedAt: '2026-09-01',

@@ -353,6 +353,9 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todayISO]);
 
+  // Single timeline source for Risks, Notifications, and the Plans display.
+  // The range reaches 31 days back so overdue obligations deduct from the
+  // projection's starting point (past days display; math starts today).
   const timeline = useMemo(
     () =>
       TimelineEngine.generateTimeline(
@@ -360,12 +363,13 @@ export function App() {
         transactions,
         resolvedCommitments,
         categories,
-        todayISO,
+        DateUtils.addDaysISO(todayISO, -31),
         DateUtils.addDaysISO(todayISO, 30),
-        todayISO
+        todayISO,
+        currency
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeAccounts, transactions, resolvedCommitments, categories, todayISO]
+    [activeAccounts, transactions, resolvedCommitments, categories, todayISO, currency]
   );
 
   const risks = useMemo(
@@ -380,7 +384,15 @@ export function App() {
       NotificationEngine.generateNotifications({
         commitments: resolvedCommitments,
         risks,
-        autoPostedTransactions: transactions.filter((t) => t.sourceCommitmentId),
+        // True auto-posts only (manual settlements are tagged bill-paid, not
+        // auto-posted), posted within the last 3 days — every historical
+        // settlement used to notify forever, crowding the feed.
+        autoPostedTransactions: transactions.filter(
+          (t) =>
+            t.sourceCommitmentId &&
+            t.tags?.includes('auto-posted') &&
+            (t.createdAt || '').slice(0, 10) >= DateUtils.addDaysISO(todayISO, -3)
+        ),
         transactions,
         budgets,
         goals,
@@ -1398,6 +1410,7 @@ export function App() {
               goals={goals}
               commitments={resolvedCommitments}
               recurring={state.recurring}
+              timeline={timeline}
               settings={settings}
               onOpenAddGoal={() => { setEditingGoal(null); setGoalPreset(null); setIsAddGoalOpen(true); }}
               onOpenAddEmergencyFund={(targetMinor?: number) => { setEditingGoal(null); setGoalPreset({ name: 'Emergency Fund', targetAmount: targetMinor }); setIsAddGoalOpen(true); }}

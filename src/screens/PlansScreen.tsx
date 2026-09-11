@@ -19,7 +19,6 @@ import { EmergencyFundEngine } from '../domain/emergency-fund/EmergencyFundEngin
 import { FutureFinanceEngine } from '../domain/future-finance/FutureFinanceEngine';
 import { GoalEngine } from '../domain/goal/GoalEngine';
 import { BudgetEngine } from '../domain/budget/BudgetEngine';
-import { TimelineEngine } from '../domain/timeline/TimelineEngine';
 import { t } from '../i18n/core';
 import {
   Shield,
@@ -46,6 +45,8 @@ interface PlansScreenProps {
   commitments: MoneyCommitment[];
   recurring: RecurringTransaction[];
   settings: UserSettings;
+  /** Authoritative timeline from App — shared with Risks/Notifications so every screen agrees. */
+  timeline: TimelineDay[];
   onOpenAddGoal: () => void;
   onOpenAddEmergencyFund: (suggestedTargetMinor?: number) => void;
   onOpenAddCommitment: () => void;
@@ -88,6 +89,7 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({
   commitments,
   recurring,
   settings,
+  timeline,
   onOpenAddGoal,
   onOpenAddEmergencyFund,
   onOpenAddCommitment,
@@ -121,18 +123,10 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({
   useEffect(() => {
     if (initialSection) setSubTab(initialSection);
   }, [initialSection, sectionNonce]);
-  const todayISO = DateUtils.getTodayISO();
   const currency = (settings.currency || accounts[0]?.currency || 'PHP') as CurrencyCode;
 
-  const timeline: TimelineDay[] = TimelineEngine.generateTimeline(
-    accounts,
-    transactions,
-    commitments,
-    [],
-    todayISO,
-    DateUtils.addDaysISO(todayISO, 30),
-    todayISO
-  );
+  // Timeline arrives as a prop (App's single source, shared with Risks and
+  // Notifications) — never recomputed here with different inputs.
 
   return (
     <div className="space-y-4 pb-20">
@@ -225,7 +219,9 @@ const TimelineView: React.FC<{ timeline: TimelineDay[]; settings: UserSettings; 
   settings,
   currency,
 }) => {
-  const window = timeline.slice(0, 30);
+  // Display starts today: past days exist in the array for projection math
+  // (overdue obligations deduct from the starting balance), not for display.
+  const window = timeline.filter((d) => !d.isPast).slice(0, 30);
   const hasAnyEvents = window.some((d) => d.events.length > 0);
   return (
   <div className="space-y-3 motion-stagger">

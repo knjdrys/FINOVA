@@ -100,7 +100,7 @@ export class AccountEngine {
         a.id === accountId ? { ...a, isArchived: true, updatedAt: nowISO } : a
       ),
       commitments: commitments.map((c) =>
-        c.accountId === accountId && c.status !== 'COMPLETED' && c.status !== 'CANCELLED'
+        c.accountId === accountId && c.status !== 'COMPLETED' && c.status !== 'CANCELLED' && c.status !== 'AUTO_POSTED'
           ? { ...c, status: 'CANCELLED' as const, updatedAt: nowISO }
           : c
       ),

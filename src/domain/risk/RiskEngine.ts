@@ -72,9 +72,17 @@ export class RiskEngine {
       }
     }
 
-    // 2. Check for overdue commitments — SAME currency only (no cross-currency totals).
+    // 2. Check for overdue OUTFLOW commitments — SAME currency only.
+    // AUTO_POSTED bills already paid (their money left); overdue INFLOW is
+    // covered by per-bill notifications instead of this owed-money total.
     const overdue = commitments.filter(
-      (c) => c.currency === currency && c.dueDate < todayISO && c.status !== 'COMPLETED' && c.status !== 'CANCELLED'
+      (c) =>
+        c.currency === currency &&
+        c.direction !== 'INFLOW' &&
+        c.dueDate < todayISO &&
+        c.status !== 'COMPLETED' &&
+        c.status !== 'CANCELLED' &&
+        c.status !== 'AUTO_POSTED'
     );
     if (overdue.length > 0) {
       const overdueTotal = overdue.reduce((sum, c) => sum + c.amount, 0);
