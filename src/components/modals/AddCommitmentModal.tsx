@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MoneyCommitment, Account, Category, CurrencyCode, CommitmentType, CommitmentPriority } from '../../types';
 import { Modal } from '../ui/Modal';
+import { Field } from '../ui/Field';
 import { MoneyValue } from '../../domain/money/MoneyValue';
 import { DateUtils } from '../../domain/date/DateUtils';
 import { t } from '../../i18n/core';
@@ -157,9 +158,3 @@ export const AddCommitmentModal: React.FC<AddCommitmentModalProps> = ({
 };
 
 const inputCls = 'w-full rounded-xl border border-(--line) px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300';
-const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <div className="space-y-1.5">
-    <span className="text-xs font-bold text-(--ink-2)">{label}</span>
-    {children}
-  </div>
-);

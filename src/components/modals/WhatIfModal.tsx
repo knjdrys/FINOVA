@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Modal } from '../ui/Modal';
+import { Field } from '../ui/Field';
 import {
   Account,
   Budget,
@@ -11,6 +12,7 @@ import {
   WhatIfSimulationInput,
 } from '../../types';
 import { WhatIfEngine } from '../../domain/what-if/WhatIfEngine';
+import { TransactionEngine } from '../../domain/transaction/TransactionEngine';
 import { MoneyValue } from '../../domain/money/MoneyValue';
 import { DateUtils } from '../../domain/date/DateUtils';
 import { Sparkles, ShieldCheck, AlertTriangle, AlertOctagon, ArrowRight, CheckCircle2 } from 'lucide-react';
@@ -42,10 +44,11 @@ export const WhatIfModal: React.FC<WhatIfModalProps> = ({
 }) => {
   const [title, setTitle] = useState('New Laptop');
   const [amountStr, setAmountStr] = useState('45000');
-  const [type] = useState<'EXPENSE' | 'INCOME' | 'RECURRING_EXPENSE'>('EXPENSE');
+  const [type, setType] = useState<'EXPENSE' | 'INCOME'>('EXPENSE');
   const [categoryId, setCategoryId] = useState(categories[0]?.id || 'cat-shopping');
   const [accountId, setAccountId] = useState(accounts[0]?.id || '');
   const [date] = useState(DateUtils.getTodayISO());
+  const [applyError, setApplyError] = useState<string | null>(null);
 
   const currency = settings.currency || 'PHP';
   const currencySymbol = MoneyValue.zero(currency).getCurrencySymbol();
@@ -73,6 +76,22 @@ export const WhatIfModal: React.FC<WhatIfModalProps> = ({
 
   const handleApplyToReal = () => {
     if (simulationInput.amount <= 0) return;
+    // Saving a sim as real money runs the same guards as manual entry —
+    // applying an over-budget test must fail loudly, not drive a negative.
+    const validationError = TransactionEngine.validateTransaction(
+      {
+        type: type === 'INCOME' ? 'INCOME' : 'EXPENSE',
+        amount: simulationInput.amount,
+        currency,
+        accountId: simulationInput.accountId,
+      },
+      accounts
+    );
+    if (validationError) {
+      setApplyError(validationError);
+      return;
+    }
+    setApplyError(null);
     onConfirmAsRealTransaction({
       userId: 'user-1',
       type: type === 'INCOME' ? 'INCOME' : 'EXPENSE',
@@ -91,20 +110,35 @@ export const WhatIfModal: React.FC<WhatIfModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Test a Purchase" maxWidth="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={type === 'INCOME' ? 'Test Extra Income' : 'Test a Purchase'} maxWidth="lg">
       <div className="space-y-4">
         {/* Notice Banner */}
         <div className="rounded-xl bg-amber-50 p-3 border border-amber-200/80 flex items-center gap-2.5 text-xs text-amber-900 font-semibold">
           <Sparkles className="h-4 w-4 shrink-0 text-amber-600" />
           <span>
-            <strong>Safe Testing:</strong> Testing a purchase here does not change your real balances or history.
+            <strong>Safe Testing:</strong> Testing here does not change your real balances or history.
           </span>
+        </div>
+
+        {/* Expense / Income toggle */}
+        <div className="grid grid-cols-2 gap-1 rounded-xl bg-(--surface-2) p-1 border border-(--line)/80" role="tablist" aria-label="Simulation type">
+          {(['EXPENSE', 'INCOME'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              role="tab"
+              aria-selected={type === v}
+              onClick={() => { setType(v); setApplyError(null); }}
+              className={`rounded-lg py-2 text-xs font-bold transition-colors cursor-pointer ${type === v ? 'bg-(--surface) text-(--ink) shadow-sm' : 'text-(--ink-3) hover:text-(--ink)'}`}
+            >
+              {v === 'EXPENSE' ? 'Expense' : 'Income'}
+            </button>
+          ))}
         </div>
 
         {/* Inputs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-(--surface-2) p-4 rounded-2xl border border-(--line)/80">
-          <div>
-            <label className="text-xs font-bold text-(--ink-2) block mb-1">Item or Expense Name</label>
+          <Field label={type === 'INCOME' ? 'Income Name' : 'Item or Expense Name'}>
             <input
               type="text"
               value={title}
@@ -112,13 +146,14 @@ export const WhatIfModal: React.FC<WhatIfModalProps> = ({
               placeholder="e.g. New Phone, Vacation"
               className="w-full rounded-xl border border-(--line) bg-(--surface) px-3 py-2 text-xs font-semibold text-(--ink) outline-none focus:border-emerald-600"
             />
-          </div>
+          </Field>
 
           <div>
-            <label className="text-xs font-bold text-(--ink-2) block mb-1">Cost / Amount</label>
+            <label htmlFor="whatif-amount" className="text-xs font-bold text-(--ink-2) block mb-1">Cost / Amount</label>
             <div className="flex items-center gap-1.5 rounded-xl border border-(--line) bg-(--surface) px-3 py-1.5 focus-within:border-emerald-600">
               <span className="text-xs font-bold text-(--ink-3)">{currencySymbol}</span>
               <input
+                id="whatif-amount"
                 type="number"
                 value={amountStr}
                 onChange={(e) => setAmountStr(e.target.value)}
@@ -128,8 +163,7 @@ export const WhatIfModal: React.FC<WhatIfModalProps> = ({
             </div>
           </div>
 
-          <div>
-            <label className="text-xs font-bold text-(--ink-2) block mb-1">Category</label>
+          <Field label="Category">
             <select
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
@@ -141,10 +175,9 @@ export const WhatIfModal: React.FC<WhatIfModalProps> = ({
                 </option>
               ))}
             </select>
-          </div>
+          </Field>
 
-          <div>
-            <label className="text-xs font-bold text-(--ink-2) block mb-1">Pay From Account</label>
+          <Field label={type === 'INCOME' ? 'To Account' : 'Pay From Account'}>
             <select
               value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
@@ -152,11 +185,11 @@ export const WhatIfModal: React.FC<WhatIfModalProps> = ({
             >
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.name} ({MoneyValue.fromMinorUnits(a.currentBalance, currency).format()})
+                  {a.name} ({MoneyValue.fromMinorUnits(a.currentBalance, a.currency).format()})
                 </option>
               ))}
             </select>
-          </div>
+          </Field>
         </div>
 
         {/* Live Simulation Results */}
@@ -184,7 +217,7 @@ export const WhatIfModal: React.FC<WhatIfModalProps> = ({
               {simulationResult.verdict === 'SAFE' && <ShieldCheck className="h-4 w-4" />}
               {simulationResult.verdict === 'CAUTION' && <AlertTriangle className="h-4 w-4" />}
               {simulationResult.verdict === 'HIGH_RISK' && <AlertOctagon className="h-4 w-4" />}
-              <span>{simulationResult.verdict === 'SAFE' ? 'SAFE TO BUY' : simulationResult.verdict === 'CAUTION' ? 'CAUTION' : 'HIGH RISK'}</span>
+              <span>{simulationResult.verdict === 'SAFE' ? (type === 'INCOME' ? 'LOOKS GOOD' : 'SAFE TO BUY') : simulationResult.verdict === 'CAUTION' ? 'CAUTION' : 'HIGH RISK'}</span>
             </div>
           </div>
 
@@ -242,6 +275,11 @@ export const WhatIfModal: React.FC<WhatIfModalProps> = ({
         </div>
 
         {/* Action Buttons */}
+        {applyError && (
+          <p className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-bold text-rose-800" role="alert">
+            {applyError}
+          </p>
+        )}
         <div className="flex items-center gap-3 pt-2">
           <button
             type="button"
@@ -256,7 +294,7 @@ export const WhatIfModal: React.FC<WhatIfModalProps> = ({
             className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-(--brand) py-3 text-xs font-bold text-(--accent) shadow-md hover:bg-(--brand-hover) transition-colors cursor-pointer"
           >
             <CheckCircle2 className="h-4 w-4" />
-            <span>Save as Real Expense</span>
+            <span>{type === 'INCOME' ? 'Save as Real Income' : 'Save as Real Expense'}</span>
           </button>
         </div>
       </div>

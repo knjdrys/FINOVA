@@ -18,6 +18,7 @@ import {
   Sparkles,
   TrendingDown,
   TrendingUp,
+  AlertOctagon,
   AlertTriangle,
   ShieldCheck,
   Target,
@@ -39,6 +40,7 @@ interface InsightsScreenProps {
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   TrendingDown,
   TrendingUp,
+  AlertOctagon,
   AlertTriangle,
   ShieldCheck,
   Target,
@@ -71,9 +73,10 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
     todayISO
   );
 
-  // Category Breakdown for current month
+  // Category Breakdown for current month — through today only, so a
+  // future-dated confirmed row can't inflate "spent so far".
   const currentMonthStart = DateUtils.getMonthStartISO(todayISO);
-  const currentMonthEnd = DateUtils.getMonthEndISO(todayISO);
+  const currentMonthEnd = todayISO;
   const categoryTotals = new Map<string, number>();
   const categoryMap = new Map<string, Category>(categories.map((c) => [c.id, c]));
 

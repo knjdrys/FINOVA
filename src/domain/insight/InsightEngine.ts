@@ -36,10 +36,17 @@ export class InsightEngine {
     const insights: FinancialInsight[] = [];
 
     const currentMonthStart = DateUtils.getMonthStartISO(todayISO);
-    const currentMonthEnd = DateUtils.getMonthEndISO(todayISO);
     const prevMonthDate = DateUtils.addMonthsISO(todayISO, -1);
     const prevMonthStart = DateUtils.getMonthStartISO(prevMonthDate);
     const prevMonthEnd = DateUtils.getMonthEndISO(prevMonthDate);
+    // Like-for-like window: comparing 5 elapsed days against a full 31-day
+    // month manufactures fake "down 85%" praise every month-start. Compare
+    // this month through today vs last month through the same day instead.
+    const elapsedDays = DateUtils.parseISO(todayISO).getDate(); // 1..31
+    const likeForLikeEnd = DateUtils.addDaysISO(prevMonthStart, elapsedDays - 1);
+    const prevWindowEnd = likeForLikeEnd > prevMonthEnd ? prevMonthEnd : likeForLikeEnd;
+    // Anything under ~100 in the display currency is noise, not a trend.
+    const DUST_FLOOR_MINOR = 100 * 100;
 
     const categoryMap = new Map<string, Category>(categories.map((c) => [c.id, c]));
 
@@ -53,11 +60,11 @@ export class InsightEngine {
       // Split-aware single source of truth (also excludes goal-fund reservations).
       const allocations = TransactionEngine.getCategoryAllocations(tx);
 
-      if (DateUtils.isDateInRange(tx.date, currentMonthStart, currentMonthEnd)) {
+      if (DateUtils.isDateInRange(tx.date, currentMonthStart, todayISO)) {
         for (const [catId, amt] of allocations) {
           currentCategoryExpenses.set(catId, (currentCategoryExpenses.get(catId) || 0) + amt);
         }
-      } else if (DateUtils.isDateInRange(tx.date, prevMonthStart, prevMonthEnd)) {
+      } else if (DateUtils.isDateInRange(tx.date, prevMonthStart, prevWindowEnd)) {
         for (const [catId, amt] of allocations) {
           prevCategoryExpenses.set(catId, (prevCategoryExpenses.get(catId) || 0) + amt);
         }
@@ -67,6 +74,7 @@ export class InsightEngine {
     // Compare largest categories
     for (const [catId, currentAmount] of currentCategoryExpenses.entries()) {
       const prevAmount = prevCategoryExpenses.get(catId) || 0;
+      if (Math.max(currentAmount, prevAmount) < DUST_FLOOR_MINOR) continue;
       const cat = categoryMap.get(catId);
       const catName = categoryName(cat) || t('insights.expenses');
 
@@ -117,27 +125,33 @@ export class InsightEngine {
     for (const b of budgets) {
       if (!b.isActive) continue;
       const forecast = BudgetEngine.calculateBudgetForecast(b, transactions, todayISO);
+      // The forecast is computed in the budget's own currency — formatting it
+      // in the global currency mislabels every multi-currency budget.
+      const bc = b.currency || currency;
 
-      if (forecast.status === 'AT_RISK') {
+      if (forecast.status === 'AT_RISK' || forecast.status === 'OVER_BUDGET') {
+        const isOver = forecast.status === 'OVER_BUDGET';
         insights.push({
           id: `insight-budget-risk-${b.id}`,
           category: 'BUDGET',
-          title: t('insights.budgetRiskTitle', { name: b.name }),
+          title: isOver
+            ? t('insights.budgetOverTitle', { name: b.name })
+            : t('insights.budgetRiskTitle', { name: b.name }),
           fact: t('insights.budgetRiskFact', {
-            spent: MoneyValue.fromMinorUnits(forecast.actualSpent, currency).format(),
+            spent: MoneyValue.fromMinorUnits(forecast.actualSpent, bc).format(),
             days: forecast.remainingDays,
           }),
           calculation: t('insights.budgetRiskCalc', {
-            avg: MoneyValue.fromMinorUnits(forecast.avgDailySpent, currency).format(),
-            projected: MoneyValue.fromMinorUnits(forecast.projectedMonthEndSpent, currency).format(),
-            limit: MoneyValue.fromMinorUnits(b.amount, currency).format(),
+            avg: MoneyValue.fromMinorUnits(forecast.avgDailySpent, bc).format(),
+            projected: MoneyValue.fromMinorUnits(forecast.projectedMonthEndSpent, bc).format(),
+            limit: MoneyValue.fromMinorUnits(forecast.effectiveBudget ?? b.amount, bc).format(),
           }),
           interpretation: t('insights.budgetRiskInterp', {
             name: b.name,
-            variance: MoneyValue.fromMinorUnits(Math.abs(forecast.projectedVariance), currency).format(),
+            variance: MoneyValue.fromMinorUnits(Math.abs(forecast.projectedVariance), bc).format(),
           }),
           severity: 'ALERT',
-          score: 95,
+          score: isOver ? 98 : 95,
           iconName: 'AlertTriangle',
           createdAt: todayISO,
         });
@@ -146,9 +160,9 @@ export class InsightEngine {
           id: `insight-budget-good-${b.id}`,
           category: 'BUDGET',
           title: t('insights.budgetGoodTitle', { name: b.name }),
-          fact: t('insights.budgetGoodFact', { pct: forecast.percentageUsed }),
+          fact: t('insights.budgetGoodFact', { pct: forecast.percentageUsed, days: forecast.remainingDays }),
           calculation: t('insights.budgetGoodCalc', {
-            remaining: MoneyValue.fromMinorUnits(forecast.remainingAmount, currency).format(),
+            remaining: MoneyValue.fromMinorUnits(forecast.remainingAmount, bc).format(),
             days: forecast.remainingDays,
           }),
           interpretation: t('insights.budgetGoodInterp', { name: b.name }),
@@ -165,6 +179,8 @@ export class InsightEngine {
       if (g.isArchived) continue;
       const progress = GoalEngine.calculateGoalProgress(g, todayISO);
 
+      // Goals carry their own currency — never relabel them with the global one.
+      const gc = g.currency || currency;
       if (progress.status === 'ON_TRACK' && progress.progressPercentage >= 50) {
         insights.push({
           id: `insight-goal-ontrack-${g.id}`,
@@ -172,11 +188,11 @@ export class InsightEngine {
           title: t('insights.goalOnTrackTitle', { name: g.name }),
           fact: t('insights.goalOnTrackFact', {
             pct: progress.progressPercentage,
-            saved: MoneyValue.fromMinorUnits(g.currentAmount, currency).format(),
-            target: MoneyValue.fromMinorUnits(g.targetAmount, currency).format(),
+            saved: MoneyValue.fromMinorUnits(g.currentAmount, gc).format(),
+            target: MoneyValue.fromMinorUnits(g.targetAmount, gc).format(),
           }),
           calculation: t('insights.goalOnTrackCalc', {
-            monthly: MoneyValue.fromMinorUnits(progress.requiredMonthlySaving, currency).format(),
+            monthly: MoneyValue.fromMinorUnits(progress.requiredMonthlySaving, gc).format(),
             date: DateUtils.formatDisplayDate(g.targetDate, { fullYear: true }),
           }),
           interpretation: t('insights.goalOnTrackInterp'),
@@ -185,12 +201,63 @@ export class InsightEngine {
           iconName: 'Target',
           createdAt: todayISO,
         });
+      } else if (progress.status === 'SLIGHTLY_BEHIND' || progress.status === 'AT_RISK') {
+        // A struggling goal used to stay silent while healthy ones got praised.
+        const critical = progress.status === 'AT_RISK';
+        insights.push({
+          id: `insight-goal-behind-${g.id}`,
+          category: 'SAVINGS',
+          title: t('insights.goalBehindTitle', { name: g.name }),
+          fact: t('insights.goalBehindFact', {
+            pct: Math.round(progress.progressPercentage),
+            saved: MoneyValue.fromMinorUnits(g.currentAmount, gc).format(),
+            target: MoneyValue.fromMinorUnits(g.targetAmount, gc).format(),
+          }),
+          calculation: t('insights.goalBehindCalc', {
+            monthly: MoneyValue.fromMinorUnits(progress.requiredMonthlySaving, gc).format(),
+            date: DateUtils.formatDisplayDate(g.targetDate, { fullYear: true }),
+          }),
+          interpretation: t('insights.goalBehindInterp'),
+          severity: critical ? 'ALERT' : 'WARNING',
+          score: critical ? 96 : 88,
+          iconName: 'Target',
+          createdAt: todayISO,
+        });
       }
     }
 
     // 4. Safe-to-Spend Run-rate Insight
     const safeToSpend = SafeToSpendEngine.calculateSafeToSpend(accounts, commitments, goals, settings, todayISO);
-    if (!safeToSpend.isDeficit && safeToSpend.dailySafeToSpend > 0) {
+    if (safeToSpend.isDeficit) {
+      // A deficit is the single most urgent cash-flow state — it used to
+      // produce no insight at all while healthy days got a card.
+      const shortfall = Math.max(
+        0,
+        safeToSpend.essentialUpcomingCommitments +
+          safeToSpend.reservedGoalContributions +
+          safeToSpend.minimumReserve -
+          safeToSpend.totalAvailableBalance
+      );
+      insights.push({
+        id: 'insight-safetospend-deficit',
+        category: 'CASH_FLOW',
+        title: t('insights.safeDeficitTitle'),
+        fact: t('insights.safeDeficitFact', {
+          shortfall: MoneyValue.fromMinorUnits(shortfall, currency).format(),
+        }),
+        calculation: t('insights.safeDeficitCalc', {
+          bills: MoneyValue.fromMinorUnits(safeToSpend.essentialUpcomingCommitments, currency).format(),
+          savings: MoneyValue.fromMinorUnits(safeToSpend.reservedGoalContributions, currency).format(),
+          reserve: MoneyValue.fromMinorUnits(safeToSpend.minimumReserve, currency).format(),
+          balance: MoneyValue.fromMinorUnits(safeToSpend.totalAvailableBalance, currency).format(),
+        }),
+        interpretation: t('insights.safeDeficitInterp'),
+        severity: 'ALERT',
+        score: 100,
+        iconName: 'AlertOctagon',
+        createdAt: todayISO,
+      });
+    } else if (!safeToSpend.isDeficit && safeToSpend.dailySafeToSpend > 0) {
       insights.push({
         id: 'insight-safetospend-healthy',
         category: 'CASH_FLOW',
