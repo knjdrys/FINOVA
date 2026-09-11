@@ -66,9 +66,9 @@ describe('sanitizeState', () => {
   it('drops plans with invalid money and coerces minimumReserve', () => {
     const s = baseState();
     s.budgets = [{ id: 'b1', amount: NaN }] as unknown as typeof s.budgets;
-    s.goals = [{ id: 'g1', targetAmount: 100, currentAmount: 50 }] as unknown as typeof s.goals;
+    s.goals = [{ id: 'g1', targetAmount: 100, currentAmount: 50, targetDate: '2026-12-31' }] as unknown as typeof s.goals;
     s.commitments = [{ id: 'c1', amount: -1 }] as unknown as typeof s.commitments;
-    s.recurring = [{ id: 'r1', amount: 100 }] as unknown as typeof s.recurring;
+    s.recurring = [{ id: 'r1', amount: 100, startDate: '2026-09-01', frequency: 'MONTHLY' }] as unknown as typeof s.recurring;
     (s.settings as unknown as Record<string, unknown>).minimumReserve = 'high';
     const { state, report } = sanitizeState(s);
     expect(state.budgets).toHaveLength(0);
@@ -97,5 +97,74 @@ describe('parseBackup reports dropped rows', () => {
       expect(parsed.state.transactions.map((t) => t.id)).toEqual(['tx-good']);
       expect(parsed.droppedRows).toBe(1);
     }
+  });
+});
+
+describe('sanitizeState hardened lists', () => {
+  it('keeps CLEARED rows intact (no silent status rewrite on reload)', () => {
+    const s = baseState();
+    s.transactions = [{
+      id: 'tx-c', userId: 'u', type: 'EXPENSE', amount: 100, currency: 'PHP',
+      categoryId: 'c', accountId: 'a', date: '2026-09-10', tags: [],
+      status: 'CLEARED', createdAt: '', updatedAt: '',
+    }] as unknown as typeof s.transactions;
+    const { state } = sanitizeState(s);
+    expect(state.transactions[0].status).toBe('CLEARED');
+  });
+
+  it('drops impossible calendar dates (2026-13-40 is not a date)', () => {
+    const s = baseState();
+    s.transactions = [{
+      id: 'tx-d', userId: 'u', type: 'EXPENSE', amount: 100, currency: 'PHP',
+      categoryId: 'c', accountId: 'a', date: '2026-13-40', tags: [],
+      status: 'CONFIRMED', createdAt: '', updatedAt: '',
+    }] as unknown as typeof s.transactions;
+    const { state, report } = sanitizeState(s);
+    expect(state.transactions).toHaveLength(0);
+    expect(report.droppedTransactions).toBe(1);
+  });
+
+  it('drops plans with garbage dates/enums, coerces soft commitment fields', () => {
+    const s = baseState();
+    s.budgets = [
+      { id: 'b-ok', amount: 100, startDate: '2026-09-01', endDate: '2026-09-30' },
+      { id: 'b-bad', amount: 100, startDate: 'yesterday', endDate: '2026-09-30' },
+    ] as unknown as typeof s.budgets;
+    s.goals = [
+      { id: 'g-bad', targetAmount: 100, currentAmount: 0, targetDate: '2026-02-30' },
+    ] as unknown as typeof s.goals;
+    s.commitments = [
+      { id: 'c-ok', amount: 100, dueDate: '2026-09-20', direction: 'OUTFLOW', status: 'WEIRD', type: 'NOPE' },
+      { id: 'c-bad', amount: 100, dueDate: '2026-09-20', direction: 'SIDEWAYS' },
+    ] as unknown as typeof s.commitments;
+    s.recurring = [
+      { id: 'r-ok', amount: 100, startDate: '2026-09-01', frequency: 'MONTHLY', nextOccurrence: '2026-10-01' },
+      { id: 'r-badfreq', amount: 100, startDate: '2026-09-01', frequency: 'FORTNIGHTLY' },
+      { id: 'r-badfloor', amount: 100, startDate: '2026-09-01', frequency: 'MONTHLY', nextOccurrence: 'soon' },
+    ] as unknown as typeof s.recurring;
+    const { state, report } = sanitizeState(s);
+    expect(state.budgets.map((b) => b.id)).toEqual(['b-ok']);
+    expect(state.goals).toHaveLength(0);
+    expect(state.commitments.map((c) => c.id)).toEqual(['c-ok']);
+    expect(state.commitments[0].status).toBe('PROJECTED');
+    expect(state.commitments[0].type).toBe('BILL');
+    expect(state.recurring.map((r) => r.id)).toEqual(['r-ok']);
+    expect(report.droppedBudgets).toBe(1);
+    expect(report.droppedGoals).toBe(1);
+    expect(report.droppedCommitments).toBe(1);
+    expect(report.droppedRecurring).toBe(2);
+  });
+
+  it('drops null accounts/categories instead of crashing downstream maps', () => {
+    const s = baseState();
+    s.accounts = [{ id: 'a1', initialBalance: 0, currentBalance: 0 }, null] as unknown as typeof s.accounts;
+    s.categories = [{ id: 'c1' }, null, 'x'] as unknown as typeof s.categories;
+    (s as unknown as Record<string, unknown>).readNotificationIds = 'not-an-array';
+    const { state, report } = sanitizeState(s);
+    expect(state.accounts).toHaveLength(1);
+    expect(state.categories).toHaveLength(1);
+    expect(state.readNotificationIds).toEqual([]);
+    expect(report.droppedAccounts).toBe(1);
+    expect(report.droppedCategories).toBe(2);
   });
 });

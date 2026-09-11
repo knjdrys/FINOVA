@@ -23,12 +23,22 @@ export interface SanitizeReport {
   droppedGoals: number;
   droppedCommitments: number;
   droppedRecurring: number;
+  droppedCategories: number;
+  droppedAccounts: number;
   coercedAccounts: number;
 }
 
 const VALID_TX_TYPES = new Set(['INCOME', 'EXPENSE', 'TRANSFER']);
-const VALID_TX_STATUS = new Set(['CONFIRMED', 'PENDING']);
+const VALID_TX_STATUS = new Set(['CONFIRMED', 'PENDING', 'CLEARED']);
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function isRealDateStr(v: unknown): v is string {
+  if (typeof v !== 'string' || !DATE_RE.test(v)) return false;
+  const [y, m, d] = v.split('-').map(Number);
+  if (m < 1 || m > 12 || d < 1 || d > 31) return false;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
+}
 
 function isMoney(v: unknown): v is number {
   return typeof v === 'number' && Number.isFinite(v) && v >= 0;
@@ -45,6 +55,8 @@ export function sanitizeState(state: FinovaState): { state: FinovaState; report:
     droppedGoals: 0,
     droppedCommitments: 0,
     droppedRecurring: 0,
+    droppedCategories: 0,
+    droppedAccounts: 0,
     coercedAccounts: 0,
   };
 
@@ -58,8 +70,7 @@ export function sanitizeState(state: FinovaState): { state: FinovaState; report:
       VALID_TX_TYPES.has(t.type as string) &&
       isMoney(t.amount) &&
       typeof t.accountId === 'string' &&
-      typeof t.date === 'string' &&
-      DATE_RE.test(t.date);
+      isRealDateStr(t.date);
     if (!ok) {
       report.droppedTransactions++;
       return false;
@@ -71,11 +82,17 @@ export function sanitizeState(state: FinovaState): { state: FinovaState; report:
     return true;
   });
 
+  const VALID_FREQUENCY = new Set(['DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY', 'YEARLY']);
+  const VALID_DIRECTION = new Set(['INFLOW', 'OUTFLOW']);
+
   const moneyList = <T,>(
     rows: unknown,
 
     key: 'droppedBudgets' | 'droppedGoals' | 'droppedCommitments' | 'droppedRecurring',
-    amountKeys: string[]
+    amountKeys: string[],
+    dateKeys: string[] = [],
+    optionalDateKeys: string[] = [],
+    enumKeys: Record<string, Set<string>> = {}
   ): T[] => {
     if (!Array.isArray(rows)) return [];
     return rows.filter((r) => {
@@ -89,14 +106,34 @@ export function sanitizeState(state: FinovaState): { state: FinovaState; report:
           return false;
         }
       }
+      // Required dates must be real calendar dates: garbage due/target dates
+      // poison every engine that string-compares or diffs them.
+      for (const k of dateKeys) {
+        if (!isRealDateStr(r[k])) {
+          report[key]++;
+          return false;
+        }
+      }
+      for (const k of optionalDateKeys) {
+        if (r[k] !== undefined && r[k] !== null && !isRealDateStr(r[k])) {
+          report[key]++;
+          return false;
+        }
+      }
+      for (const [k, allowed] of Object.entries(enumKeys)) {
+        if (!allowed.has(r[k] as string)) {
+          report[key]++;
+          return false;
+        }
+      }
       return true;
     }) as T[];
   };
 
-  const accounts = (Array.isArray(state.accounts) ? state.accounts : []).map((a) => {
+  const accounts = (Array.isArray(state.accounts) ? state.accounts : []).filter((a) => {
     if (!isRecord(a) || typeof a.id !== 'string') {
-      report.coercedAccounts++;
-      return a;
+      report.droppedAccounts++;
+      return false;
     }
     let dirty = false;
     if (!isMoney(a.initialBalance)) {
@@ -107,9 +144,27 @@ export function sanitizeState(state: FinovaState): { state: FinovaState; report:
       a.currentBalance = 0;
       dirty = true;
     }
+    if (Number.isInteger(a.initialBalance) === false && isMoney(a.initialBalance)) {
+      a.initialBalance = Math.round(a.initialBalance as number);
+      dirty = true;
+    }
+    if (Number.isInteger(a.currentBalance) === false && isMoney(a.currentBalance)) {
+      a.currentBalance = Math.round(a.currentBalance as number);
+      dirty = true;
+    }
     if (dirty) report.coercedAccounts++;
-    return a;
+    return true;
   });
+
+  const categories = (Array.isArray(state.categories) ? state.categories : []).filter((c) => {
+    if (!isRecord(c) || typeof c.id !== 'string') {
+      report.droppedCategories++;
+      return false;
+    }
+    return true;
+  });
+
+  const readNotificationIds = Array.isArray(state.readNotificationIds) ? state.readNotificationIds : [];
 
   const settings = { ...state.settings };
   if (!isMoney((settings as Record<string, unknown>).minimumReserve)) {
@@ -121,10 +176,34 @@ export function sanitizeState(state: FinovaState): { state: FinovaState; report:
       ...state,
       accounts: accounts as FinovaState['accounts'],
       transactions: transactions as FinovaState['transactions'],
-      budgets: moneyList(state.budgets, 'droppedBudgets', ['amount']),
-      goals: moneyList(state.goals, 'droppedGoals', ['targetAmount', 'currentAmount']),
-      commitments: moneyList(state.commitments, 'droppedCommitments', ['amount']),
-      recurring: moneyList(state.recurring, 'droppedRecurring', ['amount']),
+      budgets: moneyList(state.budgets, 'droppedBudgets', ['amount'], ['startDate', 'endDate']),
+      goals: moneyList(state.goals, 'droppedGoals', ['targetAmount', 'currentAmount'], ['targetDate']),
+      commitments: moneyList(state.commitments, 'droppedCommitments', ['amount'], ['dueDate'], [], {
+        direction: VALID_DIRECTION,
+      }).map((c) => {
+        // Soft enums coerce (an outstanding bill stays outstanding and visible).
+        const rec = c as unknown as Record<string, unknown>;
+        const validStatus = ['PROJECTED', 'SCHEDULED', 'CONFIRMED', 'COMPLETED', 'OVERDUE', 'CANCELLED', 'AUTO_POSTED'];
+        if (!validStatus.includes(rec.status as string)) rec.status = 'PROJECTED';
+        const validType = [
+          'BILL', 'SUBSCRIPTION', 'RECURRING_EXPENSE', 'RECURRING_INCOME',
+          'SAVINGS_CONTRIBUTION', 'DEBT_PAYMENT', 'PLANNED_EXPENSE', 'EXPECTED_INCOME', 'CUSTOM',
+        ];
+        if (!validType.includes(rec.type as string)) {
+          rec.type = rec.direction === 'INFLOW' ? 'EXPECTED_INCOME' : 'BILL';
+        }
+        return c;
+      }),
+      recurring: moneyList(
+        state.recurring,
+        'droppedRecurring',
+        ['amount'],
+        ['startDate'],
+        ['nextOccurrence', 'endDate'],
+        { frequency: VALID_FREQUENCY }
+      ),
+      categories: categories as FinovaState['categories'],
+      readNotificationIds,
       settings,
     } as FinovaState,
     report,
@@ -138,6 +217,8 @@ export function totalDropped(report: SanitizeReport): number {
     report.droppedGoals +
     report.droppedCommitments +
     report.droppedRecurring +
+    report.droppedCategories +
+    report.droppedAccounts +
     report.coercedAccounts
   );
 }

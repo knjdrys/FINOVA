@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Account,
   Budget,
@@ -90,7 +90,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const is15DayMode = settings.budgetCycleMode === 'SEMI_MONTHLY_15_DAYS';
 
   // Most-relevant budgets/goals for Home (risk-ranked, capped) — the rest lives in Plans.
-  const homePlans = PlanningService.selectHomePlans(budgets, goals, transactions, todayISO);
+  // Memoized: O(budgets × transactions); parent re-renders (modal keystrokes
+  // while Home sits behind) must not rescan 10k rows per frame.
+  const homePlans = useMemo(
+    () => PlanningService.selectHomePlans(budgets, goals, transactions, todayISO),
+    [budgets, goals, transactions, todayISO]
+  );
   const detailBudget = homePlans.budgets.find((i) => i.budget.id === detailBudgetId) || null;
   const detailGoal = homePlans.goals.find((i) => i.goal.id === detailGoalId) || null;
   const fundingGoal = goals.find((g) => g.id === fundingGoalId && !g.isArchived) || null;
@@ -148,7 +153,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     comparisonDir = 'neutral';
   }
 
-  const periodTotals = TransactionEngine.calculatePeriodTotals(transactions, periodStart, periodEnd, currency, currency);
+  // Memoized: O(transactions) scan; only the period bounds feed it.
+  const periodTotals = useMemo(
+    () => TransactionEngine.calculatePeriodTotals(transactions, periodStart, periodEnd, currency, currency),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [transactions, periodStart, periodEnd, currency]
+  );
   // Header budget figure must match what Home actually tracks: active budgets
   // in the active currency only. Summing archived or foreign-currency budgets
   // here would corrupt the "spent of budgeted" comparison.

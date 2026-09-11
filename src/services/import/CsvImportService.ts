@@ -460,7 +460,7 @@ export function parseImportDate(
   if (iso) return validImportYMD(Number(iso[1]), Number(iso[2]), Number(iso[3]));
 
   // "15 Jan 2026" / "Jan 15 2026" / "15-Jan-2026".
-  const words = s.split(/[\s/.\-]+/).filter(Boolean);
+  const words = s.split(/[\s/.-]+/).filter(Boolean);
   if (words.length === 3) {
     const monthIdx = words.findIndex(
       (w) => IMPORT_MONTHS[w.toLowerCase()] !== undefined || IMPORT_MONTHS[w.toLowerCase().slice(0, 4)] !== undefined
@@ -483,7 +483,7 @@ export function parseImportDate(
     }
   }
 
-  const parts = s.split(/[\s/.\-]+/).filter(Boolean);
+  const parts = s.split(/[\s/.-]+/).filter(Boolean);
   if (parts.length !== 3 || !parts.every((p) => /^\d{1,4}$/.test(p))) return null;
   const nums = parts.map(Number);
   // YMD expressed with slashes ("2026/09/15").

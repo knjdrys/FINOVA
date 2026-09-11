@@ -57,10 +57,16 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
   // Long-list guard: render day groups up to this many rows, then offer more.
   const [visibleLimit, setVisibleLimit] = useState(120);
 
-  const categoryMap = new Map(categories.map((c) => [c.id, c]));
-  const accountMap = new Map(accounts.map((a) => [a.id, a]));
-  const categoryNames = new Map(categories.map((c) => [c.id, c.name]));
-  const accountNames = new Map(accounts.map((a) => [a.id, a.name]));
+  const maps = useMemo(
+    () => ({
+      categoryMap: new Map(categories.map((c) => [c.id, c] as const)),
+      accountMap: new Map(accounts.map((a) => [a.id, a] as const)),
+      categoryNames: new Map(categories.map((c) => [c.id, c.name] as const)),
+      accountNames: new Map(accounts.map((a) => [a.id, a.name] as const)),
+    }),
+    [categories, accounts]
+  );
+  const { categoryMap, accountMap, categoryNames, accountNames } = maps;
   const currency = settings.currency || 'PHP';
   const currencySymbol = MoneyValue.zero(currency).getCurrencySymbol();
 
@@ -80,19 +86,28 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
   const maxMinor = maxStr ? MoneyValue.parse(maxStr, currency).getMinorUnits() : undefined;
 
   // Filter transactions dynamically — every control feeds the engine, nothing is hardcoded.
-  const filtered = TransactionEngine.filterTransactions(transactions, {
-    searchQuery,
-    type: typeFilter,
-    categoryId: selectedCategoryId !== 'ALL' ? selectedCategoryId : undefined,
-    accountId: accountId !== 'ALL' ? accountId : undefined,
-    startDate: periodBounds?.start,
-    endDate: periodBounds?.end,
-    minAmount: minMinor,
-    maxAmount: maxMinor,
-    sortBy,
-    categoryNames,
-    accountNames,
-  });
+  // Memoized: the filter+sort is O(n log n) and parent re-renders (e.g. modal
+  // keystrokes) must not recompute a 10k-row list on every frame.
+  const filtered = useMemo(
+    () =>
+      TransactionEngine.filterTransactions(transactions, {
+        searchQuery,
+        type: typeFilter,
+        categoryId: selectedCategoryId !== 'ALL' ? selectedCategoryId : undefined,
+        accountId: accountId !== 'ALL' ? accountId : undefined,
+        startDate: periodBounds?.start,
+        endDate: periodBounds?.end,
+        minAmount: minMinor,
+        maxAmount: maxMinor,
+        sortBy,
+        categoryNames,
+        accountNames,
+      }),
+    [
+      transactions, searchQuery, typeFilter, selectedCategoryId, accountId,
+      periodBounds, minMinor, maxMinor, sortBy, categoryNames, accountNames,
+    ]
+  );
 
   const activeFilterCount =
     (typeFilter !== 'ALL' ? 1 : 0) +
@@ -118,10 +133,31 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
   // Adaptive summary — honest about what the current view contains.
   // Bookkeeping rows are excluded: goal funding is savings, adjustments are
   // corrections — neither is spending or earning.
-  const isSpend = (t: Transaction) => t.type === 'EXPENSE' && !TransactionEngine.isBookkeeping(t);
-  const expenseMinor = filtered.filter(isSpend).reduce((s, t) => s + t.amount, 0);
-  const incomeMinor = filtered.filter((t) => t.type === 'INCOME' && !TransactionEngine.isBookkeeping(t)).reduce((s, t) => s + t.amount, 0);
-  const transferMinor = filtered.filter((t) => t.type === 'TRANSFER').reduce((s, t) => s + t.amount, 0);
+  // Numeric-only memo (translated labels stay at render so language switches
+  // can never be frozen by a stale memo).
+  const { expenseMinor, incomeMinor, transferMinor, groupedDatesMap, sortedDates } = useMemo(() => {
+    const isSpend = (t: Transaction) => t.type === 'EXPENSE' && !TransactionEngine.isBookkeeping(t);
+    const expenseMinor = filtered.filter(isSpend).reduce((sum, t) => sum + t.amount, 0);
+    const incomeMinor = filtered
+      .filter((t) => t.type === 'INCOME' && !TransactionEngine.isBookkeeping(t))
+      .reduce((sum, t) => sum + t.amount, 0);
+    const transferMinor = filtered.filter((t) => t.type === 'TRANSFER').reduce((sum, t) => sum + t.amount, 0);
+    // Group by date (day header shows the day's net flow). Bookkeeping rows
+    // don't move the net: funding is savings, adjustments are corrections.
+    const groupedDatesMap = new Map<string, { transactions: Transaction[]; net: number }>();
+    for (const tx of filtered) {
+      const existing = groupedDatesMap.get(tx.date) || { transactions: [], net: 0 };
+      existing.transactions.push(tx);
+      if (tx.type === 'EXPENSE' && !TransactionEngine.isBookkeeping(tx)) existing.net -= tx.amount;
+      if (tx.type === 'INCOME' && !TransactionEngine.isBookkeeping(tx)) existing.net += tx.amount;
+      groupedDatesMap.set(tx.date, existing);
+    }
+    const sortedDates =
+      sortBy === 'NEWEST' || sortBy === 'OLDEST'
+        ? Array.from(groupedDatesMap.keys()).sort((x, y) => (sortBy === 'NEWEST' ? y.localeCompare(x) : x.localeCompare(y)))
+        : Array.from(groupedDatesMap.keys());
+    return { expenseMinor, incomeMinor, transferMinor, groupedDatesMap, sortedDates };
+  }, [filtered, sortBy]);
   const summary =
     typeFilter === 'EXPENSE'
       ? { label: t('tx.sumSpent'), amount: expenseMinor }
@@ -131,22 +167,6 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
       ? { label: t('tx.sumMoved'), amount: transferMinor }
       : { label: t('tx.netFlow'), amount: incomeMinor - expenseMinor };
   const summaryMoney = MoneyValue.fromMinorUnits(Math.abs(summary.amount), currency);
-
-  // Group filtered transactions by date (day header shows the day's net flow).
-  // Bookkeeping rows don't move the net: funding is savings, adjustments are
-  // corrections — the net stays a true income-vs-spending signal.
-  const groupedDatesMap = new Map<string, { transactions: Transaction[]; net: number }>();
-  for (const tx of filtered) {
-    const existing = groupedDatesMap.get(tx.date) || { transactions: [], net: 0 };
-    existing.transactions.push(tx);
-    if (tx.type === 'EXPENSE' && !TransactionEngine.isBookkeeping(tx)) existing.net -= tx.amount;
-    if (tx.type === 'INCOME' && !TransactionEngine.isBookkeeping(tx)) existing.net += tx.amount;
-    groupedDatesMap.set(tx.date, existing);
-  }
-  const sortedDates =
-    sortBy === 'NEWEST' || sortBy === 'OLDEST'
-      ? Array.from(groupedDatesMap.keys()).sort((a, b) => (sortBy === 'NEWEST' ? b.localeCompare(a) : a.localeCompare(b)))
-      : Array.from(groupedDatesMap.keys());
 
   // Reset the render cap whenever the result set changes.
   useEffect(() => {

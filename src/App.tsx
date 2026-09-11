@@ -641,12 +641,14 @@ export function App() {
         userId: authUser?.id || restored.settings.userId,
       },
     };
-    FinovaStorage.saveState(next);
+    // Branch on the save result: claiming "restored" when persistence failed
+    // would lie (the main save effect would contradict us a beat later).
+    const saved = FinovaStorage.saveState(next);
     setState(next);
     if (authUser && !authUser.isGuest) {
       getSyncManager()?.requestSync();
     }
-    notice(t('backup.restored'));
+    notice(saved ? t('backup.restored') : t('dialog.storageFull'));
   };
 
   // Handler: Delete Account
@@ -1437,13 +1439,10 @@ export function App() {
 
           {currentTab === 'ANALYTICS' && (
             <InsightsScreen
-              accounts={activeAccounts}
               transactions={transactions}
               categories={categories}
-              budgets={budgets}
-              goals={goals}
-              commitments={resolvedCommitments}
               settings={settings}
+              insights={insights}
               onOpenWhatIf={() => setIsWhatIfOpen(true)}
             />
           )}

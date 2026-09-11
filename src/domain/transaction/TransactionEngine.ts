@@ -313,7 +313,7 @@ export class TransactionEngine {
         // Numeric queries match the amount EXACTLY (minor units per the row's
         // own currency): "50" must not match ₱500.00 or ₱1,500.00.
         let amountMatch = false;
-        const numericQuery = Number(query.replace(/[^0-9.\-]/g, ''));
+        const numericQuery = Number(query.replace(/[^0-9.-]/g, ''));
         if (query !== '' && Number.isFinite(numericQuery) && /[0-9]/.test(query)) {
           const multiplier = CURRENCY_CONFIGS[tx.currency]?.minorUnitMultiplier ?? 100;
           amountMatch = tx.amount === Math.round(Math.abs(numericQuery) * multiplier);

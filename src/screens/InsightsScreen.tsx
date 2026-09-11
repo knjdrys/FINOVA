@@ -1,14 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
-  Account,
-  Budget,
   Category,
-  MoneyCommitment,
-  SavingsGoal,
+  FinancialInsight,
   Transaction,
   UserSettings,
 } from '../types';
-import { InsightEngine, getMonthlyCashFlow } from '../domain/insight/InsightEngine';
+import { getMonthlyCashFlow } from '../domain/insight/InsightEngine';
 import { MoneyValue } from '../domain/money/MoneyValue';
 import { DateUtils } from '../domain/date/DateUtils';
 import { TransactionEngine } from '../domain/transaction/TransactionEngine';
@@ -27,13 +24,11 @@ import {
 } from 'lucide-react';
 
 interface InsightsScreenProps {
-  accounts: Account[];
   transactions: Transaction[];
   categories: Category[];
-  budgets: Budget[];
-  goals: SavingsGoal[];
-  commitments: MoneyCommitment[];
   settings: UserSettings;
+  /** App's memoized insight list — the single source (Home calm-state uses the same). */
+  insights: FinancialInsight[];
   onOpenWhatIf: () => void;
 }
 
@@ -49,55 +44,50 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
 };
 
 export const InsightsScreen: React.FC<InsightsScreenProps> = ({
-  accounts,
   transactions,
   categories,
-  budgets,
-  goals,
-  commitments,
   settings,
+  insights,
   onOpenWhatIf,
 }) => {
   const todayISO = DateUtils.getTodayISO();
   const currency = settings.currency || 'PHP';
 
-  // Authoritative Deterministic Insights
-  const insights = InsightEngine.generateInsights(
-    accounts,
-    transactions,
-    budgets,
-    goals,
-    commitments,
-    categories,
-    settings,
-    todayISO
+  // Category breakdown + cash-flow trend, memoized: each is O(transactions)
+  // and parent re-renders (WhatIf keystrokes) must not recompute 10k rows.
+  // Numeric-only memos; translated names resolve at render so language
+  // switches can never be frozen by a stale memo.
+  const { categoryTotals, totalExpenseMinor } = useMemo(() => {
+    // Through today only, so a future-dated confirmed row can't inflate spend.
+    const currentMonthStart = DateUtils.getMonthStartISO(todayISO);
+    const totals = new Map<string, number>();
+    let total = 0;
+    for (const tx of transactions) {
+      if (tx.type !== 'EXPENSE' || tx.status === 'PENDING') continue;
+      if (tx.currency !== currency) continue; // never mix currencies
+      if (TransactionEngine.isBookkeeping(tx)) continue; // reservations + adjustments are not spending
+      if (DateUtils.isDateInRange(tx.date, currentMonthStart, todayISO)) {
+        // Split-aware: a split expense contributes per allocated category.
+        const allocations = TransactionEngine.getCategoryAllocations(tx);
+        for (const [catId, amt] of allocations) {
+          totals.set(catId, (totals.get(catId) || 0) + amt);
+        }
+        total += tx.amount;
+      }
+    }
+    return { categoryTotals: totals, totalExpenseMinor: total };
+  }, [transactions, currency, todayISO]);
+
+  const categoryMap = useMemo(
+    () => new Map<string, Category>(categories.map((c) => [c.id, c])),
+    [categories]
   );
 
-  // Category Breakdown for current month — through today only, so a
-  // future-dated confirmed row can't inflate "spent so far".
-  const currentMonthStart = DateUtils.getMonthStartISO(todayISO);
-  const currentMonthEnd = todayISO;
-  const categoryTotals = new Map<string, number>();
-  const categoryMap = new Map<string, Category>(categories.map((c) => [c.id, c]));
-
-  let totalExpenseMinor = 0;
-  for (const tx of transactions) {
-    if (tx.type !== 'EXPENSE' || tx.status === 'PENDING') continue;
-    if (tx.currency !== currency) continue; // never mix currencies
-    if (TransactionEngine.isBookkeeping(tx)) continue; // reservations + adjustments are not spending
-    if (DateUtils.isDateInRange(tx.date, currentMonthStart, currentMonthEnd)) {
-      // Split-aware: a split expense contributes per allocated category.
-      const allocations = TransactionEngine.getCategoryAllocations(tx);
-      for (const [catId, amt] of allocations) {
-        const curr = categoryTotals.get(catId) || 0;
-        categoryTotals.set(catId, curr + amt);
-      }
-      totalExpenseMinor += tx.amount;
-    }
-  }
-
   // Monthly cash-flow trend — trailing 6 months, oldest → newest.
-  const cashFlow = getMonthlyCashFlow(transactions, currency, todayISO);
+  const cashFlow = useMemo(
+    () => getMonthlyCashFlow(transactions, currency, todayISO),
+    [transactions, currency, todayISO]
+  );
   const cashFlowMax = Math.max(1, ...cashFlow.map((b) => Math.max(b.income, b.expense)));
   const cashFlowActive = cashFlow.some((b) => b.hasActivity);
   const currentNet = cashFlow[cashFlow.length - 1]?.net ?? 0;

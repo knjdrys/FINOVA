@@ -385,7 +385,9 @@ export class FutureFinanceEngine {
         type: c.direction === 'INFLOW' ? 'INCOME' : 'EXPENSE',
         amount: c.amount,
         currency: c.currency,
-        categoryId: c.categoryId || 'cat-bills',
+        // Direction-aware fallback (mirrors buildSettlementTransaction): an
+        // auto-posted payday must never land in an EXPENSE category.
+        categoryId: c.categoryId || (c.direction === 'INFLOW' ? 'cat-salary' : 'cat-bills'),
         accountId: c.accountId,
         merchant: c.title,
         note: 'Auto-posted from commitment',
