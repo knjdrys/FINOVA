@@ -17,7 +17,7 @@ A calm, privacy-first personal finance web app: track spending, see a daily **Sa
 npm install
 npm run dev      # local dev server
 npm run build    # type-check (tsc -b) + production build
-npm test         # full test suite (347 tests, 32 files)
+npm test         # full test suite (352 tests, 32 files)
 npm run lint     # oxlint (0 errors; remaining warnings are reviewed idiom)
 ```
 
@@ -52,4 +52,5 @@ Without these, the app runs fully offline on the device. Apply `supabase/schema.
 - Every transaction moves account balances through `TransactionEngine`; edits reverse-then-apply, deletes reverse. Nothing hand-edits a balance except reconciliation, which posts an auditable adjustment transaction.
 - Goal funding and adjustments are tagged bookkeeping (`goal-fund`, `adjustment`) and are excluded from budgets, spending breakdowns, and trends.
 - Transfers move money between same-currency accounts and never count as income or spending.
+- The display currency can be freely chosen on a clean slate, but is locked once you hold balances or history — switching it would relabel every amount without converting it. Multi-currency households should keep one account per currency.
 - The Emergency Fund target is derived from your own essential bills (or 6-month essential spend) — every figure shows its source.
