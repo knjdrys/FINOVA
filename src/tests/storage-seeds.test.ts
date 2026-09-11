@@ -24,7 +24,10 @@ import {
   FinovaStorage,
   INITIAL_CATEGORIES,
   CLEAN_ZERO_STATE,
+  DEMO_ANCHOR_ISO,
+  DEMO_TRANSACTIONS,
 } from '../services/storage/FinovaStorage';
+import { DateUtils } from '../domain/date/DateUtils';
 
 describe('system category seeds', () => {
   beforeEach(() => {
@@ -90,5 +93,32 @@ describe('global currency lock', () => {
       (s[slice] as unknown[]).push({ id: 'x', currency: 'PHP' });
       expect(FinovaStorage.canChangeGlobalCurrency(s)).toBe(false);
     }
+  });
+});
+
+describe('demo showcase rebase', () => {
+  it('lands the newest demo transaction exactly on today, gaps preserved', () => {
+    const demo = FinovaStorage.loadDemoShowcaseData();
+    const today = DateUtils.getTodayISO();
+    const newest = demo.transactions.map((t) => t.date).sort().pop();
+    expect(newest).toBe(today);
+    // Relative shape preserved: the bill is due 3 days after the anchor tx.
+    const anchorShifted = demo.transactions.find((t) => t.id === 'tx-1')!.date;
+    expect(anchorShifted).toBe(today);
+    const bill = demo.commitments.find((c) => c.id === 'comm-electric')!;
+    expect(bill.dueDate).toBe(DateUtils.addDaysISO(today, 3));
+    // Budgets straddle today (current window, not a dead May slice).
+    expect(demo.budgets.length).toBeGreaterThan(0);
+    for (const b of demo.budgets) {
+      expect(DateUtils.isDateInRange(today, b.startDate, b.endDate)).toBe(true);
+    }
+  });
+
+  it('never mutates the DEMO_* constants (repeat loads stay identical)', () => {
+    const before = JSON.stringify(DEMO_TRANSACTIONS);
+    FinovaStorage.loadDemoShowcaseData();
+    FinovaStorage.loadDemoShowcaseData();
+    expect(JSON.stringify(DEMO_TRANSACTIONS)).toBe(before);
+    expect(DEMO_ANCHOR_ISO).toBe('2026-05-17');
   });
 });

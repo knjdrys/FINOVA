@@ -1177,13 +1177,19 @@ export function App() {
   };
 
   // Mark a notification read (persists its id so re-derivation stays idempotent).
+  // Also garbage-collects: per-occurrence ids (bill dates, budget states)
+  // would otherwise pile up in storage forever. Pruning against the live
+  // feed is safe — read-state is display-only, and a regenerated alert
+  // showing as unread again is the honest state for a fresh occurrence.
   const handleMarkNotificationRead = (id: string) => {
-    setState((prev) => ({
-      ...prev,
-      readNotificationIds: prev.readNotificationIds.includes(id)
+    const liveIds = new Set(notifications.map((n) => n.id));
+    liveIds.add(id);
+    setState((prev) => {
+      const next = prev.readNotificationIds.includes(id)
         ? prev.readNotificationIds
-        : [...prev.readNotificationIds, id],
-    }));
+        : [...prev.readNotificationIds, id];
+      return { ...prev, readNotificationIds: next.filter((rid) => liveIds.has(rid)) };
+    });
   };
 
   // Recurring Transaction CRUD

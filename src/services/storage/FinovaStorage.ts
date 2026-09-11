@@ -11,6 +11,7 @@ import {
   UserSettings,
 } from '../../types';
 import { sanitizeState, totalDropped } from './stateValidation';
+import { DateUtils } from '../../domain/date/DateUtils';
 
 export interface FinovaState {
   accounts: Account[];
@@ -47,6 +48,9 @@ export const INITIAL_CATEGORIES: Category[] = [
   { id: 'cat-freelance', userId: 'user-1', name: 'Freelance', type: 'INCOME', icon: 'Laptop', emoji: '💻', color: '#7C3AED', bgColor: '#EDE9FE', isSystem: true, isArchived: false },
   { id: 'cat-transfer', userId: 'user-1', name: 'Transfer', type: 'EXPENSE', icon: 'ArrowRightLeft', emoji: '🔄', color: '#475569', bgColor: '#F1F5F9', isSystem: true, isArchived: false },
 ];
+
+/** Newest authored demo date — the rebase anchor (lands on today at load). */
+export const DEMO_ANCHOR_ISO = '2026-05-17';
 
 export const DEMO_ACCOUNTS: Account[] = [
   {
@@ -429,16 +433,54 @@ export class FinovaStorage {
   }
 
   public static loadDemoShowcaseData(): FinovaState {
+    // Demo dates are authored once (May 2026) but must feel alive whenever
+    // they're loaded: rebase the whole fixture so the newest transaction
+    // lands exactly on today, preserving every relative gap (budgets stay
+    // current-window, the bill lands due-in-3-days, the goal stays future).
+    // Without this, demo mode opens on zeroes + a months-overdue bill.
+    // The DEMO_* constants are never mutated — everything is cloned first.
+    const todayISO = DateUtils.getTodayISO();
+    const offset = DateUtils.daysBetween(DEMO_ANCHOR_ISO, todayISO);
+    const shiftDay = (d: string): string => DateUtils.addDaysISO(d, offset);
+    const shiftStamp = (iso: string): string => {
+      const ms = new Date(iso).getTime();
+      return Number.isFinite(ms) ? new Date(ms + offset * 86400000).toISOString() : iso;
+    };
     const demo: FinovaState = {
-      accounts: DEMO_ACCOUNTS,
-      transactions: DEMO_TRANSACTIONS,
-      categories: INITIAL_CATEGORIES,
-      budgets: DEMO_BUDGETS,
-      goals: DEMO_GOALS,
-      commitments: DEMO_COMMITMENTS,
+      accounts: structuredClone(DEMO_ACCOUNTS).map((a) => ({
+        ...a,
+        createdAt: shiftStamp(a.createdAt),
+        updatedAt: shiftStamp(a.updatedAt),
+      })),
+      transactions: structuredClone(DEMO_TRANSACTIONS).map((t) => ({
+        ...t,
+        date: shiftDay(t.date),
+        createdAt: shiftStamp(t.createdAt),
+        updatedAt: shiftStamp(t.updatedAt),
+      })),
+      categories: structuredClone(INITIAL_CATEGORIES),
+      budgets: structuredClone(DEMO_BUDGETS).map((b) => ({
+        ...b,
+        startDate: shiftDay(b.startDate),
+        endDate: shiftDay(b.endDate),
+        createdAt: shiftStamp(b.createdAt),
+        updatedAt: shiftStamp(b.updatedAt),
+      })),
+      goals: structuredClone(DEMO_GOALS).map((g) => ({
+        ...g,
+        targetDate: g.targetDate ? shiftDay(g.targetDate) : g.targetDate,
+        createdAt: shiftStamp(g.createdAt),
+        updatedAt: shiftStamp(g.updatedAt),
+      })),
+      commitments: structuredClone(DEMO_COMMITMENTS).map((c) => ({
+        ...c,
+        dueDate: shiftDay(c.dueDate),
+        createdAt: shiftStamp(c.createdAt),
+        updatedAt: shiftStamp(c.updatedAt),
+      })),
       recurring: [],
       readNotificationIds: [],
-      settings: DEMO_SETTINGS,
+      settings: structuredClone(DEMO_SETTINGS),
     };
     this.saveState(demo);
     return demo;
