@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AuthService, AuthUserProfile } from '../services/supabase/authService';
 import { t } from '../i18n/core';
-import { notice } from '../components/ui/dialog';
+import { notice } from '../components/ui/dialogApi';
 import { PaldoLogo } from '../components/ui/PaldoLogo';
 import {
   Mail,

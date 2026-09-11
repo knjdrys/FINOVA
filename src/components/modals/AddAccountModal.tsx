@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useResyncOnOpen } from '../../hooks/useResyncOnOpen';
 import { Modal } from '../ui/Modal';
 import { Account, AccountType, CurrencyCode, POPULAR_BANKS_AND_WALLETS } from '../../types';
 import { MoneyValue } from '../../domain/money/MoneyValue';
@@ -32,28 +33,28 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
   // First commit wins per open — Modal unmounts on close, so this resets naturally.
   const submittedRef = useRef(false);
 
-  React.useEffect(() => {
-    if (isOpen) {
-      submittedRef.current = false;
-      if (editingAccount) {
-        setSelectedPresetId(editingAccount.bankPresetId || 'grbi');
-        setName(editingAccount.name);
-        setAccountType(editingAccount.type);
-        setAccountNumberMask(editingAccount.accountNumberMask || '');
-        setIncludeInTotalBalance(editingAccount.includeInTotalBalance);
-        setActualBalanceStr(
-          MoneyValue.fromMinorUnits(editingAccount.currentBalance, editingAccount.currency).getMajorUnits().toString()
-        );
-      } else {
-        setSelectedPresetId('grbi');
-        setName('GRBank');
-        setAccountType('BANK');
-        setAccountNumberMask('•••• 1234');
-        setInitialBalanceStr('0');
-        setIncludeInTotalBalance(true);
-      }
+  // Form re-sync on open/entity-switch (render-adjust via shared hook —
+  // the modal stays mounted while closed, so fields can't init from props).
+  useResyncOnOpen(isOpen, editingAccount?.id ?? 'new', () => {
+    submittedRef.current = false;
+    if (editingAccount) {
+      setSelectedPresetId(editingAccount.bankPresetId || 'grbi');
+      setName(editingAccount.name);
+      setAccountType(editingAccount.type);
+      setAccountNumberMask(editingAccount.accountNumberMask || '');
+      setIncludeInTotalBalance(editingAccount.includeInTotalBalance);
+      setActualBalanceStr(
+        MoneyValue.fromMinorUnits(editingAccount.currentBalance, editingAccount.currency).getMajorUnits().toString()
+      );
+    } else {
+      setSelectedPresetId('grbi');
+      setName('GRBank');
+      setAccountType('BANK');
+      setAccountNumberMask('•••• 1234');
+      setInitialBalanceStr('0');
+      setIncludeInTotalBalance(true);
     }
-  }, [isOpen, editingAccount]);
+  });
 
   const currencySymbol = MoneyValue.zero(currency).getCurrencySymbol();
   const isEdit = Boolean(editingAccount);

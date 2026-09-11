@@ -53,9 +53,8 @@ import {
   Tags,
 } from 'lucide-react';
 import { t, SUPPORTED_LANGS } from '../i18n';
-import { confirmDialog, notice } from '../components/ui/dialog';
+import { confirmDialog, notice } from '../components/ui/dialogApi';
 import { AppLockService } from '../services/security/AppLockService';
-import { getAutoLockMs, setAutoLockMs } from '../components/security/AppLockGuard';
 import { osPermission, requestOsPermission, osNotifySupported, type OsPermission } from '../services/notification/browserNotify';
 
 interface SettingsScreenProps {
@@ -125,7 +124,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [pinConfirm, setPinConfirm] = useState('');
   const [lockError, setLockError] = useState<string | null>(null);
   const [lockBusy, setLockBusy] = useState(false);
-  const [autoLockMs, setAutoLockMsState] = useState(() => getAutoLockMs());
+  const [autoLockMs, setAutoLockMsState] = useState(() => AppLockService.getAutoLockMs());
 
   const enableLock = async () => {
     setLockError(null);
@@ -1007,7 +1006,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 value={autoLockMs}
                 onChange={(e) => {
                   const ms = Number(e.target.value);
-                  setAutoLockMs(ms);
+                  AppLockService.setAutoLockMs(ms);
                   setAutoLockMsState(ms);
                 }}
                 className="rounded-xl border border-(--line) bg-(--surface) px-2.5 py-2 text-xs font-bold text-(--ink)"

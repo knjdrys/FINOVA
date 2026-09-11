@@ -15,38 +15,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { Modal } from './Modal';
 import { t } from '../../i18n/core';
-
-export interface ConfirmOptions {
-  title: string;
-  message?: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  /** Destructive actions render the confirm button in rose. */
-  danger?: boolean;
-}
-
-interface DialogState {
-  confirm: ((options: ConfirmOptions) => Promise<boolean>) | null;
-  notice: ((message: string) => void) | null;
-}
-
-const handle: DialogState = { confirm: null, notice: null };
-
-/** Ask the user to confirm a destructive or irreversible action. */
-export function confirmDialog(options: ConfirmOptions): Promise<boolean> {
-  if (handle.confirm) return handle.confirm(options);
-  // Fallback keeps behavior truthful if the provider is somehow absent.
-  return Promise.resolve(window.confirm(`${options.title}${options.message ? `\n\n${options.message}` : ''}`));
-}
-
-/** Show a short informational message (replaces alert()). */
-export function notice(message: string): void {
-  if (handle.notice) {
-    handle.notice(message);
-    return;
-  }
-  window.alert(message);
-}
+import { ConfirmOptions, dialogHandle } from './dialogApi';
 
 export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [confirmState, setConfirmState] = useState<(ConfirmOptions & { resolve: (v: boolean) => void }) | null>(null);
@@ -65,11 +34,11 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Register the imperative handles for this mounted provider.
   useEffect(() => {
-    handle.confirm = showConfirm;
-    handle.notice = showToast;
+    dialogHandle.confirm = showConfirm;
+    dialogHandle.notice = showToast;
     return () => {
-      handle.confirm = null;
-      handle.notice = null;
+      dialogHandle.confirm = null;
+      dialogHandle.notice = null;
     };
   }, [showConfirm, showToast]);
 

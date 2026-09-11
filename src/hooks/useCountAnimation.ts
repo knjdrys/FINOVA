@@ -9,9 +9,21 @@ export function useCountAnimation(targetMinor: number, opts?: { duration?: numbe
   const fromRef = useRef(targetMinor);
   const rafRef = useRef<number | null>(null);
 
+  // Reduced-motion snap happens during render (the documented alternative to
+  // setState-in-effect): no extra pass, no animation frames scheduled. The
+  // key covers target AND preference so flipping the OS setting mid-session
+  // snaps immediately too.
+  const [snapKey, setSnapKey] = useState<string | null>(null);
+  const wantKey = reduced ? `r${targetMinor}` : null;
+  if (wantKey !== null && snapKey !== wantKey) {
+    setSnapKey(wantKey);
+    setDisplay(targetMinor);
+  }
+
   useEffect(() => {
     if (reduced) {
-      setDisplay(targetMinor);
+      // Keep the animation origin pinned while snapped (ref writes belong
+      // in effects; the display value itself snaps during render above).
       fromRef.current = targetMinor;
       return;
     }

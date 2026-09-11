@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Account,
   Budget,
@@ -119,10 +119,14 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({
   sectionNonce,
 }) => {
   const [subTab, setSubTab] = useState<PlansSubTab>(initialSection || 'TIMELINE');
-  // Deep-link: when Home sends us to a section, honor it even if already mounted.
-  useEffect(() => {
+  // Deep-link: when Home sends us to a section, honor it even if already
+  // mounted. Render-adjust (not an effect): the nonce bumps exactly when a
+  // new section is requested, so this fires once per deep-link, same commit.
+  const [lastDeepLink, setLastDeepLink] = useState(sectionNonce);
+  if (sectionNonce !== lastDeepLink) {
+    setLastDeepLink(sectionNonce);
     if (initialSection) setSubTab(initialSection);
-  }, [initialSection, sectionNonce]);
+  }
   const currency = (settings.currency || accounts[0]?.currency || 'PHP') as CurrencyCode;
 
   // Timeline arrives as a prop (App's single source, shared with Risks and

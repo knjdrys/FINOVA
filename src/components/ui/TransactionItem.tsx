@@ -64,30 +64,6 @@ const ICON_MAP: Record<string, LucideIcon> = {
   CircleDollarSign,
 };
 
-/** Icon choices offered when creating a custom category. */
-export const CATEGORY_ICON_CHOICES: Array<{ name: string; Icon: LucideIcon }> = [
-  { name: 'Utensils', Icon: Utensils },
-  { name: 'ShoppingCart', Icon: ShoppingCart },
-  { name: 'Coffee', Icon: Coffee },
-  { name: 'Zap', Icon: Zap },
-  { name: 'Tv', Icon: Tv },
-  { name: 'Car', Icon: Car },
-  { name: 'Plane', Icon: Plane },
-  { name: 'ShoppingBag', Icon: ShoppingBag },
-  { name: 'Gift', Icon: Gift },
-  { name: 'HeartPulse', Icon: HeartPulse },
-  { name: 'Dumbbell', Icon: Dumbbell },
-  { name: 'Briefcase', Icon: Briefcase },
-  { name: 'Laptop', Icon: Laptop },
-  { name: 'BookOpen', Icon: BookOpen },
-  { name: 'Gamepad2', Icon: Gamepad2 },
-  { name: 'Music', Icon: Music },
-  { name: 'Baby', Icon: Baby },
-  { name: 'PawPrint', Icon: PawPrint },
-  { name: 'Wrench', Icon: Wrench },
-  { name: 'CircleDollarSign', Icon: CircleDollarSign },
-];
-
 export const TransactionItem: React.FC<TransactionItemProps> = ({
   transaction,
   category,

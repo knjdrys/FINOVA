@@ -4,7 +4,7 @@ import { Account, CurrencyCode, UserSettings, ALL_CURRENCIES } from '../../types
 import { AuthUserProfile } from '../../services/supabase/authService';
 import type { SyncStatus } from '../../services/sync/syncQueue';
 import { useI18n } from '../../i18n';
-import { confirmDialog } from '../ui/dialog';
+import { confirmDialog } from '../ui/dialogApi';
 
 interface HeaderProps {
   settings: UserSettings;

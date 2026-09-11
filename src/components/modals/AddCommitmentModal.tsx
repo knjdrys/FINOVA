@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
+import { useResyncOnOpen } from '../../hooks/useResyncOnOpen';
 import { MoneyCommitment, Account, Category, CurrencyCode, CommitmentType, CommitmentPriority } from '../../types';
 import { Modal } from '../ui/Modal';
 import { Field } from '../ui/Field';
@@ -40,23 +41,23 @@ export const AddCommitmentModal: React.FC<AddCommitmentModalProps> = ({
   // First commit wins per open — Modal unmounts on close, so this resets naturally.
   const submittedRef = useRef(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      submittedRef.current = false;
-      setTitle(editingCommitment?.title || preset?.title || '');
-      setAmountStr(editingCommitment ? MoneyValue.fromMinorUnits(editingCommitment.amount, editingCommitment.currency).format({ includeSymbol: false }) : '');
-      setDueDate(editingCommitment?.dueDate || DateUtils.addDaysISO(DateUtils.getTodayISO(), 7));
-      setType(editingCommitment?.type || preset?.type || 'BILL');
-      setPriority(editingCommitment?.priority || 'ESSENTIAL');
-      setAccountId(editingCommitment?.accountId || accounts[0]?.id || '');
-      setCategoryId(
-        editingCommitment?.categoryId ||
-          (preset?.type === 'EXPECTED_INCOME' || preset?.type === 'RECURRING_INCOME' ? 'cat-salary' : 'cat-bills')
-      );
-      setAutoPost(editingCommitment?.autoPostEnabled ?? false);
-      setError(null);
-    }
-  }, [isOpen, editingCommitment, preset, accounts]);
+  // Form re-sync on open/entity-switch (render-adjust via shared hook —
+  // the modal stays mounted while closed, so fields can't init from props).
+  useResyncOnOpen(isOpen, `${editingCommitment?.id ?? 'new'}:${preset?.type ?? ''}:${preset?.title ?? ''}:${accounts[0]?.id ?? ''}`, () => {
+    submittedRef.current = false;
+    setTitle(editingCommitment?.title || preset?.title || '');
+    setAmountStr(editingCommitment ? MoneyValue.fromMinorUnits(editingCommitment.amount, editingCommitment.currency).format({ includeSymbol: false }) : '');
+    setDueDate(editingCommitment?.dueDate || DateUtils.addDaysISO(DateUtils.getTodayISO(), 7));
+    setType(editingCommitment?.type || preset?.type || 'BILL');
+    setPriority(editingCommitment?.priority || 'ESSENTIAL');
+    setAccountId(editingCommitment?.accountId || accounts[0]?.id || '');
+    setCategoryId(
+      editingCommitment?.categoryId ||
+        (preset?.type === 'EXPECTED_INCOME' || preset?.type === 'RECURRING_INCOME' ? 'cat-salary' : 'cat-bills')
+    );
+    setAutoPost(editingCommitment?.autoPostEnabled ?? false);
+    setError(null);
+  });
 
   const save = () => {
     const amount = MoneyValue.parse(amountStr || '0', currency).getMinorUnits();

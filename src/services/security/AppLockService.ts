@@ -15,6 +15,7 @@
  */
 
 const LOCK_KEY = 'FINOVA_APP_LOCK_V1';
+const TIMEOUT_KEY = 'FINOVA_APP_LOCK_TIMEOUT_MS';
 const UNLOCK_KEY = 'FINOVA_APP_UNLOCKED';
 const ITERATIONS = 210_000;
 const MAX_ATTEMPTS_BEFORE_BACKOFF = 5;
@@ -64,6 +65,16 @@ function writeRecord(rec: LockRecord): void {
 }
 
 export const AppLockService = {
+  /** Auto-relock delay in ms (0 = only on blur/hide). UI preference, not a secret. */
+  getAutoLockMs(): number {
+    const raw = Number(localStorage.getItem(TIMEOUT_KEY) || '60000');
+    return Number.isFinite(raw) && raw >= 0 ? raw : 60000;
+  },
+
+  setAutoLockMs(ms: number): void {
+    localStorage.setItem(TIMEOUT_KEY, String(ms));
+  },
+
   isSupported(): boolean {
     return typeof crypto !== 'undefined' && typeof crypto.subtle !== 'undefined';
   },

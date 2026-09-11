@@ -8,17 +8,6 @@ import { Lock, Delete, ShieldCheck } from 'lucide-react';
 import { AppLockService } from '../../services/security/AppLockService';
 import { t } from '../../i18n/core';
 
-const TIMEOUT_KEY = 'FINOVA_APP_LOCK_TIMEOUT_MS';
-
-export function getAutoLockMs(): number {
-  const raw = Number(localStorage.getItem(TIMEOUT_KEY) || '60000');
-  return Number.isFinite(raw) && raw >= 0 ? raw : 60000;
-}
-
-export function setAutoLockMs(ms: number): void {
-  localStorage.setItem(TIMEOUT_KEY, String(ms));
-}
-
 export const AppLockGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [locked, setLocked] = useState(() => AppLockService.isConfigured() && !AppLockService.isUnlocked());
   const [pin, setPin] = useState('');
@@ -42,7 +31,7 @@ export const AppLockGuard: React.FC<{ children: React.ReactNode }> = ({ children
         if (document.visibilityState === 'hidden') {
           hiddenAt = Date.now();
         } else if (document.visibilityState === 'visible' && hiddenAt !== null) {
-          const ms = getAutoLockMs();
+          const ms = AppLockService.getAutoLockMs();
           // Lock if hidden for longer than autoLockMs (or a 10s grace period if autoLockMs is 0)
           if (ms > 0 && Date.now() - hiddenAt >= ms) {
             lock();
@@ -52,7 +41,7 @@ export const AppLockGuard: React.FC<{ children: React.ReactNode }> = ({ children
       };
       const arm = () => {
         if (timerRef.current) window.clearTimeout(timerRef.current);
-        const ms = getAutoLockMs();
+        const ms = AppLockService.getAutoLockMs();
         if (ms > 0) timerRef.current = window.setTimeout(lock, ms);
       };
       const events = ['pointerdown', 'keydown'] as const;

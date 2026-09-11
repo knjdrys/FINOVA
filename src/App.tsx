@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { I18nProvider } from './i18n';
 import { t } from './i18n/core';
-import { DialogProvider, confirmDialog, notice } from './components/ui/dialog';
+import { DialogProvider } from './components/ui/dialog';
+import { confirmDialog, notice } from './components/ui/dialogApi';
 import { AppLockGuard } from './components/security/AppLockGuard';
 import {
   Account,

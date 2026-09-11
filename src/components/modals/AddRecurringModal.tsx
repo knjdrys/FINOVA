@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
+import { useResyncOnOpen } from '../../hooks/useResyncOnOpen';
 import { RecurringTransaction, Account, Category, CurrencyCode, TransactionType, RecurringFrequency } from '../../types';
 import { Modal } from '../ui/Modal';
 import { Field } from '../ui/Field';
@@ -40,22 +41,22 @@ export const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
   // First commit wins per open — Modal unmounts on close, so this resets naturally.
   const submittedRef = useRef(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      submittedRef.current = false;
-      setTitle(editingRecurring?.title || '');
-      setAmountStr(editingRecurring ? MoneyValue.fromMinorUnits(editingRecurring.amount, editingRecurring.currency || currency).format({ includeSymbol: false }) : '');
-      setType(editingRecurring?.type || 'EXPENSE');
-      setFrequency(editingRecurring?.frequency || 'MONTHLY');
-      setStartDate(editingRecurring?.startDate || DateUtils.getTodayISO());
-      setAccountId(editingRecurring?.accountId || accounts[0]?.id || '');
-      setCategoryId(editingRecurring?.categoryId || 'cat-bills');
-      setEndDate(editingRecurring?.endDate || '');
-      setAutoPost(editingRecurring?.autoPostEnabled ?? editingRecurring?.reminderEnabled ?? true);
-      setNextOccurrence(editingRecurring?.nextOccurrence || '');
-      setError(null);
-    }
-  }, [isOpen, editingRecurring, accounts, currency]);
+  // Form re-sync on open/entity-switch (render-adjust via shared hook —
+  // the modal stays mounted while closed, so fields can't init from props).
+  useResyncOnOpen(isOpen, `${editingRecurring?.id ?? 'new'}:${accounts[0]?.id ?? ''}:${currency}`, () => {
+    submittedRef.current = false;
+    setTitle(editingRecurring?.title || '');
+    setAmountStr(editingRecurring ? MoneyValue.fromMinorUnits(editingRecurring.amount, editingRecurring.currency || currency).format({ includeSymbol: false }) : '');
+    setType(editingRecurring?.type || 'EXPENSE');
+    setFrequency(editingRecurring?.frequency || 'MONTHLY');
+    setStartDate(editingRecurring?.startDate || DateUtils.getTodayISO());
+    setAccountId(editingRecurring?.accountId || accounts[0]?.id || '');
+    setCategoryId(editingRecurring?.categoryId || 'cat-bills');
+    setEndDate(editingRecurring?.endDate || '');
+    setAutoPost(editingRecurring?.autoPostEnabled ?? editingRecurring?.reminderEnabled ?? true);
+    setNextOccurrence(editingRecurring?.nextOccurrence || '');
+    setError(null);
+  });
 
   const save = () => {
     const amount = MoneyValue.parse(amountStr || '0', currency).getMinorUnits();

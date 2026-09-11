@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
+import { useResyncOnOpen } from '../../hooks/useResyncOnOpen';
 import { Budget, Category, CurrencyCode } from '../../types';
 import { Modal } from '../ui/Modal';
 import { Field } from '../ui/Field';
@@ -32,17 +33,17 @@ export const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
   // First commit wins per open — Modal unmounts on close, so this resets naturally.
   const submittedRef = useRef(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      submittedRef.current = false;
-      setName(editingBudget?.name || '');
-      setAmountStr(editingBudget ? MoneyValue.fromMinorUnits(editingBudget.amount, currency).format({ includeSymbol: false }) : '');
-      setPeriod((editingBudget?.period as any) || 'MONTHLY');
-      setCategoryIds(editingBudget?.categoryIds || []);
-      setRollover(editingBudget?.rolloverUnused || false);
-      setError(null);
-    }
-  }, [isOpen, editingBudget, currency]);
+  // Form re-sync on open/entity-switch (render-adjust via shared hook —
+  // the modal stays mounted while closed, so fields can't init from props).
+  useResyncOnOpen(isOpen, `${editingBudget?.id ?? 'new'}:${currency}`, () => {
+    submittedRef.current = false;
+    setName(editingBudget?.name || '');
+    setAmountStr(editingBudget ? MoneyValue.fromMinorUnits(editingBudget.amount, currency).format({ includeSymbol: false }) : '');
+    setPeriod((editingBudget?.period as any) || 'MONTHLY');
+    setCategoryIds(editingBudget?.categoryIds || []);
+    setRollover(editingBudget?.rolloverUnused || false);
+    setError(null);
+  });
 
   const save = () => {
     const amount = MoneyValue.parse(amountStr || '0', currency).getMinorUnits();

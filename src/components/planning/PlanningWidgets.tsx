@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useResyncOnOpen } from '../../hooks/useResyncOnOpen';
 import { AlertTriangle, CheckCircle2, PiggyBank, Target, TrendingDown, Wallet } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { MoneyValue } from '../../domain/money/MoneyValue';
@@ -259,10 +260,11 @@ export const FundGoalModal: React.FC<{
   const [amountStr, setAmountStr] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  // Fresh amount per goal (the modal stays mounted between goals).
+  useResyncOnOpen(goal !== null, goal?.id ?? '', () => {
     setAmountStr('');
     setError(null);
-  }, [goal?.id]);
+  });
 
   if (!goal) return null;
 

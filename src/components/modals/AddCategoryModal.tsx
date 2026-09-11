@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
+import { useResyncOnOpen } from '../../hooks/useResyncOnOpen';
 import { Category, CategoryType } from '../../types';
 import { Modal } from '../ui/Modal';
 import { Field } from '../ui/Field';
-import { CATEGORY_ICON_CHOICES } from '../ui/TransactionItem';
+import { CATEGORY_ICON_CHOICES } from '../ui/categoryIcons';
 import { CategoryEngine } from '../../domain/category/CategoryEngine';
 import { t } from '../../i18n/core';
 
@@ -30,16 +31,16 @@ export const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const submittedRef = useRef(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      submittedRef.current = false;
-      setName(editingCategory?.name || '');
-      setType(editingCategory?.type || 'EXPENSE');
-      setColor(editingCategory?.color || COLORS[0]);
-      setIcon(editingCategory?.icon || CATEGORY_ICON_CHOICES[0].name);
-      setError(null);
-    }
-  }, [isOpen, editingCategory]);
+  // Form re-sync on open/entity-switch (render-adjust via shared hook —
+  // the modal stays mounted while closed, so fields can't init from props).
+  useResyncOnOpen(isOpen, `${editingCategory?.id ?? 'new'}`, () => {
+    submittedRef.current = false;
+    setName(editingCategory?.name || '');
+    setType(editingCategory?.type || 'EXPENSE');
+    setColor(editingCategory?.color || COLORS[0]);
+    setIcon(editingCategory?.icon || CATEGORY_ICON_CHOICES[0].name);
+    setError(null);
+  });
 
   const save = () => {
     const err = CategoryEngine.validateName(name, type, categories, editingCategory?.id);

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Account, Category, Transaction, TransactionType, UserSettings } from '../types';
 import { WaveCard } from '../components/ui/WaveCard';
 import { FilterChips } from '../components/ui/FilterChips';
@@ -9,7 +9,7 @@ import { TransactionEngine, TransactionFilterOptions } from '../domain/transacti
 import { ChevronLeft, Download, Search, SlidersHorizontal, X, ReceiptText, Upload } from 'lucide-react';
 import { FinovaStorage } from '../services/storage/FinovaStorage';
 import { t } from '../i18n/core';
-import { notice } from '../components/ui/dialog';
+import { notice } from '../components/ui/dialogApi';
 
 interface AllExpensesScreenProps {
   accounts: Account[];
@@ -168,10 +168,15 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
       : { label: t('tx.netFlow'), amount: incomeMinor - expenseMinor };
   const summaryMoney = MoneyValue.fromMinorUnits(Math.abs(summary.amount), currency);
 
-  // Reset the render cap whenever the result set changes.
-  useEffect(() => {
+  // Reset the render cap whenever the result set changes. Render-adjust
+  // (not an effect): same signature the effect watched, applied in the same
+  // commit instead of a trailing pass.
+  const filterSig = JSON.stringify([searchQuery, typeFilter, period, selectedCategoryId, accountId, minStr, maxStr, sortBy, customStart, customEnd, transactions.length]);
+  const [lastFilterSig, setLastFilterSig] = useState(filterSig);
+  if (filterSig !== lastFilterSig) {
+    setLastFilterSig(filterSig);
     setVisibleLimit(120);
-  }, [searchQuery, typeFilter, period, selectedCategoryId, accountId, minStr, maxStr, sortBy, customStart, customEnd, transactions.length]);
+  }
 
   let renderedRows = 0;
   const visibleDates = sortedDates.filter((dateStr) => {

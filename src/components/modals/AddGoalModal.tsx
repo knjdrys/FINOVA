@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
+import { useResyncOnOpen } from '../../hooks/useResyncOnOpen';
 import { Account, SavingsGoal, CurrencyCode, GoalPriority } from '../../types';
 import { Modal } from '../ui/Modal';
 import { Field } from '../ui/Field';
@@ -33,19 +34,19 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onS
 
   const sameCurrencyAccounts = accounts.filter((a) => !a.isArchived && a.currency === currency);
 
-  useEffect(() => {
-    if (isOpen) {
-      submittedRef.current = false;
-      setName(editingGoal?.name || preset?.name || '');
-      setTargetStr(editingGoal ? MoneyValue.fromMinorUnits(editingGoal.targetAmount, currency).format({ includeSymbol: false }) : preset?.targetAmount ? MoneyValue.fromMinorUnits(preset.targetAmount, currency).format({ includeSymbol: false }) : '');
-      setCurrentStr(editingGoal ? MoneyValue.fromMinorUnits(editingGoal.currentAmount, currency).format({ includeSymbol: false }) : '0');
-      setTargetDate(editingGoal?.targetDate || DateUtils.addDaysISO(DateUtils.getTodayISO(), 180));
-      setPriority(editingGoal?.priority || 'ESSENTIAL');
-      setAccountId(editingGoal?.accountId || '');
-      setColor(editingGoal?.color || COLORS[0]);
-      setError(null);
-    }
-  }, [isOpen, editingGoal, preset, currency]);
+  // Form re-sync on open/entity-switch (render-adjust via shared hook —
+  // the modal stays mounted while closed, so fields can't init from props).
+  useResyncOnOpen(isOpen, `${editingGoal?.id ?? 'new'}:${preset?.name ?? ''}:${preset?.targetAmount ?? ''}:${currency}`, () => {
+    submittedRef.current = false;
+    setName(editingGoal?.name || preset?.name || '');
+    setTargetStr(editingGoal ? MoneyValue.fromMinorUnits(editingGoal.targetAmount, currency).format({ includeSymbol: false }) : preset?.targetAmount ? MoneyValue.fromMinorUnits(preset.targetAmount, currency).format({ includeSymbol: false }) : '');
+    setCurrentStr(editingGoal ? MoneyValue.fromMinorUnits(editingGoal.currentAmount, currency).format({ includeSymbol: false }) : '0');
+    setTargetDate(editingGoal?.targetDate || DateUtils.addDaysISO(DateUtils.getTodayISO(), 180));
+    setPriority(editingGoal?.priority || 'ESSENTIAL');
+    setAccountId(editingGoal?.accountId || '');
+    setColor(editingGoal?.color || COLORS[0]);
+    setError(null);
+  });
 
   const save = () => {
     const target = MoneyValue.parse(targetStr || '0', currency).getMinorUnits();
