@@ -3,6 +3,7 @@ import { Modal } from '../ui/Modal';
 import { CurrencyCode } from '../../types';
 import { MoneyValue } from '../../domain/money/MoneyValue';
 import { GrbiLogo } from '../ui/GrbiLogo';
+import { useI18n } from '../../i18n';
 import {
   Sparkles,
   ShieldCheck,
@@ -41,34 +42,35 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
   onClose,
   currency = 'PHP',
 }) => {
+  const { t } = useI18n();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const currencySymbol = MoneyValue.zero(currency).getCurrencySymbol();
 
   const steps: TutorialStep[] = [
     {
       id: 1,
-      tag: 'HOME OVERVIEW',
-      title: 'Spending Summary & Time Filters',
-      subtitle: 'See exactly how much you have spent today, this week, or this month.',
+      tag: t('tutorial.s1.tag'),
+      title: t('tutorial.s1.title'),
+      subtitle: t('tutorial.s1.subtitle'),
       icon: <Sparkles className="h-6 w-6 text-(--accent)" />,
       accentColor: '#122A1E',
       bullets: [
         {
           icon: <TrendingUp className="h-4 w-4 text-emerald-700" />,
-          label: 'Simple Time Filters',
-          text: 'Tap Today, This Week, or This Month to switch views anytime.',
+          label: t('tutorial.s1.b1label'),
+          text: t('tutorial.s1.b1text'),
         },
         {
           icon: <Zap className="h-4 w-4 text-emerald-700" />,
-          label: 'Exact Math',
-          text: 'Every cent and peso is counted accurately with zero calculation errors.',
+          label: t('tutorial.s1.b2label'),
+          text: t('tutorial.s1.b2text'),
         },
       ],
       interactivePreview: (sym) => (
         <div className="rounded-2xl bg-gradient-to-br from-[#122A1E] via-[#163325] to-[#183625] p-4 text-white shadow-md space-y-2 border border-emerald-800/40 animate-pulse">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-black uppercase tracking-wider text-emerald-300">
-              Spending Summary
+              {t('tutorial.s1.pSummary')}
             </span>
             <span className="flex h-2 w-2 rounded-full bg-(--accent)"></span>
           </div>
@@ -76,29 +78,29 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
             {sym}10,000<span className="text-emerald-300 text-lg">.00</span>
           </p>
           <div className="flex items-center justify-between pt-1 text-[11px] text-emerald-200">
-            <span>Spent Today</span>
-            <span className="font-bold text-(--accent)">Budget {sym}30,000</span>
+            <span>{t('tutorial.s1.pSpent')}</span>
+            <span className="font-bold text-(--accent)">{t('tutorial.s1.pBudget', { sym })}</span>
           </div>
         </div>
       ),
     },
     {
       id: 2,
-      tag: 'SAFE SPENDING',
-      title: 'Daily Safe-to-Spend Limit',
-      subtitle: 'Never accidentally spend money you need for bills, savings, or emergencies.',
+      tag: t('tutorial.s2.tag'),
+      title: t('tutorial.s2.title'),
+      subtitle: t('tutorial.s2.subtitle'),
       icon: <ShieldCheck className="h-6 w-6 text-emerald-700" />,
       accentColor: '#059669',
       bullets: [
         {
           icon: <ShieldCheck className="h-4 w-4 text-emerald-700" />,
-          label: 'How It Works',
-          text: 'We subtract your upcoming bills and savings from your balance, then divide what is left by your days remaining.',
+          label: t('tutorial.s2.b1label'),
+          text: t('tutorial.s2.b1text'),
         },
         {
           icon: <Zap className="h-4 w-4 text-emerald-700" />,
-          label: 'Overspending Warnings',
-          text: 'If your upcoming bills are higher than your money, PALDO warns you right away so you can adjust.',
+          label: t('tutorial.s2.b2label'),
+          text: t('tutorial.s2.b2text'),
         },
       ],
       interactivePreview: (sym) => (
@@ -106,16 +108,16 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] font-black text-emerald-900 uppercase">
-                Daily Safe Limit
+                {t('tutorial.s2.pLimit')}
               </span>
               <span className="rounded-full bg-(--accent) text-(--brand) px-1.5 py-0.2 text-[11px] font-black">
-                Safe to Spend
+                {t('tutorial.s2.pSafe')}
               </span>
             </div>
-            <span className="text-xs font-black text-emerald-700">13 Days Left</span>
+            <span className="text-xs font-black text-emerald-700">{t('tutorial.daysLeft')}</span>
           </div>
           <div className="text-xl font-black text-(--ink)">
-            {sym}288.46<span className="text-xs text-(--ink-3) font-semibold"> / day</span>
+            {sym}288.46<span className="text-xs text-(--ink-3) font-semibold"> {t('tutorial.perDay')}</span>
           </div>
           <div className="h-1.5 w-full rounded-full bg-emerald-100 overflow-hidden">
             <div className="h-full bg-emerald-600 rounded-full w-2/3"></div>
@@ -125,39 +127,39 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
     },
     {
       id: 3,
-      tag: 'PAYDAY SCHEDULE',
-      title: 'Twice-a-Month Payday (15-Day Cycle)',
-      subtitle: 'Great for people who get paid on the 15th and end of the month.',
+      tag: t('tutorial.s3.tag'),
+      title: t('tutorial.s3.title'),
+      subtitle: t('tutorial.s3.subtitle'),
       icon: <Calendar className="h-6 w-6 text-emerald-700" />,
       accentColor: '#047857',
       bullets: [
         {
           icon: <Calendar className="h-4 w-4 text-emerald-700" />,
-          label: '1st & 2nd Half Periods',
-          text: 'Splits your month into two 15-day periods (1st to 15th, and 16th to end of month).',
+          label: t('tutorial.s3.b1label'),
+          text: t('tutorial.s3.b1text'),
         },
         {
           icon: <TrendingUp className="h-4 w-4 text-emerald-700" />,
-          label: 'Half-Month Budget',
-          text: 'Automatically gives you a budget for each 15-day paycheck period.',
+          label: t('tutorial.s3.b2label'),
+          text: t('tutorial.s3.b2text'),
         },
       ],
       interactivePreview: (sym) => (
         <div className="rounded-2xl bg-gradient-to-br from-[#122A1E] via-[#163325] to-[#183625] p-3.5 text-white shadow-sm space-y-2 border border-emerald-800/40">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-black uppercase text-emerald-300">
-              1st Pay Period (1st - 15th)
+              {t('tutorial.s3.pPeriod')}
             </span>
             <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[11px] font-black text-(--accent) border border-emerald-300/30">
-              13 Days Left
+              {t('tutorial.daysLeft')}
             </span>
           </div>
           <div className="flex items-baseline justify-between">
-            <span className="text-xs text-emerald-200">Spent in this period</span>
+            <span className="text-xs text-emerald-200">{t('tutorial.s3.pSpent')}</span>
             <span className="text-base font-black text-(--accent)">{sym}2,750.00</span>
           </div>
           <div className="rounded-lg bg-[#0d1f16] p-2 text-[11px] text-emerald-100 flex justify-between border border-emerald-800/40">
-            <span>15-Day Budget:</span>
+            <span>{t('tutorial.s3.pBudget')}</span>
             <span className="font-black text-white">{sym}15,000.00</span>
           </div>
         </div>
@@ -165,21 +167,21 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
     },
     {
       id: 4,
-      tag: 'BANK ACCOUNTS',
-      title: 'Real Banks, Rural Banks & E-Wallets',
-      subtitle: 'Add GRBank, BPI, BDO, GCash, Maya, or cash.',
+      tag: t('tutorial.s4.tag'),
+      title: t('tutorial.s4.title'),
+      subtitle: t('tutorial.s4.subtitle'),
       icon: <Building2 className="h-6 w-6 text-blue-700" />,
       accentColor: '#1E40AF',
       bullets: [
         {
           icon: <Building2 className="h-4 w-4 text-blue-700" />,
-          label: 'Popular Bank Presets',
-          text: 'Select GRBank, BPI, GCash, Maya, or create custom accounts.',
+          label: t('tutorial.s4.b1label'),
+          text: t('tutorial.s4.b1text'),
         },
         {
           icon: <Zap className="h-4 w-4 text-blue-700" />,
-          label: 'Move Money Easily',
-          text: 'Transferring money between accounts automatically updates both balances with zero errors.',
+          label: t('tutorial.s4.b2label'),
+          text: t('tutorial.s4.b2text'),
         },
       ],
       interactivePreview: (sym) => (
@@ -191,7 +193,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
               </div>
               <div>
                 <span className="text-xs font-black text-(--ink) block">GRBank</span>
-                <span className="text-[11px] text-(--ink-3) font-semibold">Bank • •••• 5678</span>
+                <span className="text-[11px] text-(--ink-3) font-semibold">{t('tutorial.s4.pBank')} • •••• 5678</span>
               </div>
             </div>
             <span className="text-xs font-black text-(--ink)">{sym}45,000.00</span>
@@ -203,7 +205,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
               </div>
               <div>
                 <span className="text-xs font-black text-(--ink) block">GCash Wallet</span>
-                <span className="text-[11px] text-(--ink-3) font-semibold">E-Wallet • •••• 0917</span>
+                <span className="text-[11px] text-(--ink-3) font-semibold">{t('tutorial.s4.pEwallet')} • •••• 0917</span>
               </div>
             </div>
             <span className="text-xs font-black text-(--ink)">{sym}11,180.00</span>
@@ -213,21 +215,21 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
     },
     {
       id: 5,
-      tag: 'FAST ENTRY',
-      title: 'Quick-Add Button & Easy Deletes',
-      subtitle: 'Add expenses, paychecks, or money transfers in just 5 seconds.',
+      tag: t('tutorial.s5.tag'),
+      title: t('tutorial.s5.title'),
+      subtitle: t('tutorial.s5.subtitle'),
       icon: <Plus className="h-6 w-6 text-(--brand)" />,
       accentColor: '#122A1E',
       bullets: [
         {
           icon: <Plus className="h-4 w-4 text-emerald-700" />,
-          label: 'Always Accessible',
-          text: 'Tap the bright (+) button at the bottom of the screen anytime to add a transaction.',
+          label: t('tutorial.s5.b1label'),
+          text: t('tutorial.s5.b1text'),
         },
         {
           icon: <Zap className="h-4 w-4 text-emerald-700" />,
-          label: 'Safe to Delete',
-          text: 'If you made a mistake and delete a transaction, your bank balance automatically corrects itself.',
+          label: t('tutorial.s5.b2label'),
+          text: t('tutorial.s5.b2text'),
         },
       ],
       interactivePreview: () => (
@@ -237,8 +239,8 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
               <Plus className="h-6 w-6 stroke-[3]" />
             </div>
             <div className="text-left">
-              <span className="text-xs font-black text-(--ink) block">Quick-Add Button</span>
-              <span className="text-[11px] text-(--ink-3) font-medium">Available on every screen</span>
+              <span className="text-xs font-black text-(--ink) block">{t('tutorial.s5.pButton')}</span>
+              <span className="text-[11px] text-(--ink-3) font-medium">{t('tutorial.s5.pEverywhere')}</span>
             </div>
           </div>
         </div>
@@ -246,56 +248,56 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
     },
     {
       id: 6,
-      tag: 'TEST PURCHASES',
-      title: 'What-If Purchase Tester',
-      subtitle: 'Test how a big purchase or subscription will affect your daily budget before buying.',
+      tag: t('tutorial.s6.tag'),
+      title: t('tutorial.s6.title'),
+      subtitle: t('tutorial.s6.subtitle'),
       icon: <HelpCircle className="h-6 w-6 text-purple-700" />,
       accentColor: '#7C3AED',
       bullets: [
         {
           icon: <HelpCircle className="h-4 w-4 text-purple-700" />,
-          label: 'See New Daily Limit',
-          text: 'Shows exactly how your daily spending limit will change before you spend any real money.',
+          label: t('tutorial.s6.b1label'),
+          text: t('tutorial.s6.b1text'),
         },
         {
           icon: <ShieldCheck className="h-4 w-4 text-purple-700" />,
-          label: 'Goal Protection',
-          text: 'Tells you if a purchase is safe or if it will put you in danger of running out of money.',
+          label: t('tutorial.s6.b2label'),
+          text: t('tutorial.s6.b2text'),
         },
       ],
       interactivePreview: (sym) => (
         <div className="rounded-2xl bg-purple-50/90 p-3.5 border border-purple-200 text-purple-950 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-black uppercase text-purple-800">
-              Test: New Laptop ({sym}45,000)
+              {t('tutorial.s6.pTest', { sym })}
             </span>
             <span className="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[11px] font-black">
-              VERDICT: SAFE
+              {t('tutorial.s6.pVerdict')}
             </span>
           </div>
           <p className="text-xs font-semibold text-purple-900">
-            Daily limit changes by <span className="font-black text-rose-600">-{sym}112.50 / day</span>
+            {t('tutorial.s6.pChanges')} <span className="font-black text-rose-600">-{sym}112.50 {t('tutorial.perDay')}</span>
           </p>
         </div>
       ),
     },
     {
       id: 7,
-      tag: 'WORLD CURRENCIES',
-      title: 'Currencies & Download Spreadsheet',
-      subtitle: 'Use PHP (₱), USD ($), EUR (€), and 20+ currencies, and download your data anytime.',
+      tag: t('tutorial.s7.tag'),
+      title: t('tutorial.s7.title'),
+      subtitle: t('tutorial.s7.subtitle'),
       icon: <Globe className="h-6 w-6 text-emerald-700" />,
       accentColor: '#059669',
       bullets: [
         {
           icon: <Globe className="h-4 w-4 text-emerald-700" />,
-          label: 'Switch Currency Anytime',
-          text: 'Choose your currency in Settings. All numbers and symbols update instantly.',
+          label: t('tutorial.s7.b1label'),
+          text: t('tutorial.s7.b1text'),
         },
         {
           icon: <CheckCircle2 className="h-4 w-4 text-emerald-700" />,
-          label: 'Download Spreadsheet (CSV)',
-          text: 'Download your full expense history to open in Excel or Google Sheets anytime.',
+          label: t('tutorial.s7.b2label'),
+          text: t('tutorial.s7.b2text'),
         },
       ],
       interactivePreview: (sym) => (
@@ -304,10 +306,10 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 font-black text-emerald-900 text-xs">
               {sym}
             </span>
-            <span className="text-xs font-bold text-(--ink)">{currency} Active</span>
+            <span className="text-xs font-bold text-(--ink)">{t('tutorial.s7.pActive', { currency })}</span>
           </div>
           <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-            Download Ready
+            {t('tutorial.s7.pReady')}
           </span>
         </div>
       ),
@@ -329,10 +331,10 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
             </div>
             <div>
               <span className="text-[11px] font-black uppercase tracking-wider text-emerald-700">
-                PALDO Guide
+                {t('tutorial.guide')}
               </span>
               <h3 className="text-sm sm:text-base font-black text-(--ink)">
-                Part {currentStepIndex + 1} of {steps.length}
+                {t('tutorial.partOf', { current: currentStepIndex + 1, total: steps.length })}
               </h3>
             </div>
           </div>
@@ -351,7 +353,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
                     ? 'w-2 bg-emerald-300'
                     : 'w-2 bg-(--line)'
                 }`}
-                aria-label={`Step ${idx + 1}`}
+                aria-label={t('tutorial.stepAria', { n: idx + 1 })}
               />
             ))}
           </div>
@@ -410,7 +412,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
             }`}
           >
             <ChevronLeft className="h-4 w-4" />
-            <span>Back</span>
+            <span>{t('tutorial.back')}</span>
           </button>
 
           {isLast ? (
@@ -420,7 +422,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
               className="flex items-center gap-1.5 rounded-xl bg-(--brand) px-5 py-2.5 text-xs font-black text-(--accent) shadow-md hover:bg-(--brand-hover) transition-all cursor-pointer"
             >
               <CheckCircle2 className="h-4 w-4" />
-              <span>Done</span>
+              <span>{t('tutorial.done')}</span>
             </button>
           ) : (
             <button
@@ -428,7 +430,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
               onClick={() => setCurrentStepIndex((prev) => Math.min(steps.length - 1, prev + 1))}
               className="flex items-center gap-1.5 rounded-xl bg-(--brand) px-5 py-2.5 text-xs font-black text-(--accent) shadow-md hover:bg-(--brand-hover) transition-all cursor-pointer"
             >
-              <span>Next</span>
+              <span>{t('tutorial.next')}</span>
               <ChevronRight className="h-4 w-4" />
             </button>
           )}

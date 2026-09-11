@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { NavTab } from '../navigation/BottomNavigation';
 import { CurrencyCode } from '../../types';
+import { useI18n } from '../../i18n';
 import { TOUR_STEPS } from './tourSteps';
 
 interface GuidedAppTourProps {
@@ -32,6 +33,7 @@ export const GuidedAppTour: React.FC<GuidedAppTourProps> = ({
   onClose,
   onNavigateTab,
 }) => {
+  const { t } = useI18n();
   const [stepIndex, setStepIndex] = useState<number>(0);
   const [targetRect, setTargetRect] = useState<ElementRect | null>(null);
 
@@ -128,7 +130,7 @@ export const GuidedAppTour: React.FC<GuidedAppTourProps> = ({
             }`}
           >
             <Pointer className={`h-3.5 w-3.5 ${isTargetInBottomHalf ? 'rotate-180' : ''}`} />
-            <span>{currentStep.targetLabel}</span>
+            <span>{t(currentStep.targetKey)}</span>
           </div>
         </div>
       )}
@@ -147,7 +149,7 @@ export const GuidedAppTour: React.FC<GuidedAppTourProps> = ({
                 <Sparkles className="h-3.5 w-3.5" />
               </span>
               <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-emerald-700">
-                {currentStep.badge}
+                {t(currentStep.badgeKey)}
               </span>
             </div>
 
@@ -155,7 +157,7 @@ export const GuidedAppTour: React.FC<GuidedAppTourProps> = ({
               type="button"
               onClick={onClose}
               className="flex h-6 w-6 items-center justify-center rounded-full bg-(--surface-3) text-(--ink-3) hover:bg-(--line) hover:text-(--ink) transition-colors cursor-pointer"
-              title="Close Tour"
+              title={t('tour.closeTour')}
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -164,10 +166,10 @@ export const GuidedAppTour: React.FC<GuidedAppTourProps> = ({
           {/* Title & Description */}
           <div className="space-y-1">
             <h3 className="text-base sm:text-lg font-black text-(--ink) tracking-tight">
-              {currentStep.title}
+              {t(currentStep.titleKey)}
             </h3>
             <p className="text-xs sm:text-sm text-(--ink-2) font-medium leading-relaxed">
-              {currentStep.description}
+              {t(currentStep.descriptionKey)}
             </p>
           </div>
 
@@ -175,7 +177,7 @@ export const GuidedAppTour: React.FC<GuidedAppTourProps> = ({
           <div className="flex items-start gap-2 rounded-xl bg-emerald-50/90 p-2.5 border border-emerald-200/70">
             <CheckCircle2 className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" />
             <span className="text-[11px] sm:text-xs font-bold text-emerald-950 leading-snug">
-              {currentStep.keyTakeaway}
+              {t(currentStep.takeawayKey)}
             </span>
           </div>
 
@@ -192,7 +194,7 @@ export const GuidedAppTour: React.FC<GuidedAppTourProps> = ({
               }`}
             >
               <ChevronLeft className="h-4 w-4" />
-              <span>Back</span>
+              <span>{t('tour.back')}</span>
             </button>
 
             {/* Step Dots */}
@@ -214,7 +216,7 @@ export const GuidedAppTour: React.FC<GuidedAppTourProps> = ({
                 className="flex items-center gap-1 rounded-xl bg-(--brand) px-4 py-2 text-xs font-black text-(--accent) shadow-md hover:bg-(--brand-hover) transition-all cursor-pointer"
               >
                 <CheckCircle2 className="h-4 w-4" />
-                <span>Got It! Start</span>
+                <span>{t('tour.gotIt')}</span>
               </button>
             ) : (
               <button
@@ -222,7 +224,7 @@ export const GuidedAppTour: React.FC<GuidedAppTourProps> = ({
                 onClick={() => setStepIndex((prev) => Math.min(TOUR_STEPS.length - 1, prev + 1))}
                 className="flex items-center gap-1 rounded-xl bg-(--brand) px-4 py-2 text-xs font-black text-(--accent) shadow-md hover:bg-(--brand-hover) transition-all cursor-pointer"
               >
-                <span>Next</span>
+                <span>{t('tour.next')}</span>
                 <ChevronRight className="h-4 w-4" />
               </button>
             )}
