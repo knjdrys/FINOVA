@@ -253,7 +253,7 @@ export const WhatIfModal: React.FC<WhatIfModalProps> = ({
           <button
             type="button"
             onClick={handleApplyToReal}
-            className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-[#122A1E] py-3 text-xs font-bold text-[#D4F63D] shadow-md hover:bg-[#183625] transition-colors cursor-pointer"
+            className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-(--brand) py-3 text-xs font-bold text-(--accent) shadow-md hover:bg-(--brand-hover) transition-colors cursor-pointer"
           >
             <CheckCircle2 className="h-4 w-4" />
             <span>Save as Real Expense</span>

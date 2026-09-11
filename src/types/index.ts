@@ -309,6 +309,12 @@ export interface RecurringTransaction {
    * created before this flag existed keep working unchanged.
    */
   autoPostEnabled?: boolean;
+  /**
+   * Optional essentiality flag (drives the emergency-fund engine's committed
+   * baseline). Undefined = legacy rule; the engine falls back to actual
+   * essential-category spend instead of guessing.
+   */
+  priority?: CommitmentPriority;
   createdAt: string;
   updatedAt: string;
 }

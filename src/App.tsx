@@ -6,6 +6,7 @@ import { AppLockGuard } from './components/security/AppLockGuard';
 import {
   Account,
   Budget,
+  Category,
   CommitmentType,
   CurrencyCode,
   MoneyCommitment,
@@ -21,6 +22,7 @@ import { SafeToSpendEngine } from './domain/safe-to-spend/SafeToSpendEngine';
 import { RiskEngine } from './domain/risk/RiskEngine';
 import { TimelineEngine } from './domain/timeline/TimelineEngine';
 import { TransactionEngine } from './domain/transaction/TransactionEngine';
+import { CategoryEngine } from './domain/category/CategoryEngine';
 import type { EntryMode } from './domain/entry/UnifiedEntry';
 import { GoalEngine } from './domain/goal/GoalEngine';
 import { FutureFinanceEngine } from './domain/future-finance/FutureFinanceEngine';
@@ -50,6 +52,8 @@ import { AuthScreen } from './screens/AuthScreen';
 // Modals & Tours
 import { AddTransactionModal } from './components/modals/AddTransactionModal';
 import { TransactionDetailModal } from './components/modals/TransactionDetailModal';
+import { QuickActionsSheet, type QuickAction } from './components/QuickActionsSheet';
+import { ReceiptText, ArrowDownLeft, ArrowLeftRight, CalendarClock, Wallet, Target, Repeat } from 'lucide-react';
 import { AddBudgetModal } from './components/modals/AddBudgetModal';
 import { AddGoalModal } from './components/modals/AddGoalModal';
 import { AddCommitmentModal } from './components/modals/AddCommitmentModal';
@@ -82,11 +86,15 @@ export function App() {
   const [isAddRecurringOpen, setIsAddRecurringOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
   const [editingGoal, setEditingGoal] = useState<SavingsGoal | null>(null);
-  const [goalPreset, setGoalPreset] = useState<{ name: string } | null>(null);
+  const [goalPreset, setGoalPreset] = useState<{ name: string; targetAmount?: number } | null>(null);
   const [editingCommitment, setEditingCommitment] = useState<MoneyCommitment | null>(null);
   const [commitmentPreset, setCommitmentPreset] = useState<{ type: CommitmentType; title?: string } | null>(null);
   const [editingRecurring, setEditingRecurring] = useState<RecurringTransaction | null>(null);
   const [selectedTxForDetail, setSelectedTxForDetail] = useState<Transaction | null>(null);
+
+  // Quick Actions sheet — one tap on the floating + reveals every "create" path,
+  // so a new user never has to hunt through tabs to discover what they can add.
+  const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
 
   // ---- Offline / sync plumbing ----
   // Latest state snapshot for the queue flush (avoids stale closures).
@@ -159,7 +167,9 @@ export function App() {
   // (Re)create the sync manager whenever auth identity changes.
   useEffect(() => {
     initSyncManager({ getState: () => stateRef.current, authUser });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Narrow deps are intentional: recreating on every profile-field change
+    // would churn the queue for no benefit.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [authUser?.id, authUser?.isGuest]);
 
   // Load data from Supabase Cloud whenever user logs in
@@ -195,7 +205,10 @@ export function App() {
         });
       }
     }
-  }, [authUser?.id, authUser?.fullName, authUser?.isGuest]);
+    // Narrow deps are intentional: the cloud load must fire on identity
+    // change, not on every profile-object re-creation.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser?.id, authUser?.fullName, authUser?.email, authUser?.isGuest]);
 
   // Sync state to local storage & queue the cloud push
   useEffect(() => {
@@ -429,6 +442,122 @@ export function App() {
     if (authUser && !authUser.isGuest) {
       getSyncManager()?.requestSync();
     }
+  };
+
+  // Handler: Edit Account (+ optional reconciliation). Identity fields update
+  // in place; a changed "actual" balance never overwrites silently — it posts
+  // an auditable adjustment transaction so every money law still holds.
+  const handleUpdateAccount = (
+    accountId: string,
+    data: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>,
+    reconcileToMinor?: number
+  ) => {
+    const acc = state.accounts.find((a) => a.id === accountId);
+    if (!acc) return;
+    const nowISO = new Date().toISOString();
+    let accounts = state.accounts.map((a) =>
+      a.id === accountId ? { ...a, ...data, id: a.id, createdAt: a.createdAt, updatedAt: nowISO } : a
+    );
+    let transactions = state.transactions;
+    if (reconcileToMinor !== undefined) {
+      const delta = reconcileToMinor - acc.currentBalance;
+      if (delta !== 0) {
+        const adjTx: Transaction = {
+          id: `tx-${Date.now()}`,
+          userId: 'user-1',
+          type: delta > 0 ? 'INCOME' : 'EXPENSE',
+          amount: Math.abs(delta),
+          currency: acc.currency,
+          categoryId: 'cat-transfer',
+          accountId,
+          merchant: t('tx.adjustment'),
+          note: t('tx.adjustmentNote'),
+          date: todayISO,
+          time: DateUtils.getCurrentTimeString(),
+          tags: ['adjustment'],
+          status: 'CONFIRMED',
+          createdAt: nowISO,
+          updatedAt: nowISO,
+        };
+        accounts = TransactionEngine.applyTransactionToAccounts(adjTx, accounts);
+        transactions = [adjTx, ...transactions];
+      }
+    }
+    setState((prev) => ({ ...prev, accounts, transactions }));
+    if (authUser && !authUser.isGuest) {
+      getSyncManager()?.requestSync();
+    }
+  };
+
+  // ---- Custom categories: archive-only lifecycle (history always resolves) ----
+  const handleAddCategory = (data: Omit<Category, 'id' | 'userId'>) => {
+    mutatePlans({
+      categories: [
+        ...state.categories,
+        { ...data, id: CategoryEngine.createId(), userId: 'user-1' },
+      ],
+    });
+  };
+  const handleUpdateCategory = (id: string, data: Omit<Category, 'id' | 'userId'>) => {
+    const existing = state.categories.find((c) => c.id === id);
+    if (!existing || !CategoryEngine.isEditable(existing)) {
+      notice(t('categories.systemLocked'));
+      return;
+    }
+    mutatePlans({
+      categories: state.categories.map((c) =>
+        c.id === id ? { ...c, ...data, id: c.id, userId: c.userId, isSystem: false } : c
+      ),
+    });
+  };
+  const handleToggleCategoryArchive = (id: string) => {
+    const existing = state.categories.find((c) => c.id === id);
+    if (!existing || !CategoryEngine.isArchivable(existing)) {
+      notice(t('categories.systemLocked'));
+      return;
+    }
+    mutatePlans({
+      categories: state.categories.map((c) =>
+        c.id === id ? { ...c, isArchived: !c.isArchived } : c
+      ),
+    });
+  };
+
+  // Handler: CSV import — batch-applies pre-validated transactions.
+  // No overdraft blocking here: this reconstructs history (like a restore),
+  // it isn't new spending, so rows apply even when the current balance has
+  // moved on since the row's date.
+  const handleImportTransactions = (txs: Transaction[]) => {
+    if (txs.length === 0) {
+      notice(t('import.nothingNew'));
+      return;
+    }
+    let accounts = state.accounts;
+    for (const tx of txs) {
+      accounts = TransactionEngine.applyTransactionToAccounts(tx, accounts);
+    }
+    setState((prev) => ({ ...prev, accounts, transactions: [...txs, ...prev.transactions] }));
+    if (authUser && !authUser.isGuest) {
+      getSyncManager()?.requestSync();
+    }
+    notice(t('import.done', { count: txs.length }));
+  };
+
+  // Handler: Restore a downloaded backup (replace-all with ownership kept).
+  const handleRestoreBackup = (restored: FinovaState) => {
+    const next: FinovaState = {
+      ...restored,
+      settings: {
+        ...restored.settings,
+        userId: authUser?.id || restored.settings.userId,
+      },
+    };
+    FinovaStorage.saveState(next);
+    setState(next);
+    if (authUser && !authUser.isGuest) {
+      getSyncManager()?.requestSync();
+    }
+    notice(t('backup.restored'));
   };
 
   // Handler: Delete Account
@@ -857,7 +986,7 @@ export function App() {
     if (previousUser && !previousUser.isGuest) {
       FinovaStorage.wipeForUser(previousUser.id);
       try {
-        localStorage.removeItem(`FINOVA_SYNC_QUEUE_${previousUser.id}`);
+        localStorage.removeItem(`PALDO_SYNC_QUEUE_${previousUser.id}`);
       } catch {
         /* storage quota / private mode fallback */
       }
@@ -917,7 +1046,7 @@ export function App() {
       <DialogProvider>
       <div className="min-h-screen w-full bg-[#0A1811] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 border-4 border-[#D4F63D] border-t-transparent rounded-full animate-spin" />
+          <div className="h-10 w-10 border-4 border-(--accent) border-t-transparent rounded-full animate-spin" />
           <span className="text-xs font-bold text-emerald-300 tracking-wider uppercase">{t('common.loading')}</span>
         </div>
       </div>
@@ -937,11 +1066,32 @@ export function App() {
     );
   }
 
+  const quickActions: QuickAction[] = [
+    { id: 'expense', label: t('quick.expense'), description: t('quick.expenseDesc'), icon: ReceiptText, tone: 'expense' },
+    { id: 'income', label: t('quick.income'), description: t('quick.incomeDesc'), icon: ArrowDownLeft, tone: 'income' },
+    { id: 'transfer', label: t('quick.transfer'), description: t('quick.transferDesc'), icon: ArrowLeftRight, tone: 'transfer' },
+    { id: 'planBill', label: t('quick.planBill'), description: t('quick.planBillDesc'), icon: CalendarClock, tone: 'bill' },
+    { id: 'budget', label: t('quick.budget'), description: t('quick.budgetDesc'), icon: Wallet, tone: 'budget' },
+    { id: 'goal', label: t('quick.goal'), description: t('quick.goalDesc'), icon: Target, tone: 'goal' },
+    { id: 'recurring', label: t('quick.recurring'), description: t('quick.recurringDesc'), icon: Repeat, tone: 'recurring' },
+  ];
+
+  const handleQuickAction = (id: string) => {
+    setIsQuickActionsOpen(false);
+    if (id === 'expense') openQuickAdd('EXPENSE');
+    else if (id === 'income') openQuickAdd('INCOME');
+    else if (id === 'transfer') openQuickAdd('TRANSFER');
+    else if (id === 'planBill') openQuickAdd('PLANNED');
+    else if (id === 'budget') setIsAddBudgetOpen(true);
+    else if (id === 'goal') setIsAddGoalOpen(true);
+    else if (id === 'recurring') setIsAddRecurringOpen(true);
+  };
+
   return (
     <I18nProvider lang={settings.language || 'en'}>
     <DialogProvider>
     <AppLockGuard>
-    <div className="min-h-screen bg-(--bg) text-(--ink) font-sans flex flex-col items-center justify-start w-full">
+    <div className="min-h-screen bg-(--bg) text-(--ink) font-sans flex flex-col items-center justify-start w-full motion-enter">
       {/* Responsive App Container */}
       <div className="w-full max-w-lg md:max-w-2xl lg:max-w-3xl px-4 sm:px-6 pt-2 sm:pt-4 pb-28 min-h-screen flex flex-col">
         {/* Header */}
@@ -1028,7 +1178,7 @@ export function App() {
               recurring={state.recurring}
               settings={settings}
               onOpenAddGoal={() => { setEditingGoal(null); setGoalPreset(null); setIsAddGoalOpen(true); }}
-              onOpenAddEmergencyFund={() => { setEditingGoal(null); setGoalPreset({ name: 'Emergency Fund' }); setIsAddGoalOpen(true); }}
+              onOpenAddEmergencyFund={(targetMinor?: number) => { setEditingGoal(null); setGoalPreset({ name: 'Emergency Fund', targetAmount: targetMinor }); setIsAddGoalOpen(true); }}
               onOpenAddCommitment={() => { setEditingCommitment(null); setCommitmentPreset(null); setIsAddCommitmentOpen(true); }}
               onOpenAddPayday={() => { setEditingCommitment(null); setCommitmentPreset({ type: 'EXPECTED_INCOME', title: 'Payday' }); setIsAddCommitmentOpen(true); }}
               onOpenAddBudget={() => { setEditingBudget(null); setIsAddBudgetOpen(true); }}
@@ -1068,7 +1218,13 @@ export function App() {
               onSelectCurrency={handleSelectCurrency}
               accounts={accounts}
               onAddAccount={handleAddAccount}
+              onUpdateAccount={handleUpdateAccount}
               onDeleteAccount={handleDeleteAccount}
+              onAddCategory={handleAddCategory}
+              onUpdateCategory={handleUpdateCategory}
+              onToggleCategoryArchive={handleToggleCategoryArchive}
+              onRestoreBackup={handleRestoreBackup}
+              onImportTransactions={handleImportTransactions}
               transactions={transactions}
               categories={categories}
               budgets={budgets}
@@ -1086,7 +1242,7 @@ export function App() {
       <BottomNavigation
         currentTab={currentTab}
         onSelectTab={setCurrentTab}
-        onOpenQuickAdd={() => openQuickAdd('EXPENSE')}
+        onOpenQuickActions={() => setIsQuickActionsOpen(true)}
       />
 
       {/* LIVE APP TOUR OVERLAY (ANIMATED SPOTLIGHT POINTER) */}
@@ -1095,6 +1251,16 @@ export function App() {
         onClose={() => setIsTourOpen(false)}
         onNavigateTab={(tab) => setCurrentTab(tab)}
         currency={currency}
+      />
+
+      {/* FLOATING + → QUICK ACTIONS (discovers every "add" path) */}
+      <QuickActionsSheet
+        isOpen={isQuickActionsOpen}
+        onClose={() => setIsQuickActionsOpen(false)}
+        title={t('quick.title')}
+        subtitle={t('quick.subtitle')}
+        actions={quickActions}
+        onSelect={handleQuickAction}
       />
 
       {/* MODALS */}

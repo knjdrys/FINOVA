@@ -237,7 +237,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             onOpenSafeToSpendExplainer();
           }
         }}
-        className={`group flex items-center justify-between rounded-2xl bg-(--surface) p-3.5 sm:p-4 shadow-xs border transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 ${
+        className={`group flex items-center justify-between rounded-2xl bg-(--surface) p-3.5 sm:p-4 shadow-xs border border-l-4 border-l-(--accent) transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 ${
           safeToSpend.isDeficit ? 'border-rose-200 hover:border-rose-300' : 'border-emerald-100 hover:border-emerald-300'
         }`}
       >
@@ -249,21 +249,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className={`text-[10px] sm:text-xs font-black uppercase tracking-wider ${
+              <span className={`text-[11px] sm:text-xs font-black uppercase tracking-wider ${
                 safeToSpend.isDeficit ? 'text-rose-800' : 'text-emerald-800 dark:text-emerald-300'
               }`}>
                 {t('home.safeToSpend')}
               </span>
               {safeToSpend.isDeficit ? (
-                <span className="rounded-full bg-rose-100 text-rose-900 border border-rose-200 px-1.5 py-0.2 text-[10px] font-black">
+                <span className="rounded-full bg-rose-100 text-rose-900 border border-rose-200 px-1.5 py-0.2 text-[11px] font-black">
                   {t('home.overCommitted')}
                 </span>
               ) : is15DayMode ? (
-                <span className="rounded-full bg-emerald-100 text-emerald-900 border border-emerald-200 px-1.5 py-0.2 text-[10px] font-black">
+                <span className="rounded-full bg-emerald-100 text-emerald-900 border border-emerald-200 px-1.5 py-0.2 text-[11px] font-black">
                   {t('home.fifteenDayCycle')}
                 </span>
               ) : (
-                <span className="rounded-full bg-[#E5FA82] px-1.5 py-0.2 text-[10px] font-black text-[#122A1E]">
+                <span className="rounded-full bg-[#E5FA82] px-1.5 py-0.2 text-[11px] font-black text-(--brand)">
                   {t('home.protected')}
                 </span>
               )}
@@ -275,7 +275,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               </span>
               {t('home.perDayRemaining', { days: safeToSpend.remainingDaysInPeriod })}
               {(safeToSpend.essentialUpcomingCommitments > 0 || safeToSpend.reservedGoalContributions > 0) && (
-                <span className="block truncate text-[10px] sm:text-[11px] font-medium text-(--ink-3)">
+                <span className="block truncate text-[11px] sm:text-[11px] font-medium text-(--ink-3)">
                   {t('home.stsPreview', {
                     bills: MoneyValue.fromMinorUnits(safeToSpend.essentialUpcomingCommitments, currency).format(),
                     goals: MoneyValue.fromMinorUnits(safeToSpend.reservedGoalContributions, currency).format(),
@@ -407,7 +407,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <button
               type="button"
               onClick={onOpenQuickAdd}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#122A1E] px-4 py-2 text-xs font-black text-[#D4F63D] shadow-sm hover:bg-[#183625] transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-(--brand) px-4 py-2 text-xs font-black text-(--accent) shadow-sm hover:bg-(--brand-hover) transition-all cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5 stroke-[3]" />
               <span>{t('home.logFirstTransaction')}</span>
@@ -514,7 +514,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ notifications, 
         <Bell className="h-3.5 w-3.5 text-(--ink-3)" />
         <span className="text-[11px] font-extrabold uppercase tracking-wider text-(--ink-2)">{t('home.alerts')}</span>
         {unread > 0 && (
-          <span className="rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white">{unread}</span>
+          <span className="rounded-full bg-rose-500 px-1.5 text-[11px] font-bold text-white">{unread}</span>
         )}
       </div>
 
@@ -531,14 +531,14 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ notifications, 
           <h4 className="text-xs sm:text-[13px] font-bold text-(--ink)">{focal.title}</h4>
           {focal.body && <p className="text-[11px] sm:text-xs text-(--ink-2) mt-0.5">{focal.body}</p>}
           <div className="mt-2 flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-lg bg-(--surface)/80 px-2 py-1 text-[10px] font-black text-(--ink-2) shadow-xs">
+            <span className="inline-flex items-center gap-1 rounded-lg bg-(--surface)/80 px-2 py-1 text-[11px] font-black text-(--ink-2) shadow-xs">
               {actionLabel} <ChevronRight className="h-3 w-3" />
             </span>
             {!focal.isRead && (
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onMarkRead(focal.id); }}
-                className="rounded-lg px-2 py-1 text-[10px] font-bold text-(--ink-3) hover:bg-(--surface)/70 hover:text-(--ink-2) transition-colors"
+                className="rounded-lg px-2 py-1 text-[11px] font-bold text-(--ink-3) hover:bg-(--surface)/70 hover:text-(--ink-2) transition-colors"
               >
                 {t('home.markRead')}
               </button>
@@ -565,7 +565,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ notifications, 
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onMarkRead(n.id); }}
-                className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold text-(--ink-3) hover:bg-(--surface)/70 hover:text-(--ink-2) transition-colors"
+                className="shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-bold text-(--ink-3) hover:bg-(--surface)/70 hover:text-(--ink-2) transition-colors"
                 aria-label={t('home.markRead')}
               >
                 ✓

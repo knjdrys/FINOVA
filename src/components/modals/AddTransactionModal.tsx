@@ -110,12 +110,16 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const submittedRef = useRef(false);
 
   const currencySymbol = MoneyValue.zero(currency).getCurrencySymbol();
-  const filteredCategories = categories.filter(
-    (c) =>
-      !c.isArchived &&
-      c.id !== 'cat-transfer' && // internal booking category — never hand-pickable
-      (type === 'TRANSFER' || type === 'PLANNED' ? c.type === 'EXPENSE' : c.type === type)
-  );
+  const filteredCategories = categories
+    .filter(
+      (c) =>
+        !c.isArchived &&
+        c.id !== 'cat-transfer' && // internal booking category — never hand-pickable
+        (type === 'TRANSFER' || type === 'PLANNED' ? c.type === 'EXPENSE' : c.type === type)
+    )
+    // Stable A–Z so categories don't appear in a scattered, hard-to-scan order.
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   // Hydrate on open (create = clean slate, edit = copy of the transaction)
   useEffect(() => {
@@ -518,7 +522,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 </select>
               </div>
             </div>
-            <p className="text-[10px] font-medium text-(--ink-3)">
+            <p className="text-[11px] font-medium text-(--ink-3)">
               Transfers move money between accounts — they never count as income or expense.
             </p>
           </div>
@@ -562,7 +566,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               ))}
             </div>
             {repeat !== 'OFF' && (
-              <p className="mt-1.5 text-[10px] font-medium text-(--ink-3)" role="note">
+              <p className="mt-1.5 text-[11px] font-medium text-(--ink-3)" role="note">
                 {t('modal.repeatHint')}
               </p>
             )}
@@ -760,7 +764,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               <img src={receiptDataUrl} alt="Attached receipt" className="h-14 w-14 rounded-lg object-cover border border-(--line)" />
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-(--ink-2) truncate">Receipt attached</p>
-                <p className="text-[10px] font-medium text-(--ink-3)">
+                <p className="text-[11px] font-medium text-(--ink-3)">
                   ~{Math.round(ReceiptService.sizeOf(receiptDataUrl) / 1024)} KB · stored with this transaction
                 </p>
               </div>
@@ -837,7 +841,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 <button
                   type="button"
                   onClick={applyReceiptHints}
-                  className="flex-1 rounded-xl bg-[#122A1E] py-2 text-[11px] font-bold text-[#D4F63D] hover:bg-[#183625] transition-colors cursor-pointer"
+                  className="flex-1 rounded-xl bg-(--brand) py-2 text-[11px] font-bold text-(--accent) hover:bg-(--brand-hover) transition-colors cursor-pointer"
                 >
                   {t('modal.receiptUse')}
                 </button>
@@ -863,7 +867,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         {/* Action Button */}
         <button
           type="submit"
-          className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#122A1E] py-3.5 text-sm font-bold text-[#D4F63D] shadow-lg shadow-emerald-950/20 transition-transform active:scale-[0.98] hover:bg-[#183625] cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 rounded-2xl bg-(--brand) py-3.5 text-sm font-bold text-(--accent) shadow-lg shadow-emerald-950/20 transition-transform active:scale-[0.98] hover:bg-(--brand-hover) cursor-pointer"
         >
           <Check className="h-4 w-4 stroke-[3]" />
           <span>{editingTx ? 'Save Changes' : type === 'PLANNED' ? t('modal.savePlanned') : 'Save Transaction'}</span>

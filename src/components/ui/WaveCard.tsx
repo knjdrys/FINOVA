@@ -77,7 +77,7 @@ export const WaveCard: React.FC<WaveCardProps> = ({
           rightBadge
         ) : statusDot ? (
           <div className="relative flex h-3.5 w-3.5 items-center justify-center">
-            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#D4F63D] shadow-[0_0_8px_#D4F63D]"></span>
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-(--accent) shadow-[0_0_8px_#D4F63D]"></span>
           </div>
         ) : null}
       </div>
@@ -85,7 +85,7 @@ export const WaveCard: React.FC<WaveCardProps> = ({
       {/* Main Large Financial Amount */}
       <div className="relative z-10 mt-2.5 mb-3.5 money">
         <div className="flex items-baseline gap-1.5 sm:gap-2">
-          <span className="text-2xl sm:text-3xl font-bold text-[#86EFAC] tracking-tight">
+          <span className="text-2xl sm:text-3xl font-bold text-(--accent-bright) tracking-tight">
             {currencySymbol}
           </span>
           <span className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tight text-white">
@@ -102,9 +102,9 @@ export const WaveCard: React.FC<WaveCardProps> = ({
             <span
               className={`inline-flex items-center gap-1 font-bold ${
                 trendDirection === 'up'
-                  ? 'text-[#D4F63D]'
+                  ? 'text-(--accent)'
                   : trendDirection === 'down'
-                  ? 'text-[#86EFAC]'
+                  ? 'text-(--accent-bright)'
                   : 'text-emerald-200'
               }`}
             >

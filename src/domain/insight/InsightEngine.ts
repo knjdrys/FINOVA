@@ -218,3 +218,61 @@ export class InsightEngine {
     return insights.sort((a, b) => b.score - a.score);
   }
 }
+
+export interface MonthlyCashFlow {
+  /** First day of the month (ISO) — the stable bucket key. */
+  monthStartISO: string;
+  /** 0-based month index for localized labels. */
+  monthIndex0: number;
+  year: number;
+  income: number;
+  expense: number;
+  net: number;
+  /** True when the bucket holds any economic activity. */
+  hasActivity: boolean;
+}
+
+/**
+ * Monthly income-vs-expense buckets, oldest → newest, ending with the month
+ * that contains `referenceDateISO`. Bookkeeping rows (goal funding,
+ * reconciliations) and transfers are excluded: the trend must show real
+ * money earned vs. really spent. Single-currency like every other analytic.
+ */
+export function getMonthlyCashFlow(
+  transactions: Transaction[],
+  currency: string,
+  referenceDateISO: string,
+  months: number = 6
+): MonthlyCashFlow[] {
+  const buckets: MonthlyCashFlow[] = [];
+  for (let i = months - 1; i >= 0; i--) {
+    const anchor = DateUtils.addMonthsISO(referenceDateISO, -i);
+    const start = DateUtils.getMonthStartISO(anchor);
+    const d = new Date(`${start}T00:00:00`);
+    buckets.push({
+      monthStartISO: start,
+      monthIndex0: d.getMonth(),
+      year: d.getFullYear(),
+      income: 0,
+      expense: 0,
+      net: 0,
+      hasActivity: false,
+    });
+  }
+  const byStart = new Map(buckets.map((b) => [b.monthStartISO, b]));
+  for (const tx of transactions) {
+    if (tx.status === 'PENDING') continue;
+    if (tx.currency !== currency) continue;
+    if (TransactionEngine.isBookkeeping(tx)) continue;
+    if (tx.type !== 'INCOME' && tx.type !== 'EXPENSE') continue;
+    const bucket = byStart.get(DateUtils.getMonthStartISO(tx.date));
+    if (!bucket) continue;
+    if (tx.type === 'INCOME') bucket.income += tx.amount;
+    else bucket.expense += tx.amount;
+  }
+  for (const b of buckets) {
+    b.net = b.income - b.expense;
+    b.hasActivity = b.income > 0 || b.expense > 0;
+  }
+  return buckets;
+}

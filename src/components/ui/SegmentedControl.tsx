@@ -13,7 +13,7 @@ export function SegmentedControl<T extends string>({
 }: SegmentedControlProps<T>) {
   return (
     <div
-      className={`inline-flex w-full items-center justify-between rounded-full bg-[#183625] p-1 shadow-inner ${className}`}
+      className={`inline-flex w-full items-center justify-between rounded-full bg-(--brand-hover) p-1 shadow-inner ${className}`}
     >
       {options.map((opt) => {
         const isActive = opt.value === value;
@@ -24,7 +24,7 @@ export function SegmentedControl<T extends string>({
             onClick={() => onChange(opt.value)}
             className={`relative flex-1 rounded-full py-2.5 text-xs font-bold tracking-tight transition-all duration-200 cursor-pointer ${
               isActive
-                ? 'bg-[#D4F63D] text-[#122A1E] shadow-sm scale-[1.01]'
+                ? 'bg-(--accent) text-(--brand) shadow-sm scale-[1.01]'
                 : 'text-emerald-100/70 hover:text-white'
             }`}
           >

@@ -39,7 +39,7 @@ export class BudgetEngine {
     let actualSpent = 0;
     for (const tx of transactions) {
       if (tx.type !== 'EXPENSE' || tx.status === 'PENDING') continue;
-      if (TransactionEngine.isGoalFunding(tx)) continue; // reservations are not budget spend
+      if (TransactionEngine.isBookkeeping(tx)) continue; // reservations + adjustments are not budget spend
       if (!DateUtils.isDateInRange(tx.date, budget.startDate, budget.endDate)) continue;
 
       const attributed = this.attributedAmount(tx, budget);

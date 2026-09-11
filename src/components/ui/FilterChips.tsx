@@ -107,7 +107,7 @@ export const FilterChips: React.FC<FilterChipsProps> = ({
           onClick={() => onSelectCategory('ALL')}
           className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
             selectedCategoryId === 'ALL'
-              ? 'bg-[#183625] text-[#D4F63D] shadow-sm'
+              ? 'bg-(--brand-hover) text-(--accent) shadow-sm'
               : 'bg-(--surface) border border-(--line)/80 text-(--ink-2) hover:bg-(--surface-2)'
           }`}
         >
@@ -125,7 +125,7 @@ export const FilterChips: React.FC<FilterChipsProps> = ({
               onClick={() => onSelectCategory(cat.id)}
               className={`inline-flex shrink-0 items-center rounded-full px-4 py-2 text-xs font-bold transition-all cursor-pointer ${
                 isSelected
-                  ? 'bg-[#183625] text-[#D4F63D] shadow-sm'
+                  ? 'bg-(--brand-hover) text-(--accent) shadow-sm'
                   : 'bg-(--surface) border border-(--line)/80 text-(--ink-2) hover:bg-(--surface-2)'
               }`}
             >

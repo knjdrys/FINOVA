@@ -83,11 +83,11 @@ export class ReceiptService {
   public static suggestFromFileName(fileName: string, lastModified?: number): ReceiptSuggestion {
     const suggestion: ReceiptSuggestion = { source: 'filename' };
     const base = fileName.replace(/\.[a-z0-9]+$/i, '');
-    const normalized = base.replace(/[_\-]+/g, ' ').trim();
+    const normalized = base.replace(/[_-]+/g, ' ').trim();
 
     const dateMatch =
-      normalized.match(/(20\d{2})[\-. ]?(\d{2})[\-. ]?(\d{2})/) ||
-      normalized.match(/(\d{2})[\-. ](\d{2})[\-. ](20\d{2})/);
+      normalized.match(/(20\d{2})[-. ]?(\d{2})[-. ]?(\d{2})/) ||
+      normalized.match(/(\d{2})[-. ](\d{2})[-. ](20\d{2})/);
     if (dateMatch) {
       if (dateMatch[0].startsWith('20')) {
         suggestion.dateISO = `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`;

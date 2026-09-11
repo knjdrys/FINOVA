@@ -7,13 +7,13 @@ export type NavTab = 'HOME' | 'ALL_EXPENSES' | 'PLANS' | 'ANALYTICS' | 'SETTINGS
 interface BottomNavigationProps {
   currentTab: NavTab;
   onSelectTab: (tab: NavTab) => void;
-  onOpenQuickAdd: () => void;
+  onOpenQuickActions: () => void;
 }
 
 export const BottomNavigation: React.FC<BottomNavigationProps> = ({
   currentTab,
   onSelectTab,
-  onOpenQuickAdd,
+  onOpenQuickActions,
 }) => {
   const { t } = useI18n();
   return (
@@ -29,9 +29,9 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             }`}
           >
             <Home className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
-            <span className="text-[10px] sm:text-[11px] font-bold mt-1 truncate min-w-0">{t('nav.home')}</span>
+            <span className="text-[11px] sm:text-[11px] font-bold mt-1 truncate min-w-0">{t('nav.home')}</span>
             {currentTab === 'HOME' ? (
-              <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
+              <span className="h-1.5 w-1.5 rounded-full bg-(--accent-bright) mt-0.5 shadow-xs"></span>
             ) : (
               <span className="h-1.5 w-1.5 mt-0.5 opacity-0"></span>
             )}
@@ -46,9 +46,9 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             }`}
           >
             <ListOrdered className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
-            <span className="text-[10px] sm:text-[11px] font-bold mt-1 truncate min-w-0">{t('nav.transactions')}</span>
+            <span className="text-[11px] sm:text-[11px] font-bold mt-1 truncate min-w-0">{t('nav.transactions')}</span>
             {currentTab === 'ALL_EXPENSES' ? (
-              <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
+              <span className="h-1.5 w-1.5 rounded-full bg-(--accent-bright) mt-0.5 shadow-xs"></span>
             ) : (
               <span className="h-1.5 w-1.5 mt-0.5 opacity-0"></span>
             )}
@@ -63,9 +63,9 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             }`}
           >
             <CalendarDays className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
-            <span className="text-[10px] sm:text-[11px] font-bold mt-1 truncate min-w-0">{t('nav.plans')}</span>
+            <span className="text-[11px] sm:text-[11px] font-bold mt-1 truncate min-w-0">{t('nav.plans')}</span>
             {currentTab === 'PLANS' ? (
-              <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
+              <span className="h-1.5 w-1.5 rounded-full bg-(--accent-bright) mt-0.5 shadow-xs"></span>
             ) : (
               <span className="h-1.5 w-1.5 mt-0.5 opacity-0"></span>
             )}
@@ -73,12 +73,12 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
 
           {/* Elevated Floating Quick-Add Button with soft glow ring */}
           <div data-tour="quick-add" className="relative -top-5 sm:-top-6 flex items-center justify-center px-1 sm:px-2 shrink-0">
-            <div className="rounded-full bg-[#E8F8B6]/80 p-1 sm:p-1.5 shadow-sm">
+            <div className="rounded-full bg-(--accent-soft)/80 p-1 sm:p-1.5 shadow-sm">
               <button
                 type="button"
-                onClick={onOpenQuickAdd}
+                onClick={onOpenQuickActions}
                 aria-label={t('nav.addTransaction')}
-                className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-[#C6F432] text-[#122A1E] shadow-md shadow-lime-600/30 transition-transform duration-150 hover:scale-105 active:scale-95 cursor-pointer"
+                className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-(--accent) text-(--brand) shadow-md shadow-lime-600/30 transition-transform duration-150 hover:scale-105 active:scale-95 cursor-pointer"
               >
                 <Plus className="h-6 w-6 sm:h-8 sm:w-8 stroke-[3]" />
               </button>
@@ -94,9 +94,9 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             }`}
           >
             <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
-            <span className="text-[10px] sm:text-[11px] font-bold mt-1 truncate min-w-0">{t('nav.insights')}</span>
+            <span className="text-[11px] sm:text-[11px] font-bold mt-1 truncate min-w-0">{t('nav.insights')}</span>
             {currentTab === 'ANALYTICS' ? (
-              <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
+              <span className="h-1.5 w-1.5 rounded-full bg-(--accent-bright) mt-0.5 shadow-xs"></span>
             ) : (
               <span className="h-1.5 w-1.5 mt-0.5 opacity-0"></span>
             )}
@@ -111,9 +111,9 @@ export const BottomNavigation: React.FC<BottomNavigationProps> = ({
             }`}
           >
             <Settings className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.3]" />
-            <span className="text-[10px] sm:text-[11px] font-bold mt-1 truncate min-w-0">{t('nav.settings')}</span>
+            <span className="text-[11px] sm:text-[11px] font-bold mt-1 truncate min-w-0">{t('nav.settings')}</span>
             {currentTab === 'SETTINGS' ? (
-              <span className="h-1.5 w-1.5 rounded-full bg-[#86EFAC] mt-0.5 shadow-xs"></span>
+              <span className="h-1.5 w-1.5 rounded-full bg-(--accent-bright) mt-0.5 shadow-xs"></span>
             ) : (
               <span className="h-1.5 w-1.5 mt-0.5 opacity-0"></span>
             )}

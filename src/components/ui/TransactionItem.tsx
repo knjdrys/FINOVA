@@ -14,6 +14,16 @@ import {
   LucideIcon,
   Scissors,
   Paperclip,
+  Coffee,
+  Gift,
+  Gamepad2,
+  BookOpen,
+  Dumbbell,
+  Plane,
+  Baby,
+  PawPrint,
+  Music,
+  Wrench,
 } from 'lucide-react';
 import { Category, Transaction } from '../../types';
 import { MoneyValue } from '../../domain/money/MoneyValue';
@@ -41,7 +51,42 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Briefcase,
   Laptop,
   ArrowRightLeft,
+  Coffee,
+  Gift,
+  Gamepad2,
+  BookOpen,
+  Dumbbell,
+  Plane,
+  Baby,
+  PawPrint,
+  Music,
+  Wrench,
+  CircleDollarSign,
 };
+
+/** Icon choices offered when creating a custom category. */
+export const CATEGORY_ICON_CHOICES: Array<{ name: string; Icon: LucideIcon }> = [
+  { name: 'Utensils', Icon: Utensils },
+  { name: 'ShoppingCart', Icon: ShoppingCart },
+  { name: 'Coffee', Icon: Coffee },
+  { name: 'Zap', Icon: Zap },
+  { name: 'Tv', Icon: Tv },
+  { name: 'Car', Icon: Car },
+  { name: 'Plane', Icon: Plane },
+  { name: 'ShoppingBag', Icon: ShoppingBag },
+  { name: 'Gift', Icon: Gift },
+  { name: 'HeartPulse', Icon: HeartPulse },
+  { name: 'Dumbbell', Icon: Dumbbell },
+  { name: 'Briefcase', Icon: Briefcase },
+  { name: 'Laptop', Icon: Laptop },
+  { name: 'BookOpen', Icon: BookOpen },
+  { name: 'Gamepad2', Icon: Gamepad2 },
+  { name: 'Music', Icon: Music },
+  { name: 'Baby', Icon: Baby },
+  { name: 'PawPrint', Icon: PawPrint },
+  { name: 'Wrench', Icon: Wrench },
+  { name: 'CircleDollarSign', Icon: CircleDollarSign },
+];
 
 export const TransactionItem: React.FC<TransactionItemProps> = ({
   transaction,
@@ -125,13 +170,13 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
               {titleText}
             </h4>
             {isTransfer && (
-              <span className="shrink-0 rounded bg-blue-50 px-1 py-0.5 text-[10px] font-bold text-blue-700">
+              <span className="shrink-0 rounded bg-blue-50 px-1 py-0.5 text-[11px] font-bold text-blue-700">
                 {t('tx.transfer')}
               </span>
             )}
             {splitCount > 0 && (
               <span
-                className="shrink-0 flex items-center gap-0.5 rounded bg-violet-50 px-1 py-0.5 text-[10px] font-bold text-violet-700"
+                className="shrink-0 flex items-center gap-0.5 rounded bg-violet-50 px-1 py-0.5 text-[11px] font-bold text-violet-700"
                 title={t('tx.splitAcross', { count: splitCount })}
               >
                 <Scissors className="h-2.5 w-2.5" aria-hidden="true" />
@@ -140,7 +185,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
             )}
             {hasReceipt && (
               <span
-                className="shrink-0 flex items-center rounded bg-(--surface-3) px-1 py-0.5 text-[10px] font-bold text-(--ink-2)"
+                className="shrink-0 flex items-center rounded bg-(--surface-3) px-1 py-0.5 text-[11px] font-bold text-(--ink-2)"
                 title={t('tx.receiptAttached')}
               >
                 <Paperclip className="h-2.5 w-2.5" aria-label={t('tx.receiptAttached')} />
@@ -150,7 +195,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
           <p className="truncate text-xs font-semibold text-(--ink-3) mt-0.2">
             {subtitleText}
           </p>
-          <p className="truncate text-[10px] font-medium text-(--ink-3) mt-0.5">
+          <p className="truncate text-[11px] font-medium text-(--ink-3) mt-0.5">
             {noteSubline}
           </p>
         </div>

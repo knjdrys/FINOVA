@@ -40,6 +40,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
   const allocations = TransactionEngine.getCategoryAllocations(tx);
   const isSplit = tx.type === 'EXPENSE' && Boolean(tx.splitParts && tx.splitParts.length > 0);
   const isTransfer = tx.type === 'TRANSFER';
+  const isAdjustment = TransactionEngine.isBalanceAdjustment(tx);
 
   const handleClose = () => {
     setConfirmingDelete(false);
@@ -52,8 +53,10 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
       <div className="space-y-4">
         {/* Amount header */}
         <div className="rounded-2xl bg-(--surface-2) p-4 text-center border border-(--line-soft)">
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-(--ink-3) block mb-1">
-            {TransactionEngine.isGoalFunding(tx)
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-(--ink-3) block mb-1">
+            {isAdjustment
+              ? t('tx.adjustment')
+              : TransactionEngine.isGoalFunding(tx)
               ? t('plans.goals')
               : isTransfer
               ? t('tx.transfer')
@@ -66,8 +69,13 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
           <p className="text-3xl font-black text-(--ink)">{money.format()}</p>
           <p className="text-xs font-bold text-(--ink-2) mt-1">{tx.merchant || categoryName(categories, tx.categoryId)}</p>
           {tx.sourceCommitmentId && (
-            <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+            <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-100 border border-emerald-200 px-2 py-0.5 text-[11px] font-bold text-emerald-800">
               <ShieldCheck className="h-3 w-3" /> Auto-posted
+            </span>
+          )}
+          {isAdjustment && (
+            <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-[11px] font-bold text-slate-700">
+              {t('tx.adjustmentNote')}
             </span>
           )}
         </div>
@@ -97,7 +105,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
             </div>
           )}
 
-          {!isTransfer && !isSplit && (
+          {!isTransfer && !isSplit && !isAdjustment && (
             <div className="flex justify-between py-1">
               <span className="text-(--ink-3) font-medium">Category</span>
               <span className="font-bold text-(--ink)">{categoryName(categories, tx.categoryId)}</span>
@@ -115,7 +123,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
             <div className="flex flex-wrap items-center gap-1.5 py-1">
               <span className="text-(--ink-3) font-medium mr-1">Tags</span>
               {tx.tags.map((t) => (
-                <span key={t} className="rounded-full bg-(--surface-3) px-2 py-0.5 text-[10px] font-bold text-(--ink-2)">
+                <span key={t} className="rounded-full bg-(--surface-3) px-2 py-0.5 text-[11px] font-bold text-(--ink-2)">
                   {t}
                 </span>
               ))}
@@ -137,7 +145,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                     <span className="font-bold text-(--ink-2)">{categoryName(categories, catId)}</span>
                     <span className="font-semibold text-(--ink-3)">
                       {MoneyValue.fromMinorUnits(amt, tx.currency).format()}
-                      <span className="ml-1.5 text-[10px] font-black text-emerald-700">{share}%</span>
+                      <span className="ml-1.5 text-[11px] font-black text-emerald-700">{share}%</span>
                     </span>
                   </div>
                 );
@@ -163,7 +171,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
               <span className="flex items-center gap-1.5 text-xs font-bold text-(--ink-2)">
                 <Paperclip className="h-3.5 w-3.5" /> {t('tx.receiptAttached')}
               </span>
-              <span className="block text-[10px] font-medium text-(--ink-3)">{t('tx.viewReceipt')}</span>
+              <span className="block text-[11px] font-medium text-(--ink-3)">{t('tx.viewReceipt')}</span>
             </span>
           </button>
         )}
@@ -218,7 +226,7 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
                 onEdit(tx);
                 handleClose();
               }}
-              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-[#122A1E] py-3 text-xs font-bold text-[#D4F63D] hover:bg-[#183625] transition-colors cursor-pointer"
+              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-(--brand) py-3 text-xs font-bold text-(--accent) hover:bg-(--brand-hover) transition-colors cursor-pointer"
             >
               <Pencil className="h-3.5 w-3.5" /> {t('tx.editTitle')}
             </button>

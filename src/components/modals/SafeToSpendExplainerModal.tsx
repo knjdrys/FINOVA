@@ -28,7 +28,7 @@ export const SafeToSpendExplainerModal: React.FC<SafeToSpendExplainerModalProps>
         {/* Highlight Card */}
         <div className="rounded-2xl bg-gradient-to-br from-[#122A1E] to-[#183625] p-5 text-white shadow-lg">
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-300 uppercase tracking-wider">
-            <Sparkles className="h-4 w-4 text-[#D4F63D]" />
+            <Sparkles className="h-4 w-4 text-(--accent)" />
             <span>Your Daily Limit</span>
           </div>
           <div className="mt-3 flex items-baseline gap-2">

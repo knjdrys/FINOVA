@@ -37,10 +37,5 @@ export function useCountAnimation(targetMinor: number, opts?: { duration?: numbe
     };
   }, [targetMinor, reduced, opts?.duration]);
 
-  // Keep from in sync after mount
-  useEffect(() => {
-    fromRef.current = display;
-  }, []);
-
   return display;
 }

@@ -12,8 +12,8 @@ interface AddGoalModalProps {
   currency: CurrencyCode;
   accounts: Account[];
   editingGoal?: SavingsGoal | null;
-  /** Quick-start preset (e.g. Emergency Fund): pre-fills the name for a new goal. */
-  preset?: { name: string } | null;
+  /** Quick-start preset (e.g. Emergency Fund): pre-fills name + suggested target. */
+  preset?: { name: string; targetAmount?: number } | null;
 }
 
 const COLORS = ['#059669', '#0D9488', '#7C3AED', '#DB2777', '#2563EB', '#D97706', '#DC2626', '#4F46E5'];
@@ -36,7 +36,7 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onS
     if (isOpen) {
       submittedRef.current = false;
       setName(editingGoal?.name || preset?.name || '');
-      setTargetStr(editingGoal ? MoneyValue.fromMinorUnits(editingGoal.targetAmount, currency).format({ includeSymbol: false }) : '');
+      setTargetStr(editingGoal ? MoneyValue.fromMinorUnits(editingGoal.targetAmount, currency).format({ includeSymbol: false }) : preset?.targetAmount ? MoneyValue.fromMinorUnits(preset.targetAmount, currency).format({ includeSymbol: false }) : '');
       setCurrentStr(editingGoal ? MoneyValue.fromMinorUnits(editingGoal.currentAmount, currency).format({ includeSymbol: false }) : '0');
       setTargetDate(editingGoal?.targetDate || DateUtils.addDaysISO(DateUtils.getTodayISO(), 180));
       setPriority(editingGoal?.priority || 'ESSENTIAL');
@@ -109,7 +109,7 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onS
               </option>
             ))}
           </select>
-          <p className="text-[10px] font-medium text-(--ink-3)">
+          <p className="text-[11px] font-medium text-(--ink-3)">
             {t('modal.goalAccountHint')}
           </p>
         </Field>

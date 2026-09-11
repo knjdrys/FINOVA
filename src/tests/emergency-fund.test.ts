@@ -1,0 +1,178 @@
+/**
+ * EmergencyFundEngine: the fund target is always explainable — essential
+ * bills first, else the user's own 6-month essential spend, else nothing
+ * (never an invented figure). One currency in, one currency out.
+ */
+import { describe, expect, it } from 'vitest';
+import { EmergencyFundEngine } from '../domain/emergency-fund/EmergencyFundEngine';
+import type { MoneyCommitment, RecurringTransaction, SavingsGoal, Transaction } from '../types';
+
+const REF = '2026-09-11';
+
+const bill = (over: Partial<MoneyCommitment> = {}): MoneyCommitment => ({
+  id: `c-${Math.random()}`, userId: 'u', title: 'Rent', type: 'BILL',
+  amount: 10000_00, currency: 'PHP', direction: 'OUTFLOW', status: 'SCHEDULED',
+  dueDate: '2026-09-30', accountId: 'a', categoryId: 'cat-bills',
+  priority: 'ESSENTIAL', createdAt: '', updatedAt: '', ...over,
+});
+
+const rule = (over: Partial<RecurringTransaction> = {}): RecurringTransaction => ({
+  id: `r-${Math.random()}`, userId: 'u', title: 'Gym', amount: 2500_00,
+  currency: 'PHP', type: 'EXPENSE', categoryId: 'cat-health', accountId: 'a',
+  frequency: 'MONTHLY', startDate: '2026-01-01', nextOccurrence: '2026-10-01',
+  isActive: true, reminderEnabled: true, priority: 'ESSENTIAL',
+  createdAt: '', updatedAt: '', ...over,
+});
+
+const spend = (over: Partial<Transaction> = {}): Transaction => ({
+  id: `t-${Math.random()}`, userId: 'u', type: 'EXPENSE', amount: 1000_00,
+  currency: 'PHP', categoryId: 'cat-groceries', accountId: 'a', date: '2026-08-05',
+  tags: [], status: 'CONFIRMED', createdAt: '', updatedAt: '', ...over,
+});
+
+const goal = (over: Partial<SavingsGoal> = {}): SavingsGoal => ({
+  id: 'g-ef', userId: 'u', name: 'Emergency Fund', targetAmount: 100000_00,
+  currentAmount: 15000_00, currency: 'PHP', targetDate: '2027-09-11',
+  priority: 'ESSENTIAL', status: 'ON_TRACK', icon: 'Shield', color: '#059669',
+  isArchived: false, createdAt: '', updatedAt: '', ...over,
+});
+
+describe('deriveEssentialMonthlyExpenses', () => {
+  it('committed essential bills win over actual spend', () => {
+    const out = EmergencyFundEngine.deriveEssentialMonthlyExpenses({
+      commitments: [bill({ amount: 12000_00 })],
+      recurring: [rule({ amount: 2300_00, frequency: 'WEEKLY' })],
+      transactions: [spend({ amount: 99999_00 })],
+      currency: 'PHP', referenceDateISO: REF,
+    });
+    expect(out.source).toBe('COMMITTED');
+    expect(out.essentialBillCount).toBe(2);
+    // 12,000 + 2,300×52/12 (rounded to integer minor units)
+    expect(Number.isInteger(out.committedMonthly)).toBe(true);
+    expect(out.committedMonthly).toBe(Math.round(12000_00 + (2300_00 * 52) / 12));
+    expect(out.essentialMonthly).toBe(out.committedMonthly);
+  });
+
+  it('ignores cancelled bills, inflows, inactive rules, and non-essential priorities', () => {
+    const out = EmergencyFundEngine.deriveEssentialMonthlyExpenses({
+      commitments: [
+        bill({ status: 'CANCELLED', amount: 50000_00 }),
+        bill({ direction: 'INFLOW', amount: 50000_00 }),
+        bill({ priority: 'OPTIONAL', amount: 50000_00 }),
+      ],
+      recurring: [
+        rule({ isActive: false, amount: 50000_00 }),
+        rule({ type: 'INCOME', amount: 50000_00 }),
+        rule({ priority: undefined, amount: 50000_00 }),
+      ],
+      transactions: [], currency: 'PHP', referenceDateISO: REF,
+    });
+    expect(out.source).toBe('NONE');
+    expect(out.essentialMonthly).toBe(0);
+    expect(out.essentialBillCount).toBe(0);
+  });
+
+  it('falls back to the 6-month essential-spend average', () => {
+    const out = EmergencyFundEngine.deriveEssentialMonthlyExpenses({
+      commitments: [], recurring: [],
+      transactions: [
+        spend({ categoryId: 'cat-groceries', amount: 6000_00, date: '2026-04-01' }),
+        spend({ categoryId: 'cat-transport', amount: 6000_00, date: '2026-08-20' }),
+        spend({ categoryId: 'cat-shopping', amount: 99999_00 }), // not essential
+        spend({ categoryId: 'cat-groceries', amount: 99999_00, date: '2026-01-05' }), // too old
+      ],
+      currency: 'PHP', referenceDateISO: REF,
+    });
+    expect(out.source).toBe('ACTUAL');
+    expect(out.actualAvgMonthly).toBe(Math.round((6000_00 + 6000_00) / 6));
+    expect(Number.isInteger(out.actualAvgMonthly)).toBe(true);
+  });
+
+  it('excludes pending, foreign-currency, and bookkeeping rows from actuals', () => {
+    const out = EmergencyFundEngine.deriveEssentialMonthlyExpenses({
+      commitments: [], recurring: [],
+      transactions: [
+        spend({ amount: 5000_00, status: 'PENDING' }),
+        spend({ amount: 5000_00, currency: 'USD' }),
+        spend({ amount: 5000_00, tags: ['goal-fund'] }),
+        spend({ amount: 5000_00, tags: ['adjustment'] }),
+        spend({ amount: 1200_00 }),
+      ],
+      currency: 'PHP', referenceDateISO: REF,
+    });
+    expect(out.actualAvgMonthly).toBe(Math.round(1200_00 / 6));
+  });
+
+  it('keeps currencies isolated across all three sources', () => {
+    const out = EmergencyFundEngine.deriveEssentialMonthlyExpenses({
+      commitments: [bill({ amount: 5000_00, currency: 'USD' })],
+      recurring: [rule({ amount: 5000_00, currency: 'USD' })],
+      transactions: [spend({ amount: 5000_00, currency: 'USD' })],
+      currency: 'PHP', referenceDateISO: REF,
+    });
+    expect(out.source).toBe('NONE');
+    expect(out.essentialMonthly).toBe(0);
+  });
+
+  it('treats recurring rules without a currency as base-currency (legacy data)', () => {
+    const out = EmergencyFundEngine.deriveEssentialMonthlyExpenses({
+      commitments: [], recurring: [rule({ currency: undefined, amount: 3000_00 })],
+      transactions: [], currency: 'PHP', referenceDateISO: REF,
+    });
+    expect(out.source).toBe('COMMITTED');
+    expect(out.essentialMonthly).toBe(3000_00);
+  });
+});
+
+describe('project', () => {
+  it('computes months covered, capped progress, and shortfall', () => {
+    const out = EmergencyFundEngine.project({
+      goal: goal({ currentAmount: 30000_00 }),
+      commitments: [bill({ amount: 10000_00 })],
+      recurring: [], transactions: [],
+      currency: 'PHP', referenceDateISO: REF,
+    });
+    expect(out.hasFund).toBe(true);
+    expect(out.essentialMonthly).toBe(10000_00);
+    expect(out.targetMonths).toBe(6);
+    expect(out.recommendedTarget).toBe(60000_00);
+    expect(out.monthsCovered).toBeCloseTo(3, 5);
+    expect(out.progressPct).toBeCloseTo(50, 5);
+    expect(out.shortfall).toBe(30000_00);
+  });
+
+  it('caps progress at 100 and zeroes the shortfall when overfunded', () => {
+    const out = EmergencyFundEngine.project({
+      goal: goal({ currentAmount: 999999_00 }),
+      commitments: [bill({ amount: 10000_00 })],
+      recurring: [], transactions: [],
+      currency: 'PHP', referenceDateISO: REF,
+    });
+    expect(out.progressPct).toBe(100);
+    expect(out.shortfall).toBe(0);
+    expect(out.monthsCovered).toBeGreaterThan(6);
+  });
+
+  it('projects a target even before the fund goal exists', () => {
+    const out = EmergencyFundEngine.project({
+      commitments: [bill({ amount: 10000_00 })],
+      recurring: [], transactions: [],
+      currency: 'PHP', referenceDateISO: REF,
+    });
+    expect(out.hasFund).toBe(false);
+    expect(out.recommendedTarget).toBe(60000_00);
+    expect(out.monthsCovered).toBe(0);
+  });
+
+  it('never divides by zero without essentials', () => {
+    const out = EmergencyFundEngine.project({
+      goal: goal({ currentAmount: 5000_00 }),
+      commitments: [], recurring: [], transactions: [],
+      currency: 'PHP', referenceDateISO: REF,
+    });
+    expect(out.monthsCovered).toBe(0);
+    expect(out.progressPct).toBe(0);
+    expect(out.recommendedTarget).toBe(0);
+    expect(out.breakdown.source).toBe('NONE');
+  });
+});

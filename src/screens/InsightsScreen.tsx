@@ -8,11 +8,11 @@ import {
   Transaction,
   UserSettings,
 } from '../types';
-import { InsightEngine } from '../domain/insight/InsightEngine';
+import { InsightEngine, getMonthlyCashFlow } from '../domain/insight/InsightEngine';
 import { MoneyValue } from '../domain/money/MoneyValue';
 import { DateUtils } from '../domain/date/DateUtils';
 import { TransactionEngine } from '../domain/transaction/TransactionEngine';
-import { t, categoryName } from '../i18n';
+import { t, categoryName, monthAbbr } from '../i18n';
 import {
   PieChart,
   Sparkles,
@@ -81,7 +81,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
   for (const tx of transactions) {
     if (tx.type !== 'EXPENSE' || tx.status === 'PENDING') continue;
     if (tx.currency !== currency) continue; // never mix currencies
-    if (TransactionEngine.isGoalFunding(tx)) continue; // reservations are not spending
+    if (TransactionEngine.isBookkeeping(tx)) continue; // reservations + adjustments are not spending
     if (DateUtils.isDateInRange(tx.date, currentMonthStart, currentMonthEnd)) {
       // Split-aware: a split expense contributes per allocated category.
       const allocations = TransactionEngine.getCategoryAllocations(tx);
@@ -92,6 +92,12 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
       totalExpenseMinor += tx.amount;
     }
   }
+
+  // Monthly cash-flow trend — trailing 6 months, oldest → newest.
+  const cashFlow = getMonthlyCashFlow(transactions, currency, todayISO);
+  const cashFlowMax = Math.max(1, ...cashFlow.map((b) => Math.max(b.income, b.expense)));
+  const cashFlowActive = cashFlow.some((b) => b.hasActivity);
+  const currentNet = cashFlow[cashFlow.length - 1]?.net ?? 0;
 
   const categoryBreakdown = Array.from(categoryTotals.entries())
     .map(([catId, amount]) => {
@@ -115,7 +121,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
         className="rounded-[24px] sm:rounded-[28px] bg-gradient-to-br from-[#122A1E] via-[#163325] to-[#183625] p-5 sm:p-6 text-white shadow-xl shadow-emerald-950/20 border border-emerald-800/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
       >
         <div>
-          <span className="text-xs font-bold text-[#D4F63D] uppercase tracking-wider flex items-center gap-1.5 mb-1">
+          <span className="text-xs font-bold text-(--accent) uppercase tracking-wider flex items-center gap-1.5 mb-1">
             <Sparkles className="h-3.5 w-3.5" />
             {t('analytics.simulatorKicker')}
           </span>
@@ -130,7 +136,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
         <button
           type="button"
           onClick={onOpenWhatIf}
-          className="rounded-2xl bg-[#D4F63D] px-5 py-2.5 text-xs sm:text-sm font-black text-[#122A1E] shadow-lg shadow-lime-500/20 hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer"
+          className="rounded-2xl bg-(--accent) px-5 py-2.5 text-xs sm:text-sm font-black text-(--brand) shadow-lg shadow-lime-500/20 hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer"
         >
           {t('analytics.simulatorCta')}
         </button>
@@ -195,6 +201,70 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
         )}
       </div>
 
+      {/* Monthly Cash-Flow Trend */}
+      <div className="rounded-[24px] sm:rounded-[28px] bg-(--surface) p-5 sm:p-6 shadow-sm border border-(--line-soft) space-y-3.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-800" />
+            <h4 className="text-xs sm:text-sm font-black text-(--ink) uppercase tracking-wider">
+              {t('analytics.cashflowTitle')}
+            </h4>
+          </div>
+          <span className="text-xs sm:text-sm font-bold text-(--ink-3)">{t('analytics.cashflowHint')}</span>
+        </div>
+
+        {!cashFlowActive ? (
+          <div className="flex flex-col items-center gap-1.5 py-6 text-center">
+            <Inbox className="h-6 w-6 text-slate-300" aria-hidden="true" />
+            <p className="text-xs text-(--ink-3) max-w-xs">{t('analytics.cashflowEmpty')}</p>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-4 text-[11px] font-bold text-(--ink-3)">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" aria-hidden="true" />
+                {t('analytics.income')}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-rose-400" aria-hidden="true" />
+                {t('analytics.expense')}
+              </span>
+            </div>
+            <div className="flex items-stretch justify-between gap-1.5 sm:gap-2" role="img" aria-label={t('analytics.cashflowTitle')}>
+              {cashFlow.map((b) => {
+                const incomePct = b.income > 0 ? Math.max(3, (b.income / cashFlowMax) * 100) : 0;
+                const expensePct = b.expense > 0 ? Math.max(3, (b.expense / cashFlowMax) * 100) : 0;
+                const label = monthAbbr(b.monthIndex0);
+                return (
+                  <div key={b.monthStartISO} className="flex flex-1 flex-col items-center gap-1">
+                    <div className="flex h-24 sm:h-28 w-full items-end justify-center gap-1">
+                      <div
+                        style={{ height: `${incomePct}%` }}
+                        title={`${label}: ${t('analytics.income')} ${MoneyValue.fromMinorUnits(b.income, currency).format()}`}
+                        className="w-3 sm:w-4 rounded-t-md bg-emerald-500 finova-chart-bar"
+                      />
+                      <div
+                        style={{ height: `${expensePct}%` }}
+                        title={`${label}: ${t('analytics.expense')} ${MoneyValue.fromMinorUnits(b.expense, currency).format()}`}
+                        className="w-3 sm:w-4 rounded-t-md bg-rose-400 finova-chart-bar"
+                      />
+                    </div>
+                    <span className="text-[10px] sm:text-[11px] font-bold text-(--ink-3)">{label}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs sm:text-sm font-bold text-(--ink-2)">
+              {t('analytics.net')}{' '}
+              <span className={currentNet >= 0 ? 'text-emerald-700' : 'text-rose-600'}>
+                {currentNet > 0 ? '+' : ''}
+                {MoneyValue.fromMinorUnits(currentNet, currency).format()}
+              </span>
+            </p>
+          </>
+        )}
+      </div>
+
       {/* Smart Money Tips List */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
@@ -236,7 +306,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({
                         <IconComp className="h-4 w-4 sm:h-5 sm:w-5" />
                       </div>
                       <div>
-                        <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-(--ink-3) block">
+                        <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-(--ink-3) block">
                           {t(`insightCat.${insight.category}`)}
                         </span>
                         <h4 className="text-xs sm:text-sm font-extrabold text-(--ink)">{insight.title}</h4>

@@ -1,32 +1,55 @@
-# React + TypeScript + Vite
+# PALDO — Personal Finance
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A calm, privacy-first personal finance web app: track spending, see a daily **Safe-to-Spend** limit, plan budgets and savings goals, and never miss a bill. Works offline as a PWA, with optional cloud sync.
 
-Currently, two official plugins are available:
+> Note: the repository folder is named `FINOVA` (the original code name); the shipped product is **PALDO**.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Stack
 
-## React Compiler
+- React 19 + TypeScript (strict) + Vite 6
+- Tailwind CSS v4
+- Supabase (Postgres + Auth) for optional cloud sync — local-first by design
+- Vitest for unit/domain tests
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Getting started
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev      # local dev server
+npm run build    # type-check (tsc -b) + production build
+npm test         # full test suite (347 tests, 32 files)
+npm run lint     # oxlint (0 errors; remaining warnings are reviewed idiom)
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+### Cloud sync (optional)
+
+Copy `.env.example` to `.env.local` and fill in your Supabase project keys:
+
+```bash
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-public-key-here
+```
+
+Without these, the app runs fully offline on the device. Apply `supabase/schema.sql` in your Supabase project for cloud sync and row-level security. If your database predates a migration file in `supabase/migration_*.sql`, run those too (they are idempotent and also folded into `schema.sql` for fresh databases).
+
+## How it's organized
+
+- `src/domain/*` — pure, tested financial engines (transactions, budgets, goals, safe-to-spend, timeline, risk, insights). No React.
+- `src/screens/*`, `src/components/*` — UI.
+- `src/services/*` — storage, auth, sync, notifications.
+- `src/i18n/*` — English (`en`) + Filipino (`fil`) locales. Every `en` key must exist in `fil` (enforced by a parity test).
+
+## Notes
+
+- **Local-first:** data is saved to the device immediately; cloud sync (when configured) queues and pushes in the background.
+- **Privacy:** the app stores data locally and (optionally) in your own Supabase project. There is no third-party analytics or push backend — device notifications work while the app is open; the in-app feed always works, even offline.
+- **App Lock** is a device-level PIN gate, not encryption — keep your device lock on too.
+- **Data portability:** full JSON backup/restore plus CSV export; the app's own CSV exports can be re-imported with duplicate detection and a pre-import review.
+
+## Financial model (short version)
+
+- Money is integer minor units (`MoneyValue`); dates are plain `YYYY-MM-DD` local days (`DateUtils`) — no timezone drift, no float totals.
+- Every transaction moves account balances through `TransactionEngine`; edits reverse-then-apply, deletes reverse. Nothing hand-edits a balance except reconciliation, which posts an auditable adjustment transaction.
+- Goal funding and adjustments are tagged bookkeeping (`goal-fund`, `adjustment`) and are excluded from budgets, spending breakdowns, and trends.
+- Transfers move money between same-currency accounts and never count as income or spending.
+- The Emergency Fund target is derived from your own essential bills (or 6-month essential spend) — every figure shows its source.

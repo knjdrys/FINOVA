@@ -83,7 +83,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
         {/* Step 1: Welcome & Profile */}
         {step === 1 && (
           <div className="space-y-4 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#122A1E] text-[#D4F63D] shadow-lg shadow-emerald-950/20">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-(--brand) text-(--accent) shadow-lg shadow-emerald-950/20">
               <Sparkles className="h-7 w-7" />
             </div>
 
@@ -131,7 +131,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
             <button
               type="button"
               onClick={() => setStep(2)}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#122A1E] py-3.5 text-sm font-bold text-[#D4F63D] shadow-md shadow-emerald-950/20 hover:bg-[#183625] transition-all cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-(--brand) py-3.5 text-sm font-bold text-(--accent) shadow-md shadow-emerald-950/20 hover:bg-(--brand-hover) transition-all cursor-pointer"
             >
               <span>{t('onboard.continue')}</span>
               <ArrowRight className="h-4 w-4" />
@@ -143,7 +143,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
         {step === 2 && (
           <div className="space-y-4">
             <div className="text-center">
-              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full">
+              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full">
                 {t('onboard.stepOf', { current: 2, total: 2 })}
               </span>
               <h3 className="text-lg sm:text-xl font-black text-(--ink) mt-1">
@@ -235,7 +235,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
                   }`}
                 >
                   <span className="text-xs font-black block">Twice a Month (15-Day)</span>
-                  <span className="text-[10px] text-(--ink-3)">15th & End of Month</span>
+                  <span className="text-[11px] text-(--ink-3)">15th & End of Month</span>
                 </button>
 
                 <button
@@ -248,7 +248,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
                   }`}
                 >
                   <span className="text-xs font-black block">Once a Month</span>
-                  <span className="text-[10px] text-(--ink-3)">Full Monthly Budget</span>
+                  <span className="text-[11px] text-(--ink-3)">Full Monthly Budget</span>
                 </button>
               </div>
             </div>
@@ -258,7 +258,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
               <button
                 type="button"
                 onClick={() => handleFinish(false)}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#122A1E] py-3.5 text-sm font-bold text-[#D4F63D] shadow-md hover:bg-[#183625] transition-all cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-(--brand) py-3.5 text-sm font-bold text-(--accent) shadow-md hover:bg-(--brand-hover) transition-all cursor-pointer"
               >
                 <CheckCircle2 className="h-4 w-4" />
                 {/* Honest label: the button creates the account WITH the entered

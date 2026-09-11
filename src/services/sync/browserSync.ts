@@ -36,7 +36,7 @@ export function initSyncManager(opts: {
   getState = opts.getState;
   authUser = opts.authUser;
 
-  const storageKey = opts.authUser?.id ? `FINOVA_SYNC_QUEUE_${opts.authUser.id}` : 'FINOVA_SYNC_QUEUE_GUEST';
+  const storageKey = opts.authUser?.id ? `PALDO_SYNC_QUEUE_${opts.authUser.id}` : 'PALDO_SYNC_QUEUE_GUEST';
   const queue = new SyncQueue(createPersistentQueueStorage(storageKey));
   manager = new SyncManager({
     queue,

@@ -15,6 +15,7 @@ import {
 } from '../types';
 import { DateUtils } from '../domain/date/DateUtils';
 import { MoneyValue } from '../domain/money/MoneyValue';
+import { EmergencyFundEngine } from '../domain/emergency-fund/EmergencyFundEngine';
 import { GoalEngine } from '../domain/goal/GoalEngine';
 import { BudgetEngine } from '../domain/budget/BudgetEngine';
 import { TimelineEngine } from '../domain/timeline/TimelineEngine';
@@ -22,13 +23,17 @@ import { t } from '../i18n/core';
 import {
   Shield,
   Calendar,
+  CalendarDays,
   CheckCircle2,
   Plus,
   Pencil,
   Trash2,
   Wallet,
+  Target,
+  ReceiptText,
   Repeat,
   MoreHorizontal,
+  type LucideIcon,
 } from 'lucide-react';
 
 interface PlansScreenProps {
@@ -41,7 +46,7 @@ interface PlansScreenProps {
   recurring: RecurringTransaction[];
   settings: UserSettings;
   onOpenAddGoal: () => void;
-  onOpenAddEmergencyFund: () => void;
+  onOpenAddEmergencyFund: (suggestedTargetMinor?: number) => void;
   onOpenAddCommitment: () => void;
   onOpenAddPayday: () => void;
   onOpenAddBudget: () => void;
@@ -126,8 +131,9 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({
 
   return (
     <div className="space-y-4 pb-20">
-      {/* Internal segments — no new top-level navigation tab */}
-      <div className="flex rounded-xl bg-(--surface-3) p-1 text-[10px] font-bold">
+      {/* Internal segments — no new top-level navigation tab. Scrollable on
+          narrow screens so the 5 labels never crush into an untappable row. */}
+      <div className="flex gap-1 overflow-x-auto no-scrollbar rounded-xl bg-(--surface-3) p-1 text-[11px] font-bold">
         <Seg label={t('plans.timeline')} active={subTab === 'TIMELINE'} onClick={() => setSubTab('TIMELINE')} />
         <Seg label={t('plans.budgets')} active={subTab === 'BUDGETS'} onClick={() => setSubTab('BUDGETS')} />
         <Seg label={t('plans.goals')} active={subTab === 'GOALS'} onClick={() => setSubTab('GOALS')} />
@@ -152,6 +158,9 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({
       {subTab === 'GOALS' && (
         <GoalsView
           goals={goals}
+          transactions={transactions}
+          commitments={commitments}
+          recurring={recurring}
           onOpenAdd={onOpenAddGoal}
           onOpenEmergencyFund={onOpenAddEmergencyFund}
           onEdit={onEditGoal}
@@ -196,7 +205,7 @@ const Seg: React.FC<{ label: string; active: boolean; onClick: () => void }> = (
   <button
     type="button"
     onClick={onClick}
-    className={`flex-1 py-2 px-0.5 rounded-lg transition-all leading-tight ${
+    className={`shrink-0 px-3 py-2 rounded-lg transition-all leading-tight ${
       active ? 'bg-(--surface) text-(--ink) shadow-sm' : 'text-(--ink-2) hover:text-(--ink)'
     }`}
   >
@@ -214,15 +223,18 @@ const TimelineView: React.FC<{ timeline: TimelineDay[]; settings: UserSettings; 
   return (
   <div className="space-y-3 motion-stagger">
     <div className="flex items-center justify-between px-1">
-      <span className="text-xs font-extrabold text-(--ink) uppercase tracking-wider">30-Day Cash Flow Projection</span>
+      <span className="flex items-center gap-1.5 text-xs font-extrabold text-(--ink) uppercase tracking-wider">
+        <CalendarDays className="h-3.5 w-3.5 text-emerald-700" />
+        30-Day Cash Flow Projection
+      </span>
       <span className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300">Running Projected Balances</span>
     </div>
-    <p className="px-1 text-[10px] font-medium text-(--ink-3)">
-      {t('plans.timelineLegend')}
+    <p className="px-1 text-[11px] font-medium text-(--ink-3)">
+      {t('plans.timelineDesc')}
     </p>
     {!hasAnyEvents && (
-      <div className="rounded-2xl bg-(--surface) p-6 text-center border border-(--line)/80 shadow-xs space-y-2">
-        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+      <div className="rounded-3xl bg-(--surface) p-6 text-center border border-(--line)/80 shadow-xs space-y-2">
+        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-3xl bg-emerald-50 text-emerald-700">
           <Calendar className="h-5 w-5" />
         </div>
         <p className="text-xs font-bold text-(--ink)">{t('plans.timelineEmpty')}</p>
@@ -251,7 +263,7 @@ const TimelineView: React.FC<{ timeline: TimelineDay[]; settings: UserSettings; 
         return (
           <div
             key={day.date}
-            className={`rounded-2xl border p-4 transition-all ${
+            className={`rounded-3xl border p-4 transition-all ${
               day.isToday ? 'bg-emerald-50/50 border-emerald-200/80 shadow-sm dark:bg-emerald-950/50 dark:border-emerald-800/50' : 'bg-(--surface) border-(--line-soft) shadow-xs'
             }`}
           >
@@ -261,7 +273,7 @@ const TimelineView: React.FC<{ timeline: TimelineDay[]; settings: UserSettings; 
                 <span className="text-xs font-bold text-(--ink)">{day.dayLabel}</span>
               </div>
               <div className="text-right">
-                <span className="text-[10px] text-(--ink-3) font-semibold block">Projected Balance</span>
+                <span className="text-[11px] text-(--ink-3) font-semibold block">Projected Balance</span>
                 <span className={`text-xs font-extrabold ${day.projectedEndOfDayBalance < settings.minimumReserve ? 'text-rose-600' : 'text-(--ink)'}`}>
                   {projMoney.format()}
                 </span>
@@ -276,7 +288,7 @@ const TimelineView: React.FC<{ timeline: TimelineDay[]; settings: UserSettings; 
                     <div key={ev.id} className="flex items-center justify-between text-xs font-medium py-1">
                       <div className="flex items-center gap-2 min-w-0">
                         <span
-                          className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold ${
+                          className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${
                             ev.status === 'ACTUAL'
                               ? 'bg-(--surface-3) text-(--ink-2)'
                               : ev.status === 'OVERDUE'
@@ -323,12 +335,16 @@ const BudgetsView: React.FC<{
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between px-1">
-        <span className="text-xs font-extrabold text-(--ink) uppercase tracking-wider">Budgets</span>
+        <span className="flex items-center gap-1.5 text-xs font-extrabold text-(--ink) uppercase tracking-wider">
+          <Wallet className="h-3.5 w-3.5 text-emerald-700" />
+          Budgets
+        </span>
         <button type="button" onClick={onOpenAdd} className="flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-emerald-950">
           <Plus className="h-3.5 w-3.5" /> <span>New Budget</span>
         </button>
       </div>
-      {budgets.length === 0 && <EmptyHint text="No budgets yet. Tap New Budget above to set a spending limit." />}
+      <p className="px-1 -mt-1 text-[11px] font-medium text-(--ink-3)">{t('plans.budgetsDesc')}</p>
+      {budgets.length === 0 && <EmptyHint text="No budgets yet. Tap New Budget above to set a spending limit." icon={Wallet} />}
       <div className="space-y-3">
         {activeBudgets.map((b) => {
           const insight = BudgetEngine.getBudgetInsight(b, transactions, todayISO);
@@ -348,13 +364,13 @@ const BudgetsView: React.FC<{
               ? { text: t('plans.riskLOW'), cls: 'bg-(--line) text-(--ink-2)' }
               : null;
           return (
-            <div key={b.id} className="rounded-2xl bg-(--surface) p-4 shadow-sm border border-(--line-soft) space-y-2">
+            <div key={b.id} className="rounded-3xl bg-(--surface) p-4 shadow-sm border border-(--line-soft) space-y-2">
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
                     <h4 className="text-sm font-bold text-(--ink)">{b.name}</h4>
                     {riskBadge && (
-                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${riskBadge.cls}`}>{riskBadge.text}</span>
+                      <span className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${riskBadge.cls}`}>{riskBadge.text}</span>
                     )}
                   </div>
                   <p className="text-[11px] font-medium text-(--ink-3)">
@@ -414,36 +430,89 @@ const BudgetsView: React.FC<{
 
 const GoalsView: React.FC<{
   goals: SavingsGoal[];
+  transactions: Transaction[];
+  commitments: MoneyCommitment[];
+  recurring: RecurringTransaction[];
   onOpenAdd: () => void;
-  onOpenEmergencyFund: () => void;
+  onOpenEmergencyFund: (suggestedTargetMinor?: number) => void;
   onEdit: (g: SavingsGoal) => void;
   onDelete: (id: string) => void;
   onFund: (goalId: string, amount: number, fromAccountId: string) => void;
   accounts: Account[];
   currency: CurrencyCode;
-}> = ({ goals, onOpenAdd, onOpenEmergencyFund, onEdit, onDelete, onFund, accounts, currency }) => {
+}> = ({ goals, transactions, commitments, recurring, onOpenAdd, onOpenEmergencyFund, onEdit, onDelete, onFund, accounts, currency }) => {
   const todayISO = DateUtils.getTodayISO();
   const [fundingId, setFundingId] = useState<string | null>(null);
   const [fundAmount, setFundAmount] = useState('');
   const [fundSource, setFundSource] = useState('');
 
   const activeGoals = goals.filter((g) => !g.isArchived);
-  const hasEmergencyFund = activeGoals.some((g) => /emergency/i.test(g.name));
+  const efGoal = activeGoals.find((g) => /emergency/i.test(g.name));
+  // Explainable fund projection: essential bills first, else the user's own
+  // 6-month essential spend. Drives both the creation suggestion and the
+  // months-covered status once the fund exists.
+  const efProjection = EmergencyFundEngine.project({
+    goal: efGoal,
+    commitments,
+    recurring,
+    transactions,
+    currency,
+    referenceDateISO: todayISO,
+  });
+  const suggestedEfTarget = efProjection.recommendedTarget > 0 ? efProjection.recommendedTarget : undefined;
+  const efSourceLine =
+    efProjection.breakdown.source === 'COMMITTED'
+      ? t('plans.efBasedOnCommitted', { count: efProjection.breakdown.essentialBillCount })
+      : efProjection.breakdown.source === 'ACTUAL'
+      ? t('plans.efBasedOnActual')
+      : t('plans.efNoData');
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between px-1">
-        <span className="text-xs font-extrabold text-(--ink) uppercase tracking-wider">Savings Goals</span>
+        <span className="flex items-center gap-1.5 text-xs font-extrabold text-(--ink) uppercase tracking-wider">
+          <Target className="h-3.5 w-3.5 text-emerald-700" />
+          Savings Goals
+        </span>
         <button type="button" onClick={onOpenAdd} className="flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-emerald-950">
           <Plus className="h-3.5 w-3.5" /> <span>New Goal</span>
         </button>
       </div>
+      <p className="px-1 -mt-1 text-[11px] font-medium text-(--ink-3)">{t('plans.goalsDesc')}</p>
+      {efGoal && efProjection.recommendedTarget > 0 && (
+        <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-4 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-1.5 text-xs font-extrabold text-(--ink)">
+              <Shield className="h-4 w-4 text-emerald-700" />
+              {efGoal.name}
+            </span>
+            <span className="rounded-full bg-emerald-600 px-2.5 py-0.5 text-[11px] font-bold text-white">
+              {t('plans.efMonthsCoveredFull', { months: efProjection.monthsCovered.toFixed(1) })}
+            </span>
+          </div>
+          <div className="h-2.5 w-full rounded-full bg-emerald-100 overflow-hidden" aria-hidden="true">
+            <div
+              className="h-full rounded-full bg-emerald-600 finova-chart-bar"
+              style={{ width: `${Math.round(efProjection.progressPct)}%` }}
+            />
+          </div>
+          <p className="text-[11px] font-bold text-emerald-900">
+            {efProjection.shortfall > 0
+              ? t('plans.efShortfall', {
+                  amount: MoneyValue.fromMinorUnits(efProjection.shortfall, currency).format(),
+                  months: efProjection.targetMonths,
+                })
+              : `${t('plans.efRecommended')}: ${MoneyValue.fromMinorUnits(efProjection.recommendedTarget, currency).format()}`}
+          </p>
+          <p className="text-[11px] font-medium text-(--ink-3)">{efSourceLine}</p>
+        </div>
+      )}
       {activeGoals.length === 0 && (
         <div className="space-y-2">
-          <EmptyHint text="No goals yet. Tap New Goal above to start saving toward something." />
+          <EmptyHint text="No goals yet. Tap New Goal above to start saving toward something." icon={Target} />
           <button
             type="button"
-            onClick={onOpenEmergencyFund}
-            className="flex w-full items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-left hover:bg-emerald-100/70 transition-colors cursor-pointer"
+            onClick={() => onOpenEmergencyFund(suggestedEfTarget)}
+            className="flex w-full items-center gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-left hover:bg-emerald-100/70 transition-colors cursor-pointer"
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white">
               <Shield className="h-5 w-5" />
@@ -451,17 +520,25 @@ const GoalsView: React.FC<{
             <span>
               <span className="block text-sm font-bold text-(--ink)">{t('plans.efStart')}</span>
               <span className="block text-[11px] font-medium text-(--ink-3)">{t('plans.efHint')}</span>
+              {suggestedEfTarget ? (
+                <span className="block text-[11px] font-bold text-emerald-800">
+                  {t('plans.efSuggested', { amount: MoneyValue.fromMinorUnits(suggestedEfTarget, currency).format() })}
+                  {' · '}
+                  {efSourceLine}
+                </span>
+              ) : null}
             </span>
           </button>
         </div>
       )}
-      {!hasEmergencyFund && activeGoals.length > 0 && (
+      {!efGoal && activeGoals.length > 0 && (
         <button
           type="button"
-          onClick={onOpenEmergencyFund}
+          onClick={() => onOpenEmergencyFund(suggestedEfTarget)}
           className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-(--line-2) bg-(--surface) py-2 text-[11px] font-bold text-(--ink-3) hover:border-emerald-300 hover:text-emerald-700 transition-colors cursor-pointer"
         >
           <Plus className="h-3.5 w-3.5" /> {t('plans.efStart')}
+          {suggestedEfTarget ? ` · ${MoneyValue.fromMinorUnits(suggestedEfTarget, currency).format()}` : ''}
         </button>
       )}
       <div className="space-y-3">
@@ -482,7 +559,7 @@ const GoalsView: React.FC<{
               ? { text: t('plans.riskLOW'), cls: 'bg-(--line) text-(--ink-2)' }
               : null;
           return (
-            <div key={goal.id} className="rounded-2xl bg-(--surface) p-4 shadow-sm border border-(--line-soft) space-y-3">
+            <div key={goal.id} className="rounded-3xl bg-(--surface) p-4 shadow-sm border border-(--line-soft) space-y-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl text-white font-bold" style={{ backgroundColor: goal.color }}>
@@ -492,12 +569,12 @@ const GoalsView: React.FC<{
                     <div className="flex items-center gap-2">
                       <h4 className="text-sm font-bold text-(--ink)">{goal.name}</h4>
                       {riskBadge && (
-                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${riskBadge.cls}`}>{riskBadge.text}</span>
+                        <span className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${riskBadge.cls}`}>{riskBadge.text}</span>
                       )}
                     </div>
                     <p className="text-[11px] font-medium text-(--ink-3)">Target: {DateUtils.formatDisplayDate(goal.targetDate, { fullYear: true })}</p>
                     {goal.accountId && (
-                      <p className="text-[10px] font-bold text-emerald-700">
+                      <p className="text-[11px] font-bold text-emerald-700">
                         {t('plans.savingInto', { name: accounts.find((a) => a.id === goal.accountId)?.name || 'linked account' })}
                       </p>
                     )}
@@ -618,7 +695,10 @@ const BillsView: React.FC<{
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between px-1">
-        <span className="text-xs font-extrabold text-(--ink) uppercase tracking-wider">Upcoming Bills & Liabilities</span>
+        <span className="flex items-center gap-1.5 text-xs font-extrabold text-(--ink) uppercase tracking-wider">
+          <ReceiptText className="h-3.5 w-3.5 text-emerald-700" />
+          Upcoming Bills & Liabilities
+        </span>
         <div className="flex items-center gap-2">
           <button type="button" onClick={onOpenPayday} className="flex items-center gap-1 text-xs font-bold text-(--ink-3) hover:text-emerald-700 transition-colors cursor-pointer">
             <Plus className="h-3.5 w-3.5" /> <span>{t('plans.paydayBtn')}</span>
@@ -628,6 +708,7 @@ const BillsView: React.FC<{
           </button>
         </div>
       </div>
+      <p className="px-1 -mt-1 text-[11px] font-medium text-(--ink-3)">{t('plans.billsDesc')}</p>
       <div className="flex gap-1.5 px-1" role="tablist" aria-label="Filter commitments">
         {([['ALL', t('plans.billFilterAll')], ['OUT', t('plans.billFilterBills')], ['PLANNED', t('plans.billFilterPlanned')], ['IN', t('plans.billFilterIncome')]] as const).map(([v, label]) => (
           <button
@@ -636,7 +717,7 @@ const BillsView: React.FC<{
             role="tab"
             aria-selected={filter === v}
             onClick={() => setFilter(v)}
-            className={`rounded-full px-2.5 py-1 text-[10px] font-bold transition-colors cursor-pointer ${
+            className={`rounded-full px-2.5 py-1 text-[11px] font-bold transition-colors cursor-pointer ${
               filter === v ? 'bg-slate-900 text-white' : 'bg-(--surface-3) text-(--ink-3) hover:text-(--ink)'
             }`}
           >
@@ -644,7 +725,7 @@ const BillsView: React.FC<{
           </button>
         ))}
       </div>
-      {sorted.length === 0 && <EmptyHint text="No bills yet. Tap + Add Bill above to add a recurring obligation." />}
+      {sorted.length === 0 && <EmptyHint text="No bills yet. Tap + Add Bill above to add a recurring obligation." icon={ReceiptText} />}
       <div className="space-y-2">
         {sorted.map((comm) => {
           const isCompleted = comm.status === 'COMPLETED' || comm.status === 'AUTO_POSTED';
@@ -658,7 +739,7 @@ const BillsView: React.FC<{
             ? { text: 'OVERDUE', cls: 'bg-rose-100 text-rose-800' }
             : { text: comm.status, cls: 'bg-amber-100 text-amber-800' };
           return (
-            <div key={comm.id} className={`rounded-2xl p-4 border transition-all ${isCompleted ? 'bg-(--surface-2)/70 border-(--line)/60 opacity-60' : isCancelled ? 'bg-(--surface-2)/40 border-(--line)/40 opacity-50' : 'bg-(--surface) border-(--line-soft) shadow-sm'}`}>
+            <div key={comm.id} className={`rounded-3xl p-4 border transition-all ${isCompleted ? 'bg-(--surface-2)/70 border-(--line)/60 opacity-60' : isCancelled ? 'bg-(--surface-2)/40 border-(--line)/40 opacity-50' : 'bg-(--surface) border-(--line-soft) shadow-sm'}`}>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-3 min-w-0">
                   <button
@@ -673,7 +754,7 @@ const BillsView: React.FC<{
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <h4 className={`text-xs font-bold text-(--ink) truncate ${isCompleted || isCancelled ? 'line-through' : ''}`}>{comm.title}</h4>
-                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${statusBadge.cls}`}>{statusBadge.text}</span>
+                      <span className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${statusBadge.cls}`}>{statusBadge.text}</span>
                     </div>
                     <p className="text-[11px] font-medium text-(--ink-3)">Due: {DateUtils.formatDisplayDate(comm.dueDate, { fullYear: true })} • {comm.priority}{comm.autoPostEnabled ? ' • auto' : ''}</p>
                   </div>
@@ -711,9 +792,9 @@ const BillsView: React.FC<{
                   <button
                     type="button"
                     onClick={() => { if (reschedDate) { onReschedule(comm.id, reschedDate); setReschedId(null); } }}
-                    className="rounded-lg bg-amber-600 px-2 py-1 text-[10px] font-bold text-white"
+                    className="rounded-lg bg-amber-600 px-2 py-1 text-[11px] font-bold text-white"
                   >Save</button>
-                  <button type="button" onClick={() => setReschedId(null)} className="rounded-lg bg-(--line) px-2 py-1 text-[10px] font-bold text-(--ink-2)">X</button>
+                  <button type="button" onClick={() => setReschedId(null)} className="rounded-lg bg-(--line) px-2 py-1 text-[11px] font-bold text-(--ink-2)">X</button>
                 </div>
               )}
             </div>
@@ -742,12 +823,16 @@ const RecurringView: React.FC<{
   return (
   <div className="space-y-3">
     <div className="flex items-center justify-between px-1">
-      <span className="text-xs font-extrabold text-(--ink) uppercase tracking-wider">Recurring Transactions</span>
+      <span className="flex items-center gap-1.5 text-xs font-extrabold text-(--ink) uppercase tracking-wider">
+        <Repeat className="h-3.5 w-3.5 text-emerald-700" />
+        Recurring Transactions
+      </span>
       <button type="button" onClick={onOpenAdd} className="flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-emerald-950">
         <Plus className="h-3.5 w-3.5" /> <span>Add Recurring</span>
       </button>
     </div>
-    {recurring.length === 0 && <EmptyHint text="No recurring items. Tap + Add Recurring above to automate a bill or income." />}
+    <p className="px-1 -mt-1 text-[11px] font-medium text-(--ink-3)">{t('plans.recurringDesc')}</p>
+    {recurring.length === 0 && <EmptyHint text="No recurring items. Tap + Add Recurring above to automate a bill or income." icon={Repeat} />}
     <div className="space-y-2">
       {recurring.map((r) => {
         const rMoney = MoneyValue.fromMinorUnits(r.amount, r.currency || currency);
@@ -759,7 +844,7 @@ const RecurringView: React.FC<{
             : { text: t('plans.stPaused'), cls: 'bg-(--line) text-(--ink-3)' }
           : { text: t('plans.stActive'), cls: 'bg-emerald-100 text-emerald-800' };
         return (
-          <div key={r.id} className={`rounded-2xl p-4 border transition-all ${r.isActive ? 'bg-(--surface) border-(--line-soft) shadow-sm' : 'bg-(--surface-2)/70 border-(--line)/60'}`}>
+          <div key={r.id} className={`rounded-3xl p-4 border transition-all ${r.isActive ? 'bg-(--surface) border-(--line-soft) shadow-sm' : 'bg-(--surface-2)/70 border-(--line)/60'}`}>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
@@ -768,7 +853,7 @@ const RecurringView: React.FC<{
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <h4 className="text-xs font-bold text-(--ink) truncate">{r.title}</h4>
-                    <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${badge.cls}`}>{badge.text}</span>
+                    <span className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${badge.cls}`}>{badge.text}</span>
                   </div>
                   <p className="text-[11px] font-medium text-(--ink-3)">{r.frequency} • {r.type} • Next: {DateUtils.formatDisplayDate(r.nextOccurrence, { fullYear: true })}{auto && r.isActive ? ` • ${t('plans.autoBadge')}` : ''}</p>
                 </div>
@@ -779,7 +864,7 @@ const RecurringView: React.FC<{
                   type="button"
                   onClick={() => onToggleActive(r.id)}
                   aria-label={r.isActive ? t('plans.pauseBtn') : t('plans.resumeBtn')}
-                  className="rounded-lg border border-(--line) px-2 py-1 text-[10px] font-bold text-(--ink-2) hover:bg-(--surface-3) transition-colors cursor-pointer"
+                  className="rounded-lg border border-(--line) px-2 py-1 text-[11px] font-bold text-(--ink-2) hover:bg-(--surface-3) transition-colors cursor-pointer"
                 >
                   {r.isActive ? t('plans.pauseBtn') : t('plans.resumeBtn')}
                 </button>
@@ -816,7 +901,7 @@ const RecurringView: React.FC<{
                 <button
                   type="button"
                   onClick={() => { if (reschedDate) { onReschedule(r.id, reschedDate); setReschedId(null); } }}
-                  className="rounded-lg bg-amber-600 px-2 py-1 text-[10px] font-bold text-white"
+                  className="rounded-lg bg-amber-600 px-2 py-1 text-[11px] font-bold text-white"
                 >
                   {t('plans.moveBtn')}
                 </button>
@@ -898,10 +983,10 @@ const RowMenu: React.FC<{
   );
 };
 
-const EmptyHint: React.FC<{ text: string }> = ({ text }) => (
+const EmptyHint: React.FC<{ text: string; icon?: LucideIcon }> = ({ text, icon: Icon = Wallet }) => (
   <div className="rounded-2xl bg-(--surface) p-6 text-center border border-(--line)/80 shadow-xs">
     <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-2xl bg-(--surface-2) text-(--ink-3)">
-      <Wallet className="h-5 w-5" />
+      <Icon className="h-5 w-5" />
     </div>
     <p className="text-xs text-(--ink-3) mt-2 font-medium max-w-xs mx-auto">{text}</p>
   </div>

@@ -50,7 +50,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
       tag: 'HOME OVERVIEW',
       title: 'Spending Summary & Time Filters',
       subtitle: 'See exactly how much you have spent today, this week, or this month.',
-      icon: <Sparkles className="h-6 w-6 text-[#D4F63D]" />,
+      icon: <Sparkles className="h-6 w-6 text-(--accent)" />,
       accentColor: '#122A1E',
       bullets: [
         {
@@ -67,17 +67,17 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
       interactivePreview: (sym) => (
         <div className="rounded-2xl bg-gradient-to-br from-[#122A1E] via-[#163325] to-[#183625] p-4 text-white shadow-md space-y-2 border border-emerald-800/40 animate-pulse">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300">
+            <span className="text-[11px] font-black uppercase tracking-wider text-emerald-300">
               Spending Summary
             </span>
-            <span className="flex h-2 w-2 rounded-full bg-[#D4F63D]"></span>
+            <span className="flex h-2 w-2 rounded-full bg-(--accent)"></span>
           </div>
           <p className="text-2xl sm:text-3xl font-black text-white tracking-tight">
             {sym}10,000<span className="text-emerald-300 text-lg">.00</span>
           </p>
           <div className="flex items-center justify-between pt-1 text-[11px] text-emerald-200">
             <span>Spent Today</span>
-            <span className="font-bold text-[#D4F63D]">Budget {sym}30,000</span>
+            <span className="font-bold text-(--accent)">Budget {sym}30,000</span>
           </div>
         </div>
       ),
@@ -108,7 +108,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
               <span className="text-[11px] font-black text-emerald-900 uppercase">
                 Daily Safe Limit
               </span>
-              <span className="rounded-full bg-[#D4F63D] text-[#122A1E] px-1.5 py-0.2 text-[10px] font-black">
+              <span className="rounded-full bg-(--accent) text-(--brand) px-1.5 py-0.2 text-[11px] font-black">
                 Safe to Spend
               </span>
             </div>
@@ -145,16 +145,16 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
       interactivePreview: (sym) => (
         <div className="rounded-2xl bg-gradient-to-br from-[#122A1E] via-[#163325] to-[#183625] p-3.5 text-white shadow-sm space-y-2 border border-emerald-800/40">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase text-emerald-300">
+            <span className="text-[11px] font-black uppercase text-emerald-300">
               1st Pay Period (1st - 15th)
             </span>
-            <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[10px] font-black text-[#D4F63D] border border-emerald-300/30">
+            <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[11px] font-black text-(--accent) border border-emerald-300/30">
               13 Days Left
             </span>
           </div>
           <div className="flex items-baseline justify-between">
             <span className="text-xs text-emerald-200">Spent in this period</span>
-            <span className="text-base font-black text-[#D4F63D]">{sym}2,750.00</span>
+            <span className="text-base font-black text-(--accent)">{sym}2,750.00</span>
           </div>
           <div className="rounded-lg bg-[#0d1f16] p-2 text-[11px] text-emerald-100 flex justify-between border border-emerald-800/40">
             <span>15-Day Budget:</span>
@@ -191,7 +191,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
               </div>
               <div>
                 <span className="text-xs font-black text-(--ink) block">GRBank</span>
-                <span className="text-[10px] text-(--ink-3) font-semibold">Bank • •••• 5678</span>
+                <span className="text-[11px] text-(--ink-3) font-semibold">Bank • •••• 5678</span>
               </div>
             </div>
             <span className="text-xs font-black text-(--ink)">{sym}45,000.00</span>
@@ -203,7 +203,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
               </div>
               <div>
                 <span className="text-xs font-black text-(--ink) block">GCash Wallet</span>
-                <span className="text-[10px] text-(--ink-3) font-semibold">E-Wallet • •••• 0917</span>
+                <span className="text-[11px] text-(--ink-3) font-semibold">E-Wallet • •••• 0917</span>
               </div>
             </div>
             <span className="text-xs font-black text-(--ink)">{sym}11,180.00</span>
@@ -216,7 +216,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
       tag: 'FAST ENTRY',
       title: 'Quick-Add Button & Easy Deletes',
       subtitle: 'Add expenses, paychecks, or money transfers in just 5 seconds.',
-      icon: <Plus className="h-6 w-6 text-[#122A1E]" />,
+      icon: <Plus className="h-6 w-6 text-(--brand)" />,
       accentColor: '#122A1E',
       bullets: [
         {
@@ -233,7 +233,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
       interactivePreview: () => (
         <div className="flex items-center justify-center p-4 bg-(--surface-2) rounded-2xl border border-(--line) text-center">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#D4F63D] text-[#122A1E] shadow-lg shadow-lime-500/30">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-(--accent) text-(--brand) shadow-lg shadow-lime-500/30">
               <Plus className="h-6 w-6 stroke-[3]" />
             </div>
             <div className="text-left">
@@ -266,10 +266,10 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
       interactivePreview: (sym) => (
         <div className="rounded-2xl bg-purple-50/90 p-3.5 border border-purple-200 text-purple-950 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase text-purple-800">
+            <span className="text-[11px] font-black uppercase text-purple-800">
               Test: New Laptop ({sym}45,000)
             </span>
-            <span className="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] font-black">
+            <span className="rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[11px] font-black">
               VERDICT: SAFE
             </span>
           </div>
@@ -306,7 +306,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
             </span>
             <span className="text-xs font-bold text-(--ink)">{currency} Active</span>
           </div>
-          <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+          <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
             Download Ready
           </span>
         </div>
@@ -324,11 +324,11 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
         {/* Header with Progress */}
         <div className="flex items-center justify-between border-b border-(--line-soft) pb-3">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#122A1E] text-[#D4F63D] shadow-xs">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-(--brand) text-(--accent) shadow-xs">
               <Sparkles className="h-4 w-4" />
             </div>
             <div>
-              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700">
+              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-700">
                 PALDO Guide
               </span>
               <h3 className="text-sm sm:text-base font-black text-(--ink)">
@@ -360,7 +360,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
         {/* Step Content */}
         <div className="space-y-3.5">
           <div>
-            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full">
+            <span className="text-[11px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full">
               {currentStep.tag}
             </span>
             <h4 className="text-base sm:text-lg font-black text-(--ink) mt-1">
@@ -417,7 +417,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex items-center gap-1.5 rounded-xl bg-[#122A1E] px-5 py-2.5 text-xs font-black text-[#D4F63D] shadow-md hover:bg-[#183625] transition-all cursor-pointer"
+              className="flex items-center gap-1.5 rounded-xl bg-(--brand) px-5 py-2.5 text-xs font-black text-(--accent) shadow-md hover:bg-(--brand-hover) transition-all cursor-pointer"
             >
               <CheckCircle2 className="h-4 w-4" />
               <span>Done</span>
@@ -426,7 +426,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
             <button
               type="button"
               onClick={() => setCurrentStepIndex((prev) => Math.min(steps.length - 1, prev + 1))}
-              className="flex items-center gap-1.5 rounded-xl bg-[#122A1E] px-5 py-2.5 text-xs font-black text-[#D4F63D] shadow-md hover:bg-[#183625] transition-all cursor-pointer"
+              className="flex items-center gap-1.5 rounded-xl bg-(--brand) px-5 py-2.5 text-xs font-black text-(--accent) shadow-md hover:bg-(--brand-hover) transition-all cursor-pointer"
             >
               <span>Next</span>
               <ChevronRight className="h-4 w-4" />

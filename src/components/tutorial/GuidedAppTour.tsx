@@ -58,7 +58,7 @@ export const TOUR_STEPS: TourStep[] = [
     badge: 'Step 3 of 7 • Add Transactions',
     title: 'Quick-Add Button (+)',
     description:
-      'Tap this bright button anytime to add an expense, record income like your paycheck, or move money between bank accounts.',
+      'Tap this bright button anytime to add an expense, record income, plan a bill, or set a budget. It opens a menu of everything you can add — no need to hunt through tabs.',
     targetLabel: 'Quick-Add (+) Button',
     keyTakeaway: 'Moving money between banks updates your balances automatically.',
   },
@@ -213,7 +213,7 @@ export const GuidedAppTour: React.FC<GuidedAppTourProps> = ({
 
           {/* Animated Pointing Badge attached directly to the target */}
           <div
-            className={`absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-[#122A1E] text-[#D4F63D] px-3 py-1 text-[11px] font-black shadow-xl border border-[#D4F63D]/80 whitespace-nowrap animate-bounce ${
+            className={`absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-(--brand) text-(--accent) px-3 py-1 text-[11px] font-black shadow-xl border border-(--accent)/80 whitespace-nowrap animate-bounce ${
               isTargetInBottomHalf ? '-top-9' : '-bottom-9'
             }`}
           >
@@ -233,10 +233,10 @@ export const GuidedAppTour: React.FC<GuidedAppTourProps> = ({
           {/* Header Row */}
           <div className="flex items-center justify-between border-b border-(--line-soft) pb-2.5">
             <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#122A1E] text-[#D4F63D] shadow-xs">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-(--brand) text-(--accent) shadow-xs">
                 <Sparkles className="h-3.5 w-3.5" />
               </span>
-              <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-emerald-700">
+              <span className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-emerald-700">
                 {currentStep.badge}
               </span>
             </div>
@@ -301,7 +301,7 @@ export const GuidedAppTour: React.FC<GuidedAppTourProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex items-center gap-1 rounded-xl bg-[#122A1E] px-4 py-2 text-xs font-black text-[#D4F63D] shadow-md hover:bg-[#183625] transition-all cursor-pointer"
+                className="flex items-center gap-1 rounded-xl bg-(--brand) px-4 py-2 text-xs font-black text-(--accent) shadow-md hover:bg-(--brand-hover) transition-all cursor-pointer"
               >
                 <CheckCircle2 className="h-4 w-4" />
                 <span>Got It! Start</span>
@@ -310,7 +310,7 @@ export const GuidedAppTour: React.FC<GuidedAppTourProps> = ({
               <button
                 type="button"
                 onClick={() => setStepIndex((prev) => Math.min(TOUR_STEPS.length - 1, prev + 1))}
-                className="flex items-center gap-1 rounded-xl bg-[#122A1E] px-4 py-2 text-xs font-black text-[#D4F63D] shadow-md hover:bg-[#183625] transition-all cursor-pointer"
+                className="flex items-center gap-1 rounded-xl bg-(--brand) px-4 py-2 text-xs font-black text-(--accent) shadow-md hover:bg-(--brand-hover) transition-all cursor-pointer"
               >
                 <span>Next</span>
                 <ChevronRight className="h-4 w-4" />

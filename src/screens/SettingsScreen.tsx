@@ -12,7 +12,10 @@ import {
 import { MoneyValue } from '../domain/money/MoneyValue';
 import { DateUtils } from '../domain/date/DateUtils';
 import { FinovaStorage } from '../services/storage/FinovaStorage';
+import { BackupService } from '../services/backup/BackupService';
+import { CsvImportService, ImportRejectCode } from '../services/import/CsvImportService';
 import { AddAccountModal } from '../components/modals/AddAccountModal';
+import { AddCategoryModal } from '../components/modals/AddCategoryModal';
 import { TutorialModal } from '../components/modals/TutorialModal';
 import { GrbiLogo } from '../components/ui/GrbiLogo';
 import { AuthUserProfile } from '../services/supabase/authService';
@@ -42,6 +45,11 @@ import {
   Sun,
   Moon,
   Palette,
+  Pencil,
+  Upload,
+  Archive,
+  ArchiveRestore,
+  Tags,
 } from 'lucide-react';
 import { t, SUPPORTED_LANGS } from '../i18n';
 import { confirmDialog, notice } from '../components/ui/dialog';
@@ -57,7 +65,13 @@ interface SettingsScreenProps {
   onSelectCurrency: (currency: CurrencyCode) => void;
   accounts: Account[];
   onAddAccount: (newAccount: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onUpdateAccount: (accountId: string, data: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>, reconcileToMinor?: number) => void;
   onDeleteAccount: (accountId: string) => void;
+  onAddCategory: (data: Omit<Category, 'id' | 'userId'>) => void;
+  onUpdateCategory: (id: string, data: Omit<Category, 'id' | 'userId'>) => void;
+  onToggleCategoryArchive: (id: string) => void;
+  onRestoreBackup: (state: import('../services/storage/FinovaStorage').FinovaState) => void;
+  onImportTransactions: (txs: Transaction[]) => void;
   transactions: Transaction[];
   categories: Category[];
   budgets: any[];
@@ -76,7 +90,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onSelectCurrency,
   accounts,
   onAddAccount,
+  onUpdateAccount,
   onDeleteAccount,
+  onAddCategory,
+  onUpdateCategory,
+  onToggleCategoryArchive,
+  onRestoreBackup,
+  onImportTransactions,
   transactions,
   categories,
   budgets,
@@ -87,6 +107,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onSignOut,
 }) => {
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [lastBackupAt, setLastBackupAt] = useState<string | null>(null);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [osPerm, setOsPerm] = useState<OsPermission>(() => osPermission());
   // App lock (PIN) — local state mirrors the lock service, which is the source of truth.
@@ -162,6 +186,93 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     document.body.removeChild(link);
   };
 
+  const handleDownloadBackup = () => {
+    const json = BackupService.createBackup(FinovaStorage.loadState());
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', BackupService.backupFilename(currentCurrency, todayISO));
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setLastBackupAt(todayISO);
+    notice(t('backup.downloaded'));
+  };
+
+  const handleRestoreFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const result = BackupService.parseBackup(await file.text());
+    if (!result.ok) {
+      notice(result.error === 'version' ? t('backup.versionNew') : t('backup.invalidFile'));
+      return;
+    }
+    const ok = await confirmDialog({
+      title: t('dialog.restoreBackup'),
+      message: t('dialog.restoreBackupHint'),
+      danger: true,
+      confirmLabel: t('backup.restore'),
+    });
+    if (ok) onRestoreBackup(result.state);
+  };
+
+  const importReason = (code: ImportRejectCode, params: Record<string, string>): string => {
+    switch (code) {
+      case 'bad-type': return t('import.reasons.bad-type', params);
+      case 'bad-date': return t('import.reasons.bad-date', params);
+      case 'bad-status': return t('import.reasons.bad-status', params);
+      case 'bad-currency': return t('import.reasons.bad-currency', params);
+      case 'bad-amount': return t('import.reasons.bad-amount', params);
+      case 'unknown-account': return t('import.reasons.unknown-account', params);
+      case 'currency-mismatch': return t('import.reasons.currency-mismatch', params);
+      case 'unknown-destination': return t('import.reasons.unknown-destination', params);
+      case 'same-account': return t('import.reasons.same-account', params);
+      case 'transfer-currency': return t('import.reasons.transfer-currency', params);
+      case 'booking-row': return t('import.reasons.booking-row', params);
+    }
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const parsed = CsvImportService.parse(await file.text());
+    if (!parsed.ok) {
+      notice(
+        parsed.error === 'bad-header'
+          ? t('import.badHeader')
+          : parsed.error === 'too-many'
+          ? t('import.tooMany')
+          : t('import.empty')
+      );
+      return;
+    }
+    if (parsed.rows.length === 0) {
+      notice(t('import.empty'));
+      return;
+    }
+    const plan = CsvImportService.plan(parsed.rows, { accounts, categories, existing: transactions });
+    const lines = plan.invalid.slice(0, 8).map(
+      (r) => `Line ${r.line}: ${importReason(r.code, r.params)}`
+    );
+    if (plan.invalid.length > 8) {
+      lines.push(t('import.moreRejected', { count: plan.invalid.length - 8 }));
+    }
+    const message = [
+      t('import.review', { valid: plan.valid.length, dupes: plan.duplicates, bad: plan.invalid.length }),
+      ...lines,
+    ].join('\n');
+    const ok = await confirmDialog({
+      title: t('import.reviewTitle'),
+      message,
+      confirmLabel: plan.valid.length > 0 ? t('import.confirm') : t('common.close'),
+    });
+    if (ok) onImportTransactions(plan.valid);
+  };
+
   // Calculate 15-day cycle budget and expense metrics
   const cycleExpenseTotal = transactions
     .filter(
@@ -189,7 +300,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       {/* User Account & Cloud Sync Banner */}
       <div className="rounded-[24px] sm:rounded-[28px] bg-(--surface) p-4 sm:p-5 shadow-sm border border-(--line-soft) flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#122A1E] text-[#D4F63D] overflow-hidden shadow-xs">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-(--brand) text-(--accent) overflow-hidden shadow-xs">
             {authUser?.avatarUrl ? (
               <img src={authUser.avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
             ) : (
@@ -203,7 +314,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               {authUser?.fullName || settings.userName}
             </h4>
             <p className="truncate text-[11px] text-(--ink-3)">{authUser?.email || 'Logged in'}</p>
-            <div className="flex items-center gap-1 text-[10px] mt-0.5">
+            <div className="flex items-center gap-1 text-[11px] mt-0.5">
               {isSupabaseConfigured && !authUser?.isGuest ? (
                 <span className="inline-flex items-center gap-1 text-emerald-700 font-bold">
                   <Cloud className="h-3 w-3" />
@@ -240,14 +351,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         <div className="relative z-10 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[#D4F63D] text-[#122A1E] shadow-sm">
+              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-(--accent) text-(--brand) shadow-sm">
                 <Sparkles className="h-4 w-4 stroke-[2.5]" />
               </span>
-              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300">
+              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-300">
                 App Guide
               </span>
             </div>
-            <span className="rounded-full bg-emerald-400/20 px-2.5 py-0.5 text-[10px] font-black text-[#D4F63D] border border-emerald-300/30">
+            <span className="rounded-full bg-emerald-400/20 px-2.5 py-0.5 text-[11px] font-black text-(--accent) border border-emerald-300/30">
               Guided Tour
             </span>
           </div>
@@ -265,7 +376,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             <button
               type="button"
               onClick={onStartAppTour}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#D4F63D] text-[#122A1E] px-4 py-2.5 text-xs font-black shadow-md hover:bg-[#c3e332] active:scale-[0.98] transition-all cursor-pointer"
+              className="flex items-center justify-center gap-2 rounded-xl bg-(--accent) text-(--brand) px-4 py-2.5 text-xs font-black shadow-md hover:bg-[#c3e332] active:scale-[0.98] transition-all cursor-pointer"
             >
               <Compass className="h-4 w-4" />
               <span>Start App Tour</span>
@@ -361,7 +472,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             }`}
           >
             <span className="text-xs font-black block">Twice a Month (15-Day)</span>
-            <span className="text-[10px] text-(--ink-3)">
+            <span className="text-[11px] text-(--ink-3)">
               Splits into 1st & 2nd half periods
             </span>
           </button>
@@ -376,7 +487,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             }`}
           >
             <span className="text-xs font-black block">Once a Month</span>
-            <span className="text-[10px] text-(--ink-3)">Full Monthly Budget</span>
+            <span className="text-[11px] text-(--ink-3)">Full Monthly Budget</span>
           </button>
         </div>
 
@@ -384,10 +495,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         {settings.budgetCycleMode === 'SEMI_MONTHLY_15_DAYS' && (
           <div className="rounded-2xl bg-gradient-to-br from-[#122A1E] via-[#163325] to-[#183625] p-4 text-white shadow-md space-y-3 border border-emerald-800/40">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300">
+              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-300">
                 Current 15-Day Pay Period
               </span>
-              <span className="rounded-full bg-emerald-400/20 px-2.5 py-0.5 text-[10px] font-black text-[#D4F63D] border border-emerald-300/30">
+              <span className="rounded-full bg-emerald-400/20 px-2.5 py-0.5 text-[11px] font-black text-(--accent) border border-emerald-300/30">
                 {cycle15Day.remainingDays} Days Left
               </span>
             </div>
@@ -401,8 +512,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 </p>
               </div>
               <div className="text-right">
-                <span className="text-[10px] text-emerald-300 block">Spent This Period</span>
-                <span className="text-lg font-black text-[#D4F63D]">
+                <span className="text-[11px] text-emerald-300 block">Spent This Period</span>
+                <span className="text-lg font-black text-(--accent)">
                   {MoneyValue.fromMinorUnits(cycleExpenseTotal, currentCurrency).format()}
                 </span>
               </div>
@@ -438,7 +549,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           <button
             type="button"
             onClick={() => setIsAddAccountOpen(true)}
-            className="flex items-center gap-1 rounded-xl bg-[#122A1E] text-[#D4F63D] px-3 py-1.5 text-xs font-black shadow-xs hover:bg-[#183625] transition-colors cursor-pointer"
+            className="flex items-center gap-1 rounded-xl bg-(--brand) text-(--accent) px-3 py-1.5 text-xs font-black shadow-xs hover:bg-(--brand-hover) transition-colors cursor-pointer"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>Add Bank</span>
@@ -475,7 +586,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                   </div>
                   <div className="min-w-0">
                     <h5 className="truncate text-xs font-black text-(--ink)">{acc.name}</h5>
-                    <p className="text-[10px] font-semibold text-(--ink-3)">
+                    <p className="text-[11px] font-semibold text-(--ink-3)">
                       {acc.type.replace('_', ' ')} {acc.accountNumberMask ? `• ${acc.accountNumberMask}` : ''}
                     </p>
                   </div>
@@ -485,6 +596,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                   <span className="text-xs sm:text-sm font-black text-(--ink)">
                     {money.format()}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => { setEditingAccount(acc); setIsAddAccountOpen(true); }}
+                    aria-label={t('modal.editAccount')}
+                    className="text-[11px] font-bold text-(--ink-3) hover:text-emerald-700 transition-colors cursor-pointer"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
                   {accounts.length > 1 && (
                     <button
                       type="button"
@@ -502,6 +621,87 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* 3a2. Categories */}
+      <div className="rounded-[24px] sm:rounded-[28px] bg-(--surface) p-4 sm:p-5 shadow-sm border border-(--line-soft) space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-50 text-violet-700 shadow-2xs">
+              <Tags className="h-4 w-4" />
+            </div>
+            <div>
+              <h4 className="text-xs sm:text-sm font-black text-(--ink)">{t('categories.title')}</h4>
+              <p className="text-[11px] sm:text-xs text-(--ink-3)">{t('categories.hint')}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => { setEditingCategory(null); setIsCategoryModalOpen(true); }}
+            className="flex items-center gap-1 rounded-xl bg-(--brand) text-(--accent) px-3 py-1.5 text-xs font-black shadow-xs hover:bg-(--brand-hover) transition-colors cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>{t('categories.add')}</span>
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          {categories
+            .filter((c) => c.id !== 'cat-transfer')
+            .slice()
+            .sort((a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name))
+            .map((c) => {
+              const editable = !c.isSystem;
+              return (
+                <div
+                  key={c.id}
+                  className={`flex items-center justify-between gap-2 p-2.5 rounded-2xl bg-(--surface-2) border border-(--line)/70 ${c.isArchived ? 'opacity-60' : ''}`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span
+                      className="h-7 w-7 shrink-0 rounded-lg flex items-center justify-center text-[11px] font-black text-white"
+                      style={{ backgroundColor: c.color }}
+                      aria-hidden="true"
+                    >
+                      {c.name.charAt(0).toUpperCase()}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-black text-(--ink)">
+                        {c.name}
+                        {c.isArchived ? ` · ${t('categories.archivedBadge')}` : ''}
+                      </p>
+                      <p className="text-[11px] font-semibold text-(--ink-3)">
+                        {c.type === 'EXPENSE' ? t('tx.expense') : t('tx.income')}
+                        {c.isSystem ? ` · ${t('categories.systemBadge')}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                  {editable ? (
+                    <div className="flex items-center gap-2 shrink-0">
+                      {!c.isArchived && (
+                        <button
+                          type="button"
+                          onClick={() => { setEditingCategory(c); setIsCategoryModalOpen(true); }}
+                          aria-label={t('categories.edit')}
+                          className="text-(--ink-3) hover:text-emerald-700 transition-colors cursor-pointer"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => onToggleCategoryArchive(c.id)}
+                        aria-label={c.isArchived ? t('categories.restore') : t('categories.archive')}
+                        className="text-(--ink-3) hover:text-emerald-700 transition-colors cursor-pointer"
+                      >
+                        {c.isArchived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
         </div>
       </div>
 
@@ -686,7 +886,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 <span>{t('notifSet.os')}</span>
                 {notifPrefs.osNotifications ? <Check className="h-3.5 w-3.5 text-emerald-700 shrink-0" /> : <span className="h-3.5 w-3.5 shrink-0" />}
               </button>
-              <p className="text-[10px] sm:text-[11px] leading-snug text-(--ink-3)">
+              <p className="text-[11px] sm:text-[11px] leading-snug text-(--ink-3)">
                 {!osNotifySupported()
                   ? t('notifSet.osUnsupported')
                   : osPerm === 'denied'
@@ -795,7 +995,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 <option value={300000}>{t('security.autoLock5m')}</option>
               </select>
             </label>
-            <p className="text-[10px] sm:text-[11px] leading-snug text-(--ink-3)">{t('security.honestNote')}</p>
+            <p className="text-[11px] sm:text-[11px] leading-snug text-(--ink-3)">{t('security.honestNote')}</p>
           </>
         )}
       </div>
@@ -906,6 +1106,55 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           <span>Download All Transactions ({currentCurrency} CSV Spreadsheet)</span>
         </button>
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={handleDownloadBackup}
+            className="flex items-center justify-center gap-2 rounded-xl bg-(--surface-2) border border-(--line) py-2.5 text-xs font-bold text-(--ink-2) hover:bg-(--surface-3) transition-colors cursor-pointer"
+          >
+            <Download className="h-4 w-4 text-emerald-700" />
+            <span>{t('backup.download')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => document.getElementById('finova-backup-file')?.click()}
+            className="flex items-center justify-center gap-2 rounded-xl bg-(--surface-2) border border-(--line) py-2.5 text-xs font-bold text-(--ink-2) hover:bg-(--surface-3) transition-colors cursor-pointer"
+          >
+            <Upload className="h-4 w-4 text-emerald-700" />
+            <span>{t('backup.restore')}</span>
+          </button>
+        </div>
+        <input
+          id="finova-backup-file"
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          aria-label={t('backup.restore')}
+          onChange={handleRestoreFile}
+        />
+        <p className="text-[11px] font-medium text-(--ink-3)">
+          {t('backup.hint')}
+          {lastBackupAt ? ` · ${t('backup.lastBackup', { date: lastBackupAt })}` : ''}
+        </p>
+
+        <button
+          type="button"
+          onClick={() => document.getElementById('finova-import-file')?.click()}
+          className="w-full flex items-center justify-center gap-2 rounded-xl bg-(--surface-2) border border-(--line) py-2.5 text-xs font-bold text-(--ink-2) hover:bg-(--surface-3) transition-colors cursor-pointer"
+        >
+          <Upload className="h-4 w-4 text-emerald-700" />
+          <span>{t('import.button')}</span>
+        </button>
+        <input
+          id="finova-import-file"
+          type="file"
+          accept=".csv,text/csv"
+          className="hidden"
+          aria-label={t('import.button')}
+          onChange={handleImportFile}
+        />
+        <p className="text-[11px] font-medium text-(--ink-3)">{t('import.hint')}</p>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
           {/* Start Fresh (Clean 0 Slate) */}
           <button
@@ -944,12 +1193,30 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         </div>
       </div>
 
-      {/* Add Bank Modal */}
+      {/* Add / Edit Bank Modal */}
       <AddAccountModal
         isOpen={isAddAccountOpen}
-        onClose={() => setIsAddAccountOpen(false)}
-        onSave={onAddAccount}
+        onClose={() => { setIsAddAccountOpen(false); setEditingAccount(null); }}
+        onSave={(data, reconcileToMinor) => {
+          if (editingAccount) onUpdateAccount(editingAccount.id, data, reconcileToMinor);
+          else onAddAccount(data);
+        }}
         currency={currentCurrency}
+        editingAccount={editingAccount}
+      />
+
+      {/* Add / Edit Category Modal */}
+      <AddCategoryModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => { setIsCategoryModalOpen(false); setEditingCategory(null); }}
+        onSave={(data) => {
+          if (editingCategory) onUpdateCategory(editingCategory.id, data);
+          else onAddCategory(data);
+          setIsCategoryModalOpen(false);
+          setEditingCategory(null);
+        }}
+        categories={categories}
+        editingCategory={editingCategory}
       />
 
       {/* Interactive Tutorial Modal */}

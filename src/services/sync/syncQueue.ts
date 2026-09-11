@@ -37,7 +37,7 @@ export interface QueueStorage {
 }
 
 /** localStorage-backed with an in-memory fallback (node tests, private mode). */
-export function createPersistentQueueStorage(key = 'FINOVA_SYNC_QUEUE_V1'): QueueStorage {
+export function createPersistentQueueStorage(key = 'PALDO_SYNC_QUEUE_V1'): QueueStorage {
   let memory: QueueOp[] = [];
   const hasLS = typeof localStorage !== 'undefined';
   return {

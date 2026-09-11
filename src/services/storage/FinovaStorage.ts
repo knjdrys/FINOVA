@@ -41,6 +41,7 @@ export const INITIAL_CATEGORIES: Category[] = [
   { id: 'cat-transport', userId: 'user-1', name: 'Transport', type: 'EXPENSE', icon: 'Car', emoji: '🚗', color: '#D97706', bgColor: '#FEF3C7', isSystem: true, isArchived: false },
   { id: 'cat-shopping', userId: 'user-1', name: 'Shopping', type: 'EXPENSE', icon: 'ShoppingBag', emoji: '🛍️', color: '#2563EB', bgColor: '#DBEAFE', isSystem: true, isArchived: false },
   { id: 'cat-health', userId: 'user-1', name: 'Health', type: 'EXPENSE', icon: 'HeartPulse', emoji: '❤️', color: '#DC2626', bgColor: '#FEE2E2', isSystem: true, isArchived: false },
+  { id: 'cat-general', userId: 'user-1', name: 'General', type: 'EXPENSE', icon: 'CircleDollarSign', emoji: '💵', color: '#64748B', bgColor: '#F1F5F9', isSystem: true, isArchived: false },
   { id: 'cat-salary', userId: 'user-1', name: 'Salary', type: 'INCOME', icon: 'Briefcase', emoji: '💼', color: '#0D9488', bgColor: '#CCFBF1', isSystem: true, isArchived: false },
   { id: 'cat-freelance', userId: 'user-1', name: 'Freelance', type: 'INCOME', icon: 'Laptop', emoji: '💻', color: '#7C3AED', bgColor: '#EDE9FE', isSystem: true, isArchived: false },
   { id: 'cat-transfer', userId: 'user-1', name: 'Transfer', type: 'EXPENSE', icon: 'ArrowRightLeft', emoji: '🔄', color: '#475569', bgColor: '#F1F5F9', isSystem: true, isArchived: false },
@@ -336,13 +337,23 @@ export class FinovaStorage {
       if (serialized) {
         const parsed = JSON.parse(serialized);
         const loadedSettings = { ...CLEAN_ZERO_STATE.settings, ...(parsed.settings || {}) };
+        // System seeds are code-owned: backfill any the stored state predates
+        // (e.g. cat-general) without touching the user's own rows.
+        const storedCategories: Category[] = Array.isArray(parsed.categories)
+          ? parsed.categories
+          : INITIAL_CATEGORIES;
+        const knownIds = new Set(storedCategories.map((c) => c.id));
+        const backfilledCategories = [
+          ...storedCategories,
+          ...INITIAL_CATEGORIES.filter((seed) => seed.isSystem && !knownIds.has(seed.id)),
+        ];
         // Deep-clone fallback arrays: returning references into the shared
         // CLEAN_ZERO_STATE singleton lets one caller's in-place mutation
         // leak into the next caller's "clean" state.
         return structuredClone({
           accounts: parsed.accounts || CLEAN_ZERO_STATE.accounts,
           transactions: parsed.transactions || [],
-          categories: parsed.categories || INITIAL_CATEGORIES,
+          categories: backfilledCategories,
           budgets: parsed.budgets || [],
           goals: parsed.goals || [],
           commitments: parsed.commitments || [],

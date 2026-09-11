@@ -60,7 +60,9 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
   const currency = settings.currency || 'PHP';
   const currencySymbol = MoneyValue.zero(currency).getCurrencySymbol();
 
-  const today = new Date();
+  // Frozen at mount: month bounds are stable for the screen's lifetime, so the
+  // memo below only recomputes when the user changes the period or range.
+  const today = useMemo(() => new Date(), []);
   const periodBounds = useMemo(() => {
     if (period === 'THIS_MONTH') return monthBounds(today, 0);
     if (period === 'LAST_MONTH') return monthBounds(today, -1);
@@ -68,7 +70,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
       return { start: customStart || '0000-01-01', end: customEnd || '9999-12-31' };
     }
     return undefined;
-  }, [period, customStart, customEnd]);
+  }, [period, customStart, customEnd, today]);
 
   const minMinor = minStr ? MoneyValue.parse(minStr, currency).getMinorUnits() : undefined;
   const maxMinor = maxStr ? MoneyValue.parse(maxStr, currency).getMinorUnits() : undefined;
@@ -108,10 +110,11 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
   };
 
   // Adaptive summary — honest about what the current view contains.
-  // Goal-funding reservations are excluded: they are savings, not spending.
-  const isSpend = (t: Transaction) => t.type === 'EXPENSE' && !TransactionEngine.isGoalFunding(t);
+  // Bookkeeping rows are excluded: goal funding is savings, adjustments are
+  // corrections — neither is spending or earning.
+  const isSpend = (t: Transaction) => t.type === 'EXPENSE' && !TransactionEngine.isBookkeeping(t);
   const expenseMinor = filtered.filter(isSpend).reduce((s, t) => s + t.amount, 0);
-  const incomeMinor = filtered.filter((t) => t.type === 'INCOME').reduce((s, t) => s + t.amount, 0);
+  const incomeMinor = filtered.filter((t) => t.type === 'INCOME' && !TransactionEngine.isBookkeeping(t)).reduce((s, t) => s + t.amount, 0);
   const transferMinor = filtered.filter((t) => t.type === 'TRANSFER').reduce((s, t) => s + t.amount, 0);
   const summary =
     typeFilter === 'EXPENSE'
@@ -124,13 +127,14 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
   const summaryMoney = MoneyValue.fromMinorUnits(Math.abs(summary.amount), currency);
 
   // Group filtered transactions by date (day header shows the day's net flow).
-  // Funding reservations don't move the net: they are savings, not spending.
+  // Bookkeeping rows don't move the net: funding is savings, adjustments are
+  // corrections — the net stays a true income-vs-spending signal.
   const groupedDatesMap = new Map<string, { transactions: Transaction[]; net: number }>();
   for (const tx of filtered) {
     const existing = groupedDatesMap.get(tx.date) || { transactions: [], net: 0 };
     existing.transactions.push(tx);
-    if (tx.type === 'EXPENSE' && !TransactionEngine.isGoalFunding(tx)) existing.net -= tx.amount;
-    if (tx.type === 'INCOME') existing.net += tx.amount;
+    if (tx.type === 'EXPENSE' && !TransactionEngine.isBookkeeping(tx)) existing.net -= tx.amount;
+    if (tx.type === 'INCOME' && !TransactionEngine.isBookkeeping(tx)) existing.net += tx.amount;
     groupedDatesMap.set(tx.date, existing);
   }
   const sortedDates =
@@ -215,7 +219,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
             value={period}
             onChange={(e) => setPeriod(e.target.value as PeriodFilter)}
             aria-label={t('tx.periodAria')}
-            className="rounded-full border border-emerald-800/60 bg-[#183625] px-3 py-1.5 text-xs font-black text-white outline-none cursor-pointer"
+            className="rounded-full border border-emerald-800/60 bg-(--brand-hover) px-3 py-1.5 text-xs font-black text-white outline-none cursor-pointer"
           >
             <option value="ALL">{t('tx.allTime')}</option>
             <option value="THIS_MONTH">{t('tx.thisMonth')}</option>
@@ -276,7 +280,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
           <SlidersHorizontal className="h-3.5 w-3.5" />
           {t('tx.filters')}
           {activeFilterCount > 0 && (
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-700 text-[10px] font-black text-white">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-emerald-700 text-[11px] font-black text-white">
               {activeFilterCount}
             </span>
           )}
@@ -288,7 +292,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
         <div className="space-y-3 rounded-2xl border border-(--line) bg-(--surface) p-3 shadow-xs">
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-[10px] font-black uppercase tracking-wider text-(--ink-3) block mb-1">{t('tx.filterAccount')}</label>
+              <label className="text-[11px] font-black uppercase tracking-wider text-(--ink-3) block mb-1">{t('tx.filterAccount')}</label>
               <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className={selectCls + ' w-full'} aria-label={t('tx.filterAccount')}>
                 <option value="ALL">{t('tx.allAccounts')}</option>
                 {accounts.map((a) => (
@@ -297,7 +301,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
               </select>
             </div>
             <div>
-              <label className="text-[10px] font-black uppercase tracking-wider text-(--ink-3) block mb-1">{t('common.amount')}</label>
+              <label className="text-[11px] font-black uppercase tracking-wider text-(--ink-3) block mb-1">{t('common.amount')}</label>
               <div className="flex items-center gap-1.5">
                 <input
                   type="number" min="0" placeholder={`${t('tx.filterMin')} ${currencySymbol}`} value={minStr}
@@ -315,11 +319,11 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
           {period === 'CUSTOM' && (
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-[10px] font-black uppercase tracking-wider text-(--ink-3) block mb-1">{t('tx.filterFrom')}</label>
+                <label className="text-[11px] font-black uppercase tracking-wider text-(--ink-3) block mb-1">{t('tx.filterFrom')}</label>
                 <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className={selectCls + ' w-full'} aria-label={t('tx.filterFrom')} />
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase tracking-wider text-(--ink-3) block mb-1">{t('tx.filterTo')}</label>
+                <label className="text-[11px] font-black uppercase tracking-wider text-(--ink-3) block mb-1">{t('tx.filterTo')}</label>
                 <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className={selectCls + ' w-full'} aria-label={t('tx.filterTo')} />
               </div>
             </div>
@@ -339,7 +343,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
       {/* 5. Category Filter Chips Carousel */}
       <div data-tour="category-chips">
         <FilterChips
-          categories={categories.filter((c) => c.type === 'EXPENSE')}
+          categories={categories.filter((c) => c.type === 'EXPENSE' && !c.isArchived)}
           selectedCategoryId={selectedCategoryId}
           onSelectCategory={setSelectedCategoryId}
         />
@@ -395,7 +399,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
                 {/* Date Header Badge Row */}
                 <div className="flex items-center justify-between px-1">
                   <div className="flex items-center gap-2">
-                    <span className="rounded-md bg-[#183625] px-2 py-0.5 text-[10px] sm:text-xs font-black text-white tracking-wider">
+                    <span className="rounded-md bg-(--brand-hover) px-2 py-0.5 text-[11px] sm:text-xs font-black text-white tracking-wider">
                       {dayAbbr}
                     </span>
                     <span className="text-xs sm:text-sm font-black text-(--ink-2)">

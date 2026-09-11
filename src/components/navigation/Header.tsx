@@ -58,7 +58,7 @@ const SyncPill: React.FC<{ status: SyncStatus | null }> = ({ status }) => {
     <span
       role="status"
       aria-live="polite"
-      className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${tone}`}
+      className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wide ${tone}`}
     >
       {icon}
       {label}
@@ -94,7 +94,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center justify-between bg-amber-500/10 border border-amber-500/30 rounded-2xl px-3.5 py-1.5 text-xs text-amber-900 shadow-xs">
           <div className="flex items-center gap-2 min-w-0">
             <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
-            <span className="font-black tracking-tight uppercase text-[10px] sm:text-xs text-amber-950">
+            <span className="font-black tracking-tight uppercase text-[11px] sm:text-xs text-amber-950">
               NOTE: GUEST ACCOUNT ONLY
             </span>
             <span className="hidden sm:inline text-[11px] text-amber-800/80">
@@ -105,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={onOpenSignIn}
-            className="flex items-center gap-1.5 rounded-xl bg-[#122A1E] text-[#D4F63D] px-3 py-1.5 text-[11px] sm:text-xs font-black shadow-xs hover:bg-[#183625] active:scale-95 transition-all cursor-pointer shrink-0 ml-2"
+            className="flex items-center gap-1.5 rounded-xl bg-(--brand) text-(--accent) px-3 py-1.5 text-[11px] sm:text-xs font-black shadow-xs hover:bg-(--brand-hover) active:scale-95 transition-all cursor-pointer shrink-0 ml-2"
           >
             <LogIn className="h-3.5 w-3.5 stroke-[2.5]" />
             <span>Sign In</span>
@@ -142,7 +142,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={onNavigateToSettings}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#122A1E] text-[#D4F63D] shadow-xs overflow-hidden border border-emerald-800/40 hover:scale-105 transition-transform cursor-pointer"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-(--brand) text-(--accent) shadow-xs overflow-hidden border border-emerald-800/40 hover:scale-105 transition-transform cursor-pointer"
             title={authUser?.email || 'User Profile'}
           >
             {authUser?.avatarUrl ? (
@@ -171,7 +171,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onApplyUpdate}
-              className="flex items-center gap-1 rounded-full bg-sky-600 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wide text-white shadow-xs hover:bg-sky-700 active:scale-95 transition-all cursor-pointer"
+              className="flex items-center gap-1 rounded-full bg-sky-600 px-2.5 py-1.5 text-[11px] font-black uppercase tracking-wide text-white shadow-xs hover:bg-sky-700 active:scale-95 transition-all cursor-pointer"
             >
               <RefreshCw className="h-3 w-3" />
               <span>{t('sync.update')}</span>
@@ -183,7 +183,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={onInstall}
-              className="flex items-center gap-1 rounded-full bg-[#122A1E] px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wide text-[#D4F63D] shadow-xs hover:bg-[#183625] active:scale-95 transition-all cursor-pointer"
+              className="flex items-center gap-1 rounded-full bg-(--brand) px-2.5 py-1.5 text-[11px] font-black uppercase tracking-wide text-(--accent) shadow-xs hover:bg-(--brand-hover) active:scale-95 transition-all cursor-pointer"
             >
               <Download className="h-3 w-3" />
               <span>{t('sync.install')}</span>

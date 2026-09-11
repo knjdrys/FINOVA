@@ -86,7 +86,7 @@ export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       <Modal isOpen={!!confirmState} onClose={() => close(false)} title={confirmState?.title} maxWidth="sm">
         <div className="space-y-4">
           {confirmState?.message && (
-            <p className="text-xs sm:text-sm font-semibold text-(--ink-2) leading-relaxed">{confirmState.message}</p>
+            <p className="text-xs sm:text-sm font-semibold text-(--ink-2) leading-relaxed whitespace-pre-line">{confirmState.message}</p>
           )}
           <div className="flex items-center justify-end gap-2 pt-1">
             <button

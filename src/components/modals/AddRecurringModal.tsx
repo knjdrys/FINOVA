@@ -148,7 +148,7 @@ export const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
           />
           <span>
             <span className="block text-xs font-bold text-(--ink-2)">{t('modal.autoPostTitle')}</span>
-            <span className="block text-[10px] font-medium text-(--ink-3)">{t('modal.autoPostRecurHint')}</span>
+            <span className="block text-[11px] font-medium text-(--ink-3)">{t('modal.autoPostRecurHint')}</span>
           </span>
         </label>
         <Field label={t('common.account')}>

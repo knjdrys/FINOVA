@@ -329,6 +329,21 @@ ALTER TABLE public.money_commitments ADD COLUMN IF NOT EXISTS direction TEXT NOT
 ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS split_parts JSONB;
 ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS receipt_data_url TEXT;
 
+-- transactions: auto-post provenance (which commitment a row settled)
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS source_commitment_id UUID;
+
+-- savings_goals: priority/status the client already round-trips. Without
+-- these columns PostgREST rejects the whole goals upsert, so goals silently
+-- never back up to the cloud.
+ALTER TABLE public.savings_goals ADD COLUMN IF NOT EXISTS priority TEXT NOT NULL DEFAULT 'ESSENTIAL';
+ALTER TABLE public.savings_goals ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'ON_TRACK';
+
+-- recurring_transactions: essentiality flag (emergency-fund baseline) +
+-- scheduled-transfer destination. Priority stays nullable: legacy rules
+-- without it mean "unknown", not "essential".
+ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS priority TEXT;
+ALTER TABLE public.recurring_transactions ADD COLUMN IF NOT EXISTS destination_account_id UUID REFERENCES public.accounts(id) ON DELETE SET NULL;
+
 -- recurring_transactions: RLS + owner policies
 ALTER TABLE public.recurring_transactions ENABLE ROW LEVEL SECURITY;
 

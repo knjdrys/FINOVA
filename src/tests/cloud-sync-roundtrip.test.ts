@@ -150,6 +150,44 @@ describe('Cloud Sync — round-trip persistence of ALL plans data', () => {
     expect(recPayload[0].category_id).toBe(catPayload[0].id);
   });
 
+  it('syncStateToCloud preserves recurring priority + destination, commitment provenance, tx source, and category archive state', async () => {
+    const s = makeState();
+    s.recurring[0].priority = 'ESSENTIAL';
+    s.recurring[0].destinationAccountId = 'acc-1';
+    s.commitments[0].goalId = 'goal-1';
+    s.commitments[0].notes = 'Pay before the 10th';
+    s.commitments[0].relatedRecurringTransactionId = 'rec-1';
+    s.commitments[0].lastAutoPostedAt = '2026-09-01T00:00:00.000Z';
+    s.transactions[0].sourceCommitmentId = 'comm-1';
+    s.categories = [{
+      id: 'cat-custom-1', userId: 'user-1', name: 'Custom', icon: 'Tag',
+      emoji: '🏷️', color: '#ff0000', bgColor: '#fee2e2', type: 'EXPENSE',
+      isSystem: false, isArchived: true,
+    }];
+
+    await CloudSyncService.syncStateToCloud(s, fakeUser as any);
+
+    const recPayload = hoisted.captured.find((p) => Array.isArray(p) && p[0] && 'next_occurrence' in p[0]) as any[];
+    expect(recPayload[0].priority).toBe('ESSENTIAL');
+    expect(recPayload[0].destination_account_id).toBe(toValidUuid('acc-1'));
+
+    const commPayload = hoisted.captured.find((p) => Array.isArray(p) && p[0] && 'due_date' in p[0]) as any[];
+    expect(commPayload[0].goal_id).toBe(toValidUuid('goal-1'));
+    expect(commPayload[0].notes).toBe('Pay before the 10th');
+    expect(commPayload[0].related_recurring_transaction_id).toBe(toValidUuid('rec-1'));
+    expect(commPayload[0].last_auto_posted_at).toBe('2026-09-01T00:00:00.000Z');
+
+    const txPayload = hoisted.captured.find((p) => Array.isArray(p) && p[0] && 'to_account_id' in p[0]) as any[];
+    expect(txPayload[0].source_commitment_id).toBe(toValidUuid('comm-1'));
+
+    const catPayload = hoisted.captured.find(
+      (p) => Array.isArray(p) && p[0] && p[0].id === toValidUuid('cat-custom-1')
+    ) as any[];
+    expect(catPayload[0].is_archived).toBe(true);
+    expect(catPayload[0].emoji).toBe('🏷️');
+    expect(catPayload[0].bg_color).toBe('#fee2e2');
+  });
+
   it('delete helper methods execute cleanly without exceptions', async () => {
     const delTx = await CloudSyncService.deleteTransactionFromCloud('tx-1', fakeUser as any);
     const delComm = await CloudSyncService.deleteCommitmentFromCloud('comm-1', fakeUser as any);

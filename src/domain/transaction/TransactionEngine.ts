@@ -27,17 +27,34 @@ export class TransactionEngine {
   }
 
   /**
+   * Reconciliation marker. When the real-world balance drifts from the books
+   * (missed cash, bank fees posted late), the correction is recorded as an
+   * ordinary INCOME/EXPENSE row tagged `adjustment` — so every money-direction
+   * and edit/delete law still holds — but it is bookkeeping, not economic
+   * activity, and must not inflate spending, earnings, or budget analytics.
+   */
+  public static isBalanceAdjustment(tx: Pick<Transaction, 'tags'>): boolean {
+    return Boolean(tx.tags && tx.tags.includes('adjustment'));
+  }
+
+  /** True for any internal booking row (goal reservations, reconciliations). */
+  public static isBookkeeping(tx: Pick<Transaction, 'tags'>): boolean {
+    return this.isGoalFunding(tx) || this.isBalanceAdjustment(tx);
+  }
+
+  /**
    * Single source of truth for category attribution.
    * A split expense contributes to each of its categories by the allocated amount;
    * a normal expense contributes its full amount to its single category.
-   * Goal-funding reservations contribute to NO category (they are not spending).
+   * Bookkeeping rows (goal-funding reservations, balance adjustments) contribute
+   * to NO category — they are not spending.
    * Budgets, Insights, and any future consumer MUST use this instead of reading
    * tx.categoryId directly, so split money is never double-counted or lost.
    */
   public static getCategoryAllocations(tx: Transaction): Map<string, number> {
     const map = new Map<string, number>();
     if (tx.type !== 'EXPENSE') return map;
-    if (this.isGoalFunding(tx)) return map;
+    if (this.isBookkeeping(tx)) return map;
     if (tx.splitParts && tx.splitParts.length > 0) {
       for (const part of tx.splitParts) {
         if (part.amount > 0) {

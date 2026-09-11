@@ -4,12 +4,15 @@ import { Account, AccountType, CurrencyCode, POPULAR_BANKS_AND_WALLETS } from '.
 import { MoneyValue } from '../../domain/money/MoneyValue';
 import { GrbiLogo } from '../ui/GrbiLogo';
 import { Building2, Smartphone, Wallet, Check } from 'lucide-react';
+import { t } from '../../i18n/core';
 
 interface AddAccountModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (newAccount: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onSave: (account: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>, reconcileToMinor?: number) => void;
   currency: CurrencyCode;
+  /** When set, the modal edits identity fields + offers balance reconciliation. */
+  editingAccount?: Account | null;
 }
 
 export const AddAccountModal: React.FC<AddAccountModalProps> = ({
@@ -17,12 +20,14 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
   onClose,
   onSave,
   currency,
+  editingAccount,
 }) => {
   const [selectedPresetId, setSelectedPresetId] = useState<string>('grbi');
   const [name, setName] = useState('GRBank');
   const [accountType, setAccountType] = useState<AccountType>('BANK');
   const [accountNumberMask, setAccountNumberMask] = useState('•••• 1234');
   const [initialBalanceStr, setInitialBalanceStr] = useState('0');
+  const [actualBalanceStr, setActualBalanceStr] = useState('0');
   const [includeInTotalBalance, setIncludeInTotalBalance] = useState(true);
   // First commit wins per open — Modal unmounts on close, so this resets naturally.
   const submittedRef = useRef(false);
@@ -30,10 +35,32 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
   React.useEffect(() => {
     if (isOpen) {
       submittedRef.current = false;
+      if (editingAccount) {
+        setSelectedPresetId(editingAccount.bankPresetId || 'grbi');
+        setName(editingAccount.name);
+        setAccountType(editingAccount.type);
+        setAccountNumberMask(editingAccount.accountNumberMask || '');
+        setIncludeInTotalBalance(editingAccount.includeInTotalBalance);
+        setActualBalanceStr(
+          MoneyValue.fromMinorUnits(editingAccount.currentBalance, editingAccount.currency).getMajorUnits().toString()
+        );
+      } else {
+        setSelectedPresetId('grbi');
+        setName('GRBank');
+        setAccountType('BANK');
+        setAccountNumberMask('•••• 1234');
+        setInitialBalanceStr('0');
+        setIncludeInTotalBalance(true);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, editingAccount]);
 
   const currencySymbol = MoneyValue.zero(currency).getCurrencySymbol();
+  const isEdit = Boolean(editingAccount);
+  const reconcileMinor = isEdit && editingAccount
+    ? MoneyValue.parse(actualBalanceStr || '0', editingAccount.currency).getMinorUnits()
+    : 0;
+  const reconcileDelta = isEdit && editingAccount ? reconcileMinor - editingAccount.currentBalance : 0;
 
   const handleSelectPreset = (presetId: string) => {
     setSelectedPresetId(presetId);
@@ -49,6 +76,31 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
     // Duplicate-submit guard: the first commit wins per open.
     if (submittedRef.current) return;
     submittedRef.current = true;
+
+    if (editingAccount) {
+      // Edit keeps the money; a changed "actual" balance reconciles via an
+      // adjustment transaction in App (never a silent balance overwrite).
+      onSave(
+        {
+          userId: editingAccount.userId,
+          name: name.trim() || editingAccount.name,
+          bankPresetId: editingAccount.bankPresetId,
+          accountNumberMask: accountNumberMask.trim() || undefined,
+          type: accountType,
+          currency: editingAccount.currency,
+          initialBalance: editingAccount.initialBalance,
+          currentBalance: editingAccount.currentBalance,
+          icon: editingAccount.icon,
+          color: editingAccount.color,
+          includeInTotalBalance,
+          isArchived: editingAccount.isArchived,
+        },
+        reconcileDelta !== 0 ? reconcileMinor : undefined
+      );
+      onClose();
+      return;
+    }
+
     const money = MoneyValue.parse(initialBalanceStr, currency);
     const preset = POPULAR_BANKS_AND_WALLETS.find((p) => p.id === selectedPresetId);
 
@@ -75,9 +127,10 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Bank or Wallet" maxWidth="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={isEdit ? t('modal.editAccount') : 'Add Bank or Wallet'} maxWidth="lg">
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Popular Institution Selection */}
+        {/* Popular Institution Selection (create-only: identity is fixed after creation) */}
+        {!isEdit && (
         <div>
           <label className="text-xs font-bold text-(--ink-2) block mb-1.5">
             Select Bank or E-Wallet
@@ -120,6 +173,7 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
             })}
           </div>
         </div>
+        )}
 
         {/* Account Details */}
         <div className="space-y-3 bg-(--surface-2) p-4 rounded-2xl border border-(--line)/80">
@@ -164,27 +218,59 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
             </div>
           </div>
 
-          {/* Initial Balance */}
-          <div>
-            <label className="text-xs font-bold text-(--ink-2) block mb-1">Current Balance</label>
-            <div className="flex items-center gap-1.5 rounded-xl border border-(--line) bg-(--surface) px-3 py-1.5 focus-within:border-emerald-600">
-              <span className="text-xs font-bold text-(--ink-3)">{currencySymbol}</span>
-              <input
-                type="number"
-                step="any"
-                min="0"
-                value={initialBalanceStr}
-                onChange={(e) => setInitialBalanceStr(e.target.value)}
-                className="w-full text-sm font-bold text-(--ink) outline-none"
-              />
+          {/* Initial Balance (create) / Reconciliation (edit) */}
+          {!isEdit ? (
+            <div>
+              <label className="text-xs font-bold text-(--ink-2) block mb-1">Current Balance</label>
+              <div className="flex items-center gap-1.5 rounded-xl border border-(--line) bg-(--surface) px-3 py-1.5 focus-within:border-emerald-600">
+                <span className="text-xs font-bold text-(--ink-3)">{currencySymbol}</span>
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  value={initialBalanceStr}
+                  onChange={(e) => setInitialBalanceStr(e.target.value)}
+                  className="w-full text-sm font-bold text-(--ink) outline-none"
+                />
+              </div>
             </div>
-          </div>
+          ) : editingAccount ? (
+            <div>
+              <label className="text-xs font-bold text-(--ink-2) block mb-1">{t('modal.reconcileLabel')}</label>
+              <div className="flex items-center gap-1.5 rounded-xl border border-(--line) bg-(--surface) px-3 py-1.5 focus-within:border-emerald-600">
+                <span className="text-xs font-bold text-(--ink-3)">
+                  {MoneyValue.zero(editingAccount.currency).getCurrencySymbol()}
+                </span>
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  value={actualBalanceStr}
+                  onChange={(e) => setActualBalanceStr(e.target.value)}
+                  aria-label={t('modal.reconcileLabel')}
+                  className="w-full text-sm font-bold text-(--ink) outline-none"
+                />
+              </div>
+              <p className="mt-1.5 text-[11px] font-medium text-(--ink-3)">
+                {reconcileDelta === 0 ? (
+                  t('modal.reconcileMatch')
+                ) : (
+                  <>
+                    {reconcileDelta > 0 ? '+' : '−'}
+                    {MoneyValue.fromMinorUnits(Math.abs(reconcileDelta), editingAccount.currency).format()} ·{' '}
+                    {reconcileDelta > 0 ? t('tx.income') : t('tx.expense')} {t('tx.adjustment').toLowerCase()} ·{' '}
+                    {t('modal.reconcileHint')}
+                  </>
+                )}
+              </p>
+            </div>
+          ) : null}
 
           {/* Include in Total Balance Toggle */}
           <div className="flex items-center justify-between pt-1">
             <div>
               <span className="text-xs font-bold text-(--ink) block">Include in Total Balance</span>
-              <span className="text-[10px] text-(--ink-3)">Count this money toward your daily spending limit</span>
+              <span className="text-[11px] text-(--ink-3)">Count this money toward your daily spending limit</span>
             </div>
             <input
               type="checkbox"
@@ -198,7 +284,7 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
         {/* Submit */}
         <button
           type="submit"
-          className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#122A1E] py-3.5 text-sm font-bold text-[#D4F63D] shadow-lg shadow-emerald-950/20 transition-transform active:scale-[0.98] hover:bg-[#183625] cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 rounded-2xl bg-(--brand) py-3.5 text-sm font-bold text-(--accent) shadow-lg shadow-emerald-950/20 transition-transform active:scale-[0.98] hover:bg-(--brand-hover) cursor-pointer"
         >
           <Check className="h-4 w-4 stroke-[3]" />
           <span>Save Account</span>

@@ -15,7 +15,7 @@ interface PaldoLogoProps {
  */
 export const PaldoLogo: React.FC<PaldoLogoProps> = ({
   className = 'h-6 w-6',
-  accent = '#c4f042',
+  accent = '#D4F63D',
   bars = 'white',
 }) => {
   return (

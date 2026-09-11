@@ -68,6 +68,26 @@ export const AppLockGuard: React.FC<{ children: React.ReactNode }> = ({ children
     return undefined;
   }, [locked, lock]);
 
+  const submit = useCallback(async () => {
+    if (checking) return;
+    setChecking(true);
+    const res = await AppLockService.verify(pin);
+    setChecking(false);
+    if (res.ok) {
+      setLocked(false);
+      setPin('');
+      setError(null);
+    } else {
+      setError(res.error || t('security.wrongPin'));
+      setPin('');
+    }
+  }, [checking, pin]);
+
+  const press = (d: string) => {
+    setError(null);
+    setPin((p) => (p.length >= 10 ? p : p + d));
+  };
+
   // Physical keyboard PIN entry when locked
   useEffect(() => {
     if (!locked) return;
@@ -85,27 +105,7 @@ export const AppLockGuard: React.FC<{ children: React.ReactNode }> = ({ children
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [locked, pin, checking]);
-
-  const submit = async () => {
-    if (checking) return;
-    setChecking(true);
-    const res = await AppLockService.verify(pin);
-    setChecking(false);
-    if (res.ok) {
-      setLocked(false);
-      setPin('');
-      setError(null);
-    } else {
-      setError(res.error || t('security.wrongPin'));
-      setPin('');
-    }
-  };
-
-  const press = (d: string) => {
-    setError(null);
-    setPin((p) => (p.length >= 10 ? p : p + d));
-  };
+  }, [locked, pin, checking, submit]);
 
   if (!locked) return <>{children}</>;
 
@@ -114,8 +114,8 @@ export const AppLockGuard: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950 px-6">
       <div className="w-full max-w-xs text-center">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#122A1E]">
-          <Lock className="h-6 w-6 text-[#D4F63D]" aria-hidden="true" />
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-(--brand)">
+          <Lock className="h-6 w-6 text-(--accent)" aria-hidden="true" />
         </div>
         <h1 className="text-lg font-black text-white">{t('security.title')}</h1>
         <p className="mt-1 text-xs text-slate-400">{t('security.subtitle')}</p>
@@ -125,7 +125,7 @@ export const AppLockGuard: React.FC<{ children: React.ReactNode }> = ({ children
             <span className="text-sm text-(--ink-3)">{t('security.enterPin')}</span>
           ) : (
             Array.from({ length: pin.length }).map((_, i) => (
-              <span key={i} className="h-3 w-3 rounded-full bg-[#D4F63D]" />
+              <span key={i} className="h-3 w-3 rounded-full bg-(--accent)" />
             ))
           )}
         </div>
@@ -151,7 +151,7 @@ export const AppLockGuard: React.FC<{ children: React.ReactNode }> = ({ children
             0
           </button>
           <button type="button" onClick={submit} disabled={pin.length < 4 || checking} aria-label={t('security.unlock')}
-            className="flex h-14 items-center justify-center rounded-2xl bg-[#D4F63D] text-(--ink) disabled:opacity-40">
+            className="flex h-14 items-center justify-center rounded-2xl bg-(--accent) text-(--ink) disabled:opacity-40">
             <ShieldCheck className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
