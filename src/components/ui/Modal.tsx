@@ -21,6 +21,15 @@ export const Modal: React.FC<ModalProps> = ({
   maxWidth = 'md',
 }) => {
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const onCloseRef = useRef(onClose);
+
+  // onClose identity is unstable across consumers (inline arrows like
+  // `onClose={() => {}}` recreate it every render). It must NEVER retrigger
+  // the focus lifecycle below — that re-ran `first.focus()` on each keystroke
+  // and yanked focus out of text inputs onto the X button (onboarding bug).
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     if (!isOpen) {
@@ -41,7 +50,7 @@ export const Modal: React.FC<ModalProps> = ({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key !== 'Tab' || !dialog) return;
@@ -68,7 +77,10 @@ export const Modal: React.FC<ModalProps> = ({
       window.removeEventListener('keydown', handleKeyDown);
       opener?.focus?.();
     };
-  }, [isOpen, onClose]);
+    // Deps are intentionally [isOpen]: onClose flows through onCloseRef so an
+    // unstable callback identity can never restart focus management mid-open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

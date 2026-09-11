@@ -17,7 +17,7 @@ A calm, privacy-first personal finance web app: track spending, see a daily **Sa
 npm install
 npm run dev      # local dev server
 npm run build    # type-check (tsc -b) + production build
-npm test         # full test suite (481 tests, 42 files)
+npm test         # full test suite (483 tests, 43 files)
 npm run lint     # oxlint (0 warnings, 0 errors)
 ```
 
