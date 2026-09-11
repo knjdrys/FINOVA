@@ -187,6 +187,13 @@ export function App() {
 
   // PWA: service worker + install prompt + sync status subscription.
   useEffect(() => {
+    // Healthy boot: the error boundary counts consecutive trips per session,
+    // so a clean mount resets it — only a true crash loop offers the reset hatch.
+    try {
+      sessionStorage.removeItem('FINOVA_ERROR_TRIPS');
+    } catch {
+      // Private-mode storage — the boundary hatch simply stays trip-1-shy.
+    }
     registerServiceWorker();
     setupInstallPrompt();
     const unsubInstall = subscribeInstallable(setCanInstall);

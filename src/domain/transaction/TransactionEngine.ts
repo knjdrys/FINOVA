@@ -206,7 +206,7 @@ export class TransactionEngine {
 
   /**
    * Aggregates total income, total expense, and net cash flow for a date period.
-   * Transfer transactions are strictly excluded from income and expense aggregates (FINOVA Invariant #4 & #10).
+   * Transfer transactions are strictly excluded from income and expense aggregates (Laws 4 & 10, docs/INVARIANTS.md).
    */
   public static calculatePeriodTotals(
     transactions: Transaction[],

@@ -21,12 +21,11 @@ const ASSET_CACHE = `${VERSION}-assets`;
 const SHELL_URLS = ['/', '/index.html', '/manifest.webmanifest', '/icons/pwa-192.png', '/icons/pwa-512.png'];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches
-      .open(SHELL_CACHE)
-      .then((cache) => cache.addAll(SHELL_URLS))
-      .then(() => self.skipWaiting())
-  );
+  // No skipWaiting here by design: the new worker parks in WAITING until
+  // the user taps "Refresh for update" (SKIP_WAITING via message below).
+  // Auto-activating would swap the shell mid-session AND strand the app's
+  // update prompt (reg.waiting would never exist to observe).
+  event.waitUntil(caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL_URLS)));
 });
 
 self.addEventListener('activate', (event) => {
