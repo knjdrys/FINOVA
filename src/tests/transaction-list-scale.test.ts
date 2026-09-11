@@ -62,7 +62,7 @@ describe('long transaction lists', () => {
       .reduce((s, t) => s + t.amount, 0);
     const raw = all.filter((t) => t.type === 'EXPENSE').reduce((s, t) => s + t.amount, 0);
     expect(raw - spend).toBeGreaterThan(0);
-    const totals = TransactionEngine.calculatePeriodTotals(all, '2026-09-01', '2026-09-30', 'PHP', 'PHP');
+    const totals = TransactionEngine.calculatePeriodTotals(all, '2026-09-01', '2026-09-30', 'PHP', 'PHP', '2026-09-30');
     expect(totals.totalExpense.getMinorUnits()).toBe(spend);
     expect(totals.transactionCount).toBe(all.filter((t) => !TransactionEngine.isGoalFunding(t)).length);
   });

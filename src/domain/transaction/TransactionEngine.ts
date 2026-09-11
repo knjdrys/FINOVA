@@ -213,7 +213,8 @@ export class TransactionEngine {
     startDate: string,
     endDate: string,
     currencyFallback: CurrencyCode = 'PHP',
-    currencyFilter?: CurrencyCode
+    currencyFilter?: CurrencyCode,
+    asOfISO?: string
   ): {
     totalIncome: MoneyValue;
     totalExpense: MoneyValue;
@@ -226,9 +227,14 @@ export class TransactionEngine {
     // Never guess from row zero: an empty period must still format in the
     // user's currency (previously fell back to PKR for everyone).
     const currency = transactions[0]?.currency || currencyFallback;
+    // Spent-so-far: future-dated rows inside the window are committed money,
+    // not spend — counting them here desyncs Home from the Analytics
+    // breakdown (through-today by design) and inflates budget run-rates.
+    const asOf = asOfISO || DateUtils.getTodayISO();
 
     for (const tx of transactions) {
       if (tx.status === 'PENDING') continue;
+      if (tx.date > asOf) continue;
       if (TransactionEngine.isBookkeeping(tx)) continue; // reservations, withdrawals, adjustments are not economic activity
       if (currencyFilter && tx.currency !== currencyFilter) continue; // never mix currencies
       if (!DateUtils.isDateInRange(tx.date, startDate, endDate)) continue;

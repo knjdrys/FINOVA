@@ -81,7 +81,7 @@ describe('realistic September: every surface agrees', () => {
   });
 
   it('period spend excludes the EF set-aside; budgets match their category sums', () => {
-    const totals = TransactionEngine.calculatePeriodTotals(txs, '2026-09-01', '2026-09-30', 'PHP');
+    const totals = TransactionEngine.calculatePeriodTotals(txs, '2026-09-01', '2026-09-30', 'PHP', undefined, TODAY);
     expect(totals.totalExpense.getMinorUnits()).toBe(P(5000) + P(1699) + P(800) + P(400) + P(600));
     expect(totals.totalIncome.getMinorUnits()).toBe(P(20000));
     const food = budget('bud-food', P(3500), ['cat-food']);

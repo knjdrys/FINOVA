@@ -76,7 +76,7 @@ describe('expense create → edit → delete propagates everywhere', () => {
     const created = [tx];
     expect(afterCreateAccts[0].currentBalance).toBe(900000);
     expect(BudgetEngine.calculateBudgetForecast(budget, created, TODAY).actualSpent).toBe(100000);
-    expect(TransactionEngine.calculatePeriodTotals(created, '2026-09-01', '2026-09-30').totalExpense.getMinorUnits()).toBe(100000);
+    expect(TransactionEngine.calculatePeriodTotals(created, '2026-09-01', '2026-09-30', 'PHP', undefined, TODAY).totalExpense.getMinorUnits()).toBe(100000);
     const days = TimelineEngine.generateTimeline(afterCreateAccts, created, [], [], TODAY, '2026-10-15', TODAY);
     expect(days.find((d) => d.date === TODAY)!.events.some((e) => e.status === 'ACTUAL')).toBe(true);
     const stsAfter = SafeToSpendEngine.calculateSafeToSpend(afterCreateAccts, [], goals, settings, TODAY);

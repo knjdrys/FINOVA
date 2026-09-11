@@ -29,7 +29,7 @@ describe('getMonthlyCashFlow', () => {
     const out = getMonthlyCashFlow(
       [
         tx({ type: 'INCOME', amount: 5000, date: '2026-09-01' }),
-        tx({ type: 'EXPENSE', amount: 2000, date: '2026-09-15' }),
+        tx({ type: 'EXPENSE', amount: 2000, date: '2026-09-05' }),
         tx({ type: 'EXPENSE', amount: 700, date: '2026-08-20' }),
       ],
       'PHP', '2026-09-11'
@@ -41,6 +41,20 @@ describe('getMonthlyCashFlow', () => {
     expect(sep.hasActivity).toBe(true);
     expect(out[4].expense).toBe(700);
     expect(out[0].hasActivity).toBe(false);
+  });
+
+  it('excludes rows after the reference date from the current bar (spent-so-far)', () => {
+    const out = getMonthlyCashFlow(
+      [
+        tx({ type: 'EXPENSE', amount: 2000, date: '2026-09-05' }),
+        tx({ type: 'EXPENSE', amount: 9000, date: '2026-09-20' }),
+        tx({ type: 'INCOME', amount: 8000, date: '2026-09-25' }),
+      ],
+      'PHP', '2026-09-11'
+    );
+    expect(out[5].expense).toBe(2000);
+    expect(out[5].income).toBe(0);
+    expect(out[5].net).toBe(-2000);
   });
 
   it('excludes goal funding, adjustments, transfers, and pending rows', () => {

@@ -92,7 +92,7 @@ describe('auto-post is idempotent and flows downstream once', () => {
 
     const forecast = BudgetEngine.calculateBudgetForecast(wholeBudget(), second.transactions, TODAY);
     expect(forecast.actualSpent).toBe(169900);
-    const totals = TransactionEngine.calculatePeriodTotals(second.transactions, '2026-09-01', '2026-09-30');
+    const totals = TransactionEngine.calculatePeriodTotals(second.transactions, '2026-09-01', '2026-09-30', 'PHP', undefined, TODAY);
     expect(totals.totalExpense.getMinorUnits()).toBe(169900);
   });
 

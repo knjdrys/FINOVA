@@ -119,9 +119,29 @@ describe('month boundaries + recurring month-end anchoring', () => {
 describe('multi-currency isolation', () => {
   it('period totals ignore other currencies when filtered', () => {
     const txs = [tx({ id: 'p', currency: 'PHP' }), tx({ id: 'u', currency: 'USD', amount: 50000 })];
-    const php = TransactionEngine.calculatePeriodTotals(txs, '2026-09-01', '2026-09-30', 'PHP', 'PHP');
+    const php = TransactionEngine.calculatePeriodTotals(txs, '2026-09-01', '2026-09-30', 'PHP', 'PHP', '2026-09-30');
     expect(php.totalExpense.getMinorUnits()).toBe(100000);
     expect(php.totalExpense.getCurrency()).toBe('PHP');
+  });
+});
+
+describe('spent-so-far clamping (X-consistency)', () => {
+  it('period totals exclude rows after as-of even inside the window', () => {
+    const txs = [tx({ id: 'past', date: '2026-09-05' }), tx({ id: 'future', date: '2026-09-20' })];
+    const totals = TransactionEngine.calculatePeriodTotals(txs, '2026-09-01', '2026-09-30', 'PHP', 'PHP', '2026-09-11');
+    expect(totals.totalExpense.getMinorUnits()).toBe(100000);
+    expect(totals.transactionCount).toBe(1);
+  });
+
+  it('budget actualSpent excludes future rows so the run-rate stays honest', () => {
+    const b: Budget = {
+      id: 'b', userId: 'user-1', name: 'Food', amount: 500000, currency: 'PHP', period: 'MONTHLY',
+      startDate: '2026-09-01', endDate: '2026-09-30', categoryIds: ['cat-food'],
+      notifyThresholdPercentage: 80, isActive: true, rolloverUnused: false, createdAt: 'x', updatedAt: 'x',
+    };
+    const txs = [tx({ id: 'past', date: '2026-09-05' }), tx({ id: 'future', date: '2026-09-20' })];
+    const f = BudgetEngine.calculateBudgetForecast(b, txs, '2026-09-11');
+    expect(f.actualSpent).toBe(100000);
   });
 });
 

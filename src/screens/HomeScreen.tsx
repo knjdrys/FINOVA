@@ -154,10 +154,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   }
 
   // Memoized: O(transactions) scan; only the period bounds feed it.
+  // Explicit as-of: spent-so-far must agree with the Analytics breakdown
+  // even across a midnight rollover mid-session (no hidden getTodayISO()).
   const periodTotals = useMemo(
-    () => TransactionEngine.calculatePeriodTotals(transactions, periodStart, periodEnd, currency, currency),
+    () => TransactionEngine.calculatePeriodTotals(transactions, periodStart, periodEnd, currency, currency, todayISO),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [transactions, periodStart, periodEnd, currency]
+    [transactions, periodStart, periodEnd, currency, todayISO]
   );
   // Header budget figure must match what Home actually tracks: active budgets
   // in the active currency only. Summing archived or foreign-currency budgets

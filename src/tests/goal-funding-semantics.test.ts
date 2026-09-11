@@ -78,7 +78,7 @@ describe('unlinked goal funding is an excluded reservation', () => {
 
   it('a normal expense still counts everywhere (guards did not over-exclude)', () => {
     const spend = fundTx({ id: 'tx-spend', tags: [], categoryId: 'cat-food', amount: 50000 });
-    const totals = TransactionEngine.calculatePeriodTotals([spend], '2026-09-01', '2026-09-30');
+    const totals = TransactionEngine.calculatePeriodTotals([spend], '2026-09-01', '2026-09-30', 'PHP', undefined, '2026-09-30');
     expect(totals.totalExpense.getMinorUnits()).toBe(50000);
     expect(TransactionEngine.getCategoryAllocations(spend).get('cat-food')).toBe(50000);
   });

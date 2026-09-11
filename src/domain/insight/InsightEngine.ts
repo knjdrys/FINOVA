@@ -332,6 +332,7 @@ export function getMonthlyCashFlow(
     if (tx.currency !== currency) continue;
     if (TransactionEngine.isBookkeeping(tx)) continue;
     if (tx.type !== 'INCOME' && tx.type !== 'EXPENSE') continue;
+    if (tx.date > referenceDateISO) continue; // current bar is spent-so-far, matching the breakdown
     const bucket = byStart.get(DateUtils.getMonthStartISO(tx.date));
     if (!bucket) continue;
     if (tx.type === 'INCOME') bucket.income += tx.amount;
