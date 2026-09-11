@@ -94,6 +94,25 @@ export class GoalEngine {
   }
 
   /**
+   * Pure withdrawal logic: returns the next goal state after removing `amount`
+   * from progress, floored at zero, reopening a COMPLETED goal when progress
+   * drops below target. No side effects — the caller moves the money.
+   */
+  public static withdraw(
+    goal: SavingsGoal,
+    amount: number
+  ): SavingsGoal {
+    if (amount <= 0) return goal;
+    const nextCurrent = Math.max(0, goal.currentAmount - amount);
+    return {
+      ...goal,
+      currentAmount: nextCurrent,
+      status: nextCurrent >= goal.targetAmount ? 'COMPLETED' : 'ON_TRACK',
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  /**
    * Planned-vs-actual tracking + goal risk detection.
    * "Planned" = even pace required (target / total span since creation).
    * "Actual" = currentAmount. Variance and paceRatio surface whether the user is on track,

@@ -32,6 +32,20 @@ import { NotificationPrefsService } from './services/notification/NotificationPr
 import { showOsNotification } from './services/notification/browserNotify';
 import type { NotificationPreferences, NotificationMeta } from './types';
 import { DateUtils } from './domain/date/DateUtils';
+import { MoneyValue } from './domain/money/MoneyValue';
+
+/**
+ * Collision-proof entity ids. `Date.now()` ids collide when two entities are
+ * created in the same millisecond (batch materialization, rapid taps); a
+ * random suffix makes every id unique even within one tick.
+ */
+function newId(prefix: string): string {
+  const rand =
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? (crypto.randomUUID as () => string)().slice(0, 8)
+      : `${Date.now().toString(36)}${Math.floor(Math.random() * 1e8).toString(36)}`;
+  return `${prefix}-${rand}`;
+}
 
 // Services
 import { AuthService, AuthUserProfile } from './services/supabase/authService';
@@ -294,11 +308,22 @@ export function App() {
       if (result.postedCount === 0) return prev;
 
       const postedIds = new Set(result.commitments.filter((c) => c.status === 'AUTO_POSTED').map((c) => c.id));
-      const postedRecurringIds = new Set(
-        result.commitments
-          .filter((c) => postedIds.has(c.id) && c.relatedRecurringTransactionId)
-          .map((c) => c.relatedRecurringTransactionId as string)
-      );
+      // Per-rule floors: a rule's floor moves past the latest occurrence it
+      // actually posted — but never past a still-unpaid due occurrence (an
+      // overdraft-skipped bill must stay visible as overdue, not vanish).
+      const postedDueByRule = new Map<string, string>();
+      for (const c of result.commitments) {
+        if (c.status === 'AUTO_POSTED' && c.relatedRecurringTransactionId) {
+          const prevDue = postedDueByRule.get(c.relatedRecurringTransactionId);
+          if (!prevDue || c.dueDate > prevDue) postedDueByRule.set(c.relatedRecurringTransactionId, c.dueDate);
+        }
+      }
+      const unpaidDueByRule = new Map<string, string>();
+      for (const c of due) {
+        if (postedIds.has(c.id) || !c.relatedRecurringTransactionId) continue;
+        const prevDue = unpaidDueByRule.get(c.relatedRecurringTransactionId);
+        if (!prevDue || c.dueDate < prevDue) unpaidDueByRule.set(c.relatedRecurringTransactionId, c.dueDate);
+      }
 
       return {
         ...prev,
@@ -307,21 +332,22 @@ export function App() {
         // Persist settled status for manual commitments (generated ones re-derive
         // from the posted transactions, which are already in result.transactions).
         commitments: prev.commitments.map((c) =>
-          postedIds.has(c.id) ? { ...c, status: 'AUTO_POSTED' as const, updatedAt: todayISO } : c
+          postedIds.has(c.id) ? { ...c, status: 'AUTO_POSTED' as const, updatedAt: new Date().toISOString() } : c
         ),
-        // Roll recurring rules forward so the posted occurrence is not regenerated.
-        recurring: prev.recurring.map((r) =>
-          postedRecurringIds.has(r.id)
-            ? {
-                ...r,
-                nextOccurrence: FutureFinanceEngine.advanceOccurrence(
-                  r.nextOccurrence && r.nextOccurrence >= r.startDate ? r.nextOccurrence : r.startDate,
-                  r.frequency
-                ),
-                updatedAt: new Date().toISOString(),
-              }
-            : r
-        ),
+        // Roll recurring rules forward so posted occurrences are not regenerated.
+        recurring: prev.recurring.map((r) => {
+          const postedDue = postedDueByRule.get(r.id);
+          if (!postedDue) return r;
+          // On-grid floors: the next anchored occurrence after the latest
+          // posted date (or the earliest still-unpaid due date, itself
+          // on-grid) — floors never drift off the month-end grid.
+          const floor =
+            unpaidDueByRule.get(r.id) ??
+            FutureFinanceEngine.nextAnchoredAfter(r.startDate, r.frequency, postedDue);
+          // Never move a floor backwards (a reschedule may sit ahead of it).
+          const nextOccurrence = r.nextOccurrence && r.nextOccurrence > floor ? r.nextOccurrence : floor;
+          return { ...r, nextOccurrence, updatedAt: new Date().toISOString() };
+        }),
       };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -630,6 +656,17 @@ export function App() {
   // Handler: Add New Transaction (or save edits when editingTx is set)
   const handleSaveTransaction = (newTxData: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (editingTx) {
+      // Linked rows are edited through their owner, never here: changing a
+      // bill payment's amount would desync it from the bill, and touching a
+      // goal row would desync goal progress.
+      if (editingTx.sourceCommitmentId) {
+        notice(t('dialog.settleTxLocked'));
+        return;
+      }
+      if (TransactionEngine.isGoalFunding(editingTx) || TransactionEngine.isGoalWithdrawal(editingTx)) {
+        notice(t('dialog.goalTxLocked'));
+        return;
+      }
       const updatedTx: Transaction = {
         ...editingTx,
         ...newTxData,
@@ -680,19 +717,27 @@ export function App() {
     }
   };
 
-  // Handler: Delete Transaction (confirmation happens in the detail modal)
+  // Handler: Delete Transaction (confirmation happens in the detail modal).
+  // - Goal-funding/withdrawal rows are locked: deleting one would desync goal
+  //   progress (the goal keeps money the account got back). Fund/withdraw instead.
+  // - Bill-payment rows reopen their bill: deleting a payment means unpaid
+  //   again (manual bills flip back to PROJECTED; generated occurrences are
+  //   rescued as manual bills, since the rule's floor already moved past them).
   const handleDeleteTransaction = (txId: string) => {
     const tx = state.transactions.find((t) => t.id === txId);
     if (!tx) return;
-
-    const updatedAccounts = TransactionEngine.reverseTransactionFromAccounts(tx, state.accounts);
-    const updatedTransactions = state.transactions.filter((t) => t.id !== txId);
-
-    setState((prev) => ({
-      ...prev,
-      accounts: updatedAccounts,
-      transactions: updatedTransactions,
-    }));
+    if (TransactionEngine.isGoalFunding(tx) || TransactionEngine.isGoalWithdrawal(tx)) {
+      notice(t('dialog.goalTxLocked'));
+      return;
+    }
+    setState((prev) => {
+      const target = prev.transactions.find((t) => t.id === txId);
+      if (!target) return prev;
+      const updatedAccounts = TransactionEngine.reverseTransactionFromAccounts(target, prev.accounts);
+      const updatedTransactions = prev.transactions.filter((t) => t.id !== txId);
+      const nextCommitments = FutureFinanceEngine.reopenBillForDeletedPayment(prev.commitments, target, newId);
+      return { ...prev, accounts: updatedAccounts, transactions: updatedTransactions, commitments: nextCommitments };
+    });
 
     if (authUser && !authUser.isGuest) {
       getSyncManager()?.requestDelete(txId);
@@ -741,8 +786,22 @@ export function App() {
     mutatePlans({ goals: state.goals.map((g) => (g.id === id ? { ...g, ...data, updatedAt: new Date().toISOString() } : g)) });
   };
   const handleDeleteGoal = async (id: string) => {
+    // Archiving a funded goal would strand its reservation (account stays
+    // deducted, progress sits in an invisible goal). Withdraw first.
+    const goal = state.goals.find((g) => g.id === id);
+    if (goal && goal.currentAmount > 0) {
+      notice(
+        t('dialog.goalFundedHint', {
+          amount: MoneyValue.fromMinorUnits(goal.currentAmount, goal.currency || currency).format(),
+        })
+      );
+      return;
+    }
     if (!(await confirmDialog({ title: t('dialog.deleteGoal'), message: t('dialog.deleteGoalHint'), danger: true, confirmLabel: t('common.delete') }))) return;
     mutatePlans({ goals: state.goals.map((g) => (g.id === id ? { ...g, isArchived: true, updatedAt: new Date().toISOString() } : g)) });
+  };
+  const handleRestoreGoal = (id: string) => {
+    mutatePlans({ goals: state.goals.map((g) => (g.id === id ? { ...g, isArchived: false, updatedAt: new Date().toISOString() } : g)) });
   };
   /**
    * Fund a goal — one coherent interpretation, never double-counted.
@@ -831,6 +890,75 @@ export function App() {
     handleFundGoal(goalId, amount, source.id);
   };
 
+  /**
+   * Withdraw from a goal — the exact reverse of funding, never income.
+   * - Goal with a usable linked account holding enough: a true TRANSFER
+   *   linked → destination. Refused (not faked) when the linked account
+   *   can't cover it — posting income instead would invent money.
+   * - Otherwise: an INCOME row tagged `goal-withdraw` that every spend,
+   *   income, and budget aggregate excludes. Goal progress drops by the
+   *   same amount, so account delta + goal delta == 0, always.
+   */
+  const handleWithdrawGoal = (goalId: string, amount: number, toAccountId: string) => {
+    const goal = state.goals.find((g) => g.id === goalId);
+    if (!goal) return;
+    if (amount <= 0) { notice(t('tx.errors.amountPositive')); return; }
+    const withdrawable = Math.min(amount, goal.currentAmount);
+    if (withdrawable <= 0) { notice(t('plans.withdrawEmpty')); return; }
+    const goalCurrency = goal.currency || currency;
+    const dest = state.accounts.find((a) => a.id === toAccountId);
+    if (!dest) { notice(t('tx.errors.accountRequired')); return; }
+    if (dest.currency !== goalCurrency) { notice(t('dialog.currencyMismatch')); return; }
+    const linked = state.accounts.find((a) => a.id === goal.accountId);
+    const useTransfer = Boolean(
+      linked && !linked.isArchived && linked.id !== dest.id && linked.currency === dest.currency
+    );
+    if (useTransfer && linked && linked.currentBalance - withdrawable < 0) {
+      notice(t('plans.withdrawLinkedShort'));
+      return;
+    }
+    const nowISO = new Date().toISOString();
+    const withdrawTx: Transaction = useTransfer && linked
+      ? {
+          id: newId('tx'),
+          userId: 'user-1',
+          type: 'TRANSFER',
+          amount: withdrawable,
+          currency: goalCurrency,
+          categoryId: 'cat-transfer',
+          accountId: linked.id,
+          destinationAccountId: dest.id,
+          merchant: `Withdraw: ${goal.name}`,
+          note: `Returned from ${goal.name} to ${dest.name}`,
+          date: todayISO,
+          time: DateUtils.getCurrentTimeString(),
+          tags: ['goal-withdraw'],
+          status: 'CONFIRMED',
+          createdAt: nowISO,
+          updatedAt: nowISO,
+        }
+      : {
+          id: newId('tx'),
+          userId: 'user-1',
+          type: 'INCOME',
+          amount: withdrawable,
+          currency: goalCurrency,
+          categoryId: 'cat-transfer',
+          accountId: dest.id,
+          merchant: `Withdraw: ${goal.name}`,
+          note: `Released from ${goal.name} — tracked as savings movement, not income`,
+          date: todayISO,
+          time: DateUtils.getCurrentTimeString(),
+          tags: ['goal-withdraw'],
+          status: 'CONFIRMED',
+          createdAt: nowISO,
+          updatedAt: nowISO,
+        };
+    const updatedAccounts = TransactionEngine.applyTransactionToAccounts(withdrawTx, state.accounts);
+    const updatedGoals = state.goals.map((g) => (g.id === goalId ? GoalEngine.withdraw(g, withdrawable) : g));
+    mutatePlans({ accounts: updatedAccounts, goals: updatedGoals, transactions: [withdrawTx, ...state.transactions] });
+  };
+
   // Commitment (Bill) CRUD + mark paid
   const handleAddCommitment = (data: Omit<MoneyCommitment, 'id' | 'createdAt' | 'updatedAt'>) => {
     mutatePlans({ commitments: [...state.commitments, { ...data, id: `comm-${Date.now()}`, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }] });
@@ -839,6 +967,12 @@ export function App() {
     mutatePlans({ commitments: state.commitments.map((c) => (c.id === id ? { ...c, ...data, updatedAt: new Date().toISOString() } : c)) });
   };
   const handleDeleteCommitment = async (id: string) => {
+    // Generated occurrences have no row to delete (the Bills list hides Delete
+    // for them); this guard keeps the handler truthful if ever reached.
+    if (!state.commitments.some((c) => c.id === id)) {
+      notice(t('dialog.generatedDeleteHint'));
+      return;
+    }
     if (!(await confirmDialog({ title: t('dialog.deleteBill'), message: t('dialog.deleteBillHint'), danger: true, confirmLabel: t('common.delete') }))) return;
     mutatePlans({ commitments: state.commitments.filter((c) => c.id !== id) });
     // Hard delete: the cloud row must go too, or it resurrects on restore.
@@ -851,48 +985,87 @@ export function App() {
   // posts INCOME and credits the account (expected paydays must never post
   // as expenses). Either way exactly one transaction is created per call —
   // toggling back to PROJECTED never deletes the posted transaction, and
-  // re-completing is blocked by the completed-status check below.
+  // re-completing is blocked by the already-posted check (inside a functional
+  // update, so a double-tap can never double-post).
   const handleToggleCommitmentStatus = (commitmentId: string) => {
-    const comm = state.commitments.find((c) => c.id === commitmentId);
-    if (!comm) return;
-    const willBePaid = comm.status !== 'COMPLETED';
-    let nextCommitments = state.commitments.map((c) =>
-      c.id === commitmentId ? { ...c, status: willBePaid ? ('COMPLETED' as const) : ('PROJECTED' as const), updatedAt: new Date().toISOString() } : c
-    );
-    let nextAccounts = state.accounts;
-    let nextTransactions = state.transactions;
-    if (willBePaid) {
-      const isInflow = comm.direction === 'INFLOW';
-      const source = state.accounts.find((a) => a.id === comm.accountId);
-      const alreadyPosted = state.transactions.some((t) => t.sourceCommitmentId === commitmentId);
-      const canSettle =
-        source &&
-        source.currency === comm.currency &&
-        (isInflow || source.currentBalance - comm.amount >= 0);
-      if (alreadyPosted) {
-        // Idempotent re-complete: flip the status, never post a second transaction.
-      } else if (canSettle && source) {
-        const payTx: Transaction = {
-          ...FutureFinanceEngine.buildSettlementTransaction(comm, todayISO, DateUtils.getCurrentTimeString()),
-          id: `tx-${Date.now()}`,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        nextAccounts = TransactionEngine.applyTransactionToAccounts(payTx, state.accounts);
-        nextTransactions = [payTx, ...state.transactions];
-      } else {
-        // Mark paid without posting (insufficient funds or currency mismatch) — record only.
-        nextCommitments = nextCommitments.map((c) =>
-          c.id === commitmentId ? { ...c, notes: 'Marked paid (no balance change — insufficient funds or currency mismatch).' } : c
-        );
-      }
+    // Generated (recurring-derived) occurrences live outside state.commitments.
+    if (!state.commitments.some((c) => c.id === commitmentId)) {
+      settleGeneratedOccurrence(commitmentId);
+      return;
     }
-    mutatePlans({ commitments: nextCommitments, accounts: nextAccounts, transactions: nextTransactions });
+    setState((prev) => {
+      const comm = prev.commitments.find((c) => c.id === commitmentId);
+      if (!comm) return prev;
+      // AUTO_POSTED counts as paid: tapping it acknowledges (→ COMPLETED),
+      // never reopens — the money already moved.
+      const willBePaid = comm.status !== 'COMPLETED';
+      const nowISO = new Date().toISOString();
+      let nextCommitments = prev.commitments.map((c) =>
+        c.id === commitmentId ? { ...c, status: willBePaid ? ('COMPLETED' as const) : ('PROJECTED' as const), updatedAt: nowISO } : c
+      );
+      let nextAccounts = prev.accounts;
+      let nextTransactions = prev.transactions;
+      if (willBePaid) {
+        const isInflow = comm.direction === 'INFLOW';
+        const source = prev.accounts.find((a) => a.id === comm.accountId);
+        const alreadyPosted = prev.transactions.some((t) => t.sourceCommitmentId === commitmentId);
+        const canSettle =
+          source &&
+          source.currency === comm.currency &&
+          (isInflow || source.currentBalance - comm.amount >= 0);
+        if (alreadyPosted) {
+          // Idempotent re-complete: flip the status, never post a second transaction.
+        } else if (canSettle && source) {
+          const payTx: Transaction = {
+            ...FutureFinanceEngine.buildSettlementTransaction(comm, todayISO, DateUtils.getCurrentTimeString()),
+            id: newId('tx'),
+            createdAt: nowISO,
+            updatedAt: nowISO,
+          };
+          nextAccounts = TransactionEngine.applyTransactionToAccounts(payTx, prev.accounts);
+          nextTransactions = [payTx, ...prev.transactions];
+        } else {
+          // Mark paid without posting (insufficient funds or currency mismatch) — record only.
+          nextCommitments = nextCommitments.map((c) =>
+            c.id === commitmentId ? { ...c, notes: 'Marked paid (no balance change — insufficient funds or currency mismatch).' } : c
+          );
+        }
+      }
+      return { ...prev, commitments: nextCommitments, accounts: nextAccounts, transactions: nextTransactions };
+    });
+  };
+
+  /**
+   * Settles a recurring-generated occurrence via the tested engine transition:
+   * posts the payment (same settleability rules as manual bills) and advances
+   * the rule's floor past the settled date, rescuing outstanding earlier
+   * occurrences as manual bills first.
+   */
+  const settleGeneratedOccurrence = (commitmentId: string) => {
+    setState((prev) => {
+      const next = FutureFinanceEngine.settleGeneratedOccurrence(
+        prev,
+        commitmentId,
+        todayISO,
+        DateUtils.getCurrentTimeString(),
+        newId
+      );
+      return next ? { ...prev, ...next } : prev;
+    });
   };
 
   // Cancel a commitment — terminal state, never auto-recomputed or auto-posted.
+  // Cancelling a generated occurrence skips the rule past it; outstanding
+  // earlier occurrences are rescued as manual bills so no obligation is lost.
   const handleCancelCommitment = async (id: string) => {
     if (!(await confirmDialog({ title: t('dialog.cancelCommitment'), message: t('dialog.cancelCommitmentHint'), danger: true, confirmLabel: t('common.confirm') }))) return;
+    if (!state.commitments.some((c) => c.id === id)) {
+      setState((prev) => {
+        const next = FutureFinanceEngine.cancelGeneratedOccurrence(prev, id, todayISO, newId);
+        return next ? { ...prev, ...next } : prev;
+      });
+      return;
+    }
     mutatePlans({
       commitments: state.commitments.map((c) =>
         c.id === id ? { ...c, status: 'CANCELLED', updatedAt: new Date().toISOString() } : c
@@ -901,7 +1074,16 @@ export function App() {
   };
 
   // Reschedule a commitment — moves the due date; recompute/auto-post handle the rest.
+  // Rescheduling a generated occurrence moves the RULE's next occurrence; any
+  // outstanding occurrences the jump would hide are rescued as manual bills.
   const handleRescheduleCommitment = (id: string, newDueDate: string) => {
+    if (!state.commitments.some((c) => c.id === id)) {
+      setState((prev) => {
+        const next = FutureFinanceEngine.rescheduleGeneratedOccurrence(prev, id, newDueDate, todayISO, newId);
+        return next ? { ...prev, ...next } : prev;
+      });
+      return;
+    }
     mutatePlans({
       commitments: state.commitments.map((c) =>
         c.id === id ? { ...c, dueDate: newDueDate, updatedAt: new Date().toISOString() } : c
@@ -955,12 +1137,14 @@ export function App() {
     });
   };
 
-  // Skip one occurrence: move to the next without creating anything.
+  // Skip one occurrence: move past the first emitted occurrence without
+  // creating anything. Anchored (not chained +1 step), so skipping from an
+  // off-grid floor can never swallow a real occurrence.
   const handleSkipRecurring = (id: string) => {
     mutatePlans({
       recurring: state.recurring.map((r) =>
         r.id === id
-          ? { ...r, nextOccurrence: FutureFinanceEngine.advanceOccurrence(r.nextOccurrence, r.frequency), updatedAt: new Date().toISOString() }
+          ? { ...r, nextOccurrence: FutureFinanceEngine.skipFloor(r), updatedAt: new Date().toISOString() }
           : r
       ),
     });
@@ -1223,11 +1407,25 @@ export function App() {
               onOpenAddRecurring={() => { setEditingRecurring(null); setIsAddRecurringOpen(true); }}
               onEditBudget={(b) => { setEditingBudget(b); setIsAddBudgetOpen(true); }}
               onEditGoal={(g) => { setEditingGoal(g); setIsAddGoalOpen(true); }}
-              onEditCommitment={(c) => { setEditingCommitment(c); setIsAddCommitmentOpen(true); }}
+              // Editing a generated occurrence edits its RULE (the occurrence itself
+              // is derived) — a truthful deep-link instead of a void save.
+              onEditCommitment={(c) => {
+                if (c.relatedRecurringTransactionId) {
+                  const rule = state.recurring.find((r) => r.id === c.relatedRecurringTransactionId);
+                  if (rule) {
+                    setEditingRecurring(rule);
+                    setIsAddRecurringOpen(true);
+                    return;
+                  }
+                }
+                setEditingCommitment(c);
+                setIsAddCommitmentOpen(true);
+              }}
               onEditRecurring={(r) => { setEditingRecurring(r); setIsAddRecurringOpen(true); }}
               onDeleteBudget={handleDeleteBudget}
               onRestoreBudget={handleRestoreBudget}
               onDeleteGoal={handleDeleteGoal}
+              onRestoreGoal={handleRestoreGoal}
               onDeleteCommitment={handleDeleteCommitment}
               onDeleteRecurring={handleDeleteRecurring}
               onToggleRecurringActive={handleToggleRecurringActive}
@@ -1238,6 +1436,7 @@ export function App() {
               onCancelCommitment={handleCancelCommitment}
               onRescheduleCommitment={handleRescheduleCommitment}
               onFundGoal={handleFundGoal}
+              onWithdrawGoal={handleWithdrawGoal}
               onNavigateToTab={(t) => setCurrentTab(t as NavTab)}
               initialSection={plansInitialSection}
               sectionNonce={plansSectionNonce}
@@ -1410,6 +1609,16 @@ export function App() {
         accounts={accounts}
         categories={categories}
         onEdit={(tx) => {
+          // Same ownership rule as handleSaveTransaction, enforced at open so
+          // the user never edits a linked row into a desync.
+          if (tx.sourceCommitmentId) {
+            notice(t('dialog.settleTxLocked'));
+            return;
+          }
+          if (TransactionEngine.isGoalFunding(tx) || TransactionEngine.isGoalWithdrawal(tx)) {
+            notice(t('dialog.goalTxLocked'));
+            return;
+          }
           setEditingTx(tx);
           setIsAddTxOpen(true);
         }}

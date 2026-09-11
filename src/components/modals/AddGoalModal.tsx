@@ -48,11 +48,14 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onS
 
   const save = () => {
     const target = MoneyValue.parse(targetStr || '0', currency).getMinorUnits();
-    const current = MoneyValue.parse(currentStr || '0', currency).getMinorUnits();
+    // Progress is money-backed: only a NEW goal may declare a starting amount
+    // (opening state, like an account's opening balance). Editing never touches
+    // progress — Fund / Withdraw own it, so progress and money can't desync.
+    const current = editingGoal ? editingGoal.currentAmount : MoneyValue.parse(currentStr || '0', currency).getMinorUnits();
     if (!name.trim()) { setError(t('tx.errors.nameRequired')); return; }
     if (target <= 0) { setError(t('tx.errors.targetPositive')); return; }
     if (!targetDate) { setError(t('tx.errors.dateRequired')); return; }
-    if (current > target) { setError(t('tx.errors.currentOverTarget')); return; }
+    if (!editingGoal && current > target) { setError(t('tx.errors.currentOverTarget')); return; }
     setError(null);
 
     // Duplicate-submit guard: the first commit wins per open.
@@ -70,7 +73,7 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onS
       status: current >= target ? 'COMPLETED' : 'ON_TRACK',
       icon: 'Target',
       color,
-      isArchived: false,
+      isArchived: editingGoal ? editingGoal.isArchived : false,
     });
   };
 
@@ -87,7 +90,16 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onS
             <input value={targetStr} onChange={(e) => setTargetStr(e.target.value)} type="number" inputMode="decimal" placeholder="0.00" className={inputCls} />
           </Field>
           <Field label={t('modal.alreadySaved') + ` (${symbol})`}>
-            <input value={currentStr} onChange={(e) => setCurrentStr(e.target.value)} type="number" inputMode="decimal" placeholder="0.00" className={inputCls} />
+            {editingGoal ? (
+              <div>
+                <div className="w-full rounded-xl border border-(--line) bg-(--surface-2) px-3 py-2.5 text-sm font-bold text-(--ink-2)">
+                  {MoneyValue.fromMinorUnits(editingGoal.currentAmount, currency).format({ includeSymbol: false })}
+                </div>
+                <p className="mt-1 text-[11px] font-medium text-(--ink-3)">{t('modal.goalCurrentLocked')}</p>
+              </div>
+            ) : (
+              <input value={currentStr} onChange={(e) => setCurrentStr(e.target.value)} type="number" inputMode="decimal" placeholder="0.00" className={inputCls} />
+            )}
           </Field>
         </div>
         <Field label={t('modal.targetDate')}>

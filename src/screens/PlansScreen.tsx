@@ -16,6 +16,7 @@ import {
 import { DateUtils } from '../domain/date/DateUtils';
 import { MoneyValue } from '../domain/money/MoneyValue';
 import { EmergencyFundEngine } from '../domain/emergency-fund/EmergencyFundEngine';
+import { FutureFinanceEngine } from '../domain/future-finance/FutureFinanceEngine';
 import { GoalEngine } from '../domain/goal/GoalEngine';
 import { BudgetEngine } from '../domain/budget/BudgetEngine';
 import { TimelineEngine } from '../domain/timeline/TimelineEngine';
@@ -58,6 +59,7 @@ interface PlansScreenProps {
   onDeleteBudget: (id: string) => void;
   onRestoreBudget: (id: string) => void;
   onDeleteGoal: (id: string) => void;
+  onRestoreGoal: (id: string) => void;
   onDeleteCommitment: (id: string) => void;
   onDeleteRecurring: (id: string) => void;
   onToggleRecurringActive: (id: string) => void;
@@ -68,6 +70,7 @@ interface PlansScreenProps {
   onCancelCommitment: (id: string) => void;
   onRescheduleCommitment: (id: string, newDueDate: string) => void;
   onFundGoal: (goalId: string, amount: number, fromAccountId: string) => void;
+  onWithdrawGoal: (goalId: string, amount: number, toAccountId: string) => void;
   onNavigateToTab: (tab: string) => void;
   /** Deep-link from Home alerts: which section to show on arrival. */
   initialSection?: PlansSection;
@@ -98,6 +101,7 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({
   onDeleteBudget,
   onRestoreBudget,
   onDeleteGoal,
+  onRestoreGoal,
   onDeleteCommitment,
   onDeleteRecurring,
   onToggleRecurringActive,
@@ -108,6 +112,7 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({
   onCancelCommitment,
   onRescheduleCommitment,
   onFundGoal,
+  onWithdrawGoal,
   initialSection,
   sectionNonce,
 }) => {
@@ -165,7 +170,9 @@ export const PlansScreen: React.FC<PlansScreenProps> = ({
           onOpenEmergencyFund={onOpenAddEmergencyFund}
           onEdit={onEditGoal}
           onDelete={onDeleteGoal}
+          onRestore={onRestoreGoal}
           onFund={onFundGoal}
+          onWithdraw={onWithdrawGoal}
           accounts={accounts}
           currency={currency}
         />
@@ -437,16 +444,23 @@ const GoalsView: React.FC<{
   onOpenEmergencyFund: (suggestedTargetMinor?: number) => void;
   onEdit: (g: SavingsGoal) => void;
   onDelete: (id: string) => void;
+  onRestore: (id: string) => void;
   onFund: (goalId: string, amount: number, fromAccountId: string) => void;
+  onWithdraw: (goalId: string, amount: number, toAccountId: string) => void;
   accounts: Account[];
   currency: CurrencyCode;
-}> = ({ goals, transactions, commitments, recurring, onOpenAdd, onOpenEmergencyFund, onEdit, onDelete, onFund, accounts, currency }) => {
+}> = ({ goals, transactions, commitments, recurring, onOpenAdd, onOpenEmergencyFund, onEdit, onDelete, onRestore, onFund, onWithdraw, accounts, currency }) => {
   const todayISO = DateUtils.getTodayISO();
   const [fundingId, setFundingId] = useState<string | null>(null);
   const [fundAmount, setFundAmount] = useState('');
   const [fundSource, setFundSource] = useState('');
+  const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawDest, setWithdrawDest] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
 
   const activeGoals = goals.filter((g) => !g.isArchived);
+  const archivedGoals = goals.filter((g) => g.isArchived);
   const efGoal = activeGoals.find((g) => /emergency/i.test(g.name));
   // Explainable fund projection: essential bills first, else the user's own
   // 6-month essential spend. Drives both the creation suggestion and the
@@ -661,10 +675,86 @@ const GoalsView: React.FC<{
                   Fund this goal
                 </button>
               )}
+              {withdrawingId === goal.id ? (
+                <div className="mt-2 space-y-2 rounded-xl bg-amber-50/60 p-3 border border-amber-100">
+                  <input
+                    type="number"
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    placeholder="Amount"
+                    className="w-full rounded-lg border border-(--line) px-3 py-2 text-sm"
+                  />
+                  <select value={withdrawDest} onChange={(e) => setWithdrawDest(e.target.value)} className="w-full rounded-lg border border-(--line) px-3 py-2 text-sm">
+                    <option value="">To account…</option>
+                    {accounts.filter((a) => a.currency === (goal.currency || currency)).map((a) => (
+                      <option key={a.id} value={a.id}>{a.name} ({MoneyValue.fromMinorUnits(a.currentBalance, a.currency).format()})</option>
+                    ))}
+                  </select>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const amt = MoneyValue.parse(withdrawAmount, goal.currency || currency).getMinorUnits();
+                        if (amt > 0 && withdrawDest) {
+                          onWithdraw(goal.id, amt, withdrawDest);
+                          setWithdrawingId(null);
+                          setWithdrawAmount('');
+                          setWithdrawDest('');
+                        }
+                      }}
+                      className="flex-1 rounded-lg bg-amber-600 px-3 py-2 text-xs font-bold text-white"
+                    >
+                      {t('plans.withdrawBtn')}
+                    </button>
+                    <button type="button" onClick={() => setWithdrawingId(null)} className="rounded-lg bg-(--line) px-3 py-2 text-xs font-bold text-(--ink-2)">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                goal.currentAmount > 0 && (
+                  <button type="button" onClick={() => {
+                    setWithdrawingId(goal.id);
+                    const goalCurrency = goal.currency || currency;
+                    const fallback = accounts.find((a) => a.currency === goalCurrency && !a.isArchived);
+                    setWithdrawDest(fallback?.id || '');
+                  }} className="mt-2 w-full rounded-xl border border-(--line) bg-(--surface) py-2 text-xs font-bold text-(--ink-2) hover:text-(--ink)">
+                    {t('plans.withdrawBtn')}
+                  </button>
+                )
+              )}
             </div>
           );
         })}
       </div>
+      {archivedGoals.length > 0 && (
+        <div className="pt-1">
+          <button
+            type="button"
+            onClick={() => setShowArchived((v) => !v)}
+            aria-expanded={showArchived}
+            className="w-full rounded-xl border border-(--line) bg-(--surface) py-2 text-[11px] font-bold text-(--ink-3) hover:text-(--ink) transition-colors cursor-pointer"
+          >
+            {showArchived ? t('plans.archivedHide') : t('plans.archivedShow', { count: archivedGoals.length })}
+          </button>
+          {showArchived && (
+            <div className="mt-2 space-y-2">
+              {archivedGoals.map((g) => (
+                <div key={g.id} className="flex items-center justify-between rounded-xl border border-(--line-soft) bg-(--surface-2) px-3 py-2">
+                  <span className="text-xs font-bold text-(--ink-3)">{g.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => onRestore(g.id)}
+                    className="rounded-full border border-emerald-200 bg-(--surface) px-2.5 py-1 text-[11px] font-bold text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+                  >
+                    {t('plans.restoreBtn')}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -776,7 +866,11 @@ const BillsView: React.FC<{
                       ...(!isCancelled && !isCompleted
                         ? [{ label: t('common.cancel'), onSelect: () => onCancel(comm.id) }]
                         : []),
-                      { label: t('common.delete'), onSelect: () => onDelete(comm.id), danger: true },
+                      // Generated occurrences have no row to delete — cancel
+                      // skips the occurrence; the rule lives in Recurring.
+                      ...(!comm.relatedRecurringTransactionId
+                        ? [{ label: t('common.delete'), onSelect: () => onDelete(comm.id), danger: true }]
+                        : []),
                     ]}
                   />
                 </div>
@@ -855,7 +949,7 @@ const RecurringView: React.FC<{
                     <h4 className="text-xs font-bold text-(--ink) truncate">{r.title}</h4>
                     <span className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${badge.cls}`}>{badge.text}</span>
                   </div>
-                  <p className="text-[11px] font-medium text-(--ink-3)">{r.frequency} • {r.type} • Next: {DateUtils.formatDisplayDate(r.nextOccurrence, { fullYear: true })}{auto && r.isActive ? ` • ${t('plans.autoBadge')}` : ''}</p>
+                  <p className="text-[11px] font-medium text-(--ink-3)">{r.frequency} • {r.type} • Next: {DateUtils.formatDisplayDate(FutureFinanceEngine.firstAnchoredOnOrAfter(r.startDate, r.frequency, r.nextOccurrence && r.nextOccurrence >= r.startDate ? r.nextOccurrence : r.startDate), { fullYear: true })}{auto && r.isActive ? ` • ${t('plans.autoBadge')}` : ''}</p>
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">

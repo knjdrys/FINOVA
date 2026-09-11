@@ -37,9 +37,17 @@ export class TransactionEngine {
     return Boolean(tx.tags && tx.tags.includes('adjustment'));
   }
 
-  /** True for any internal booking row (goal reservations, reconciliations). */
+  /**
+   * Goal-withdrawal marker. The exact reverse of a goal-funding reservation
+   * (goal progress → account): internal plumbing, never income.
+   */
+  public static isGoalWithdrawal(tx: Pick<Transaction, 'tags'>): boolean {
+    return Boolean(tx.tags && tx.tags.includes('goal-withdraw'));
+  }
+
+  /** True for any internal booking row (goal reservations, goal withdrawals, reconciliations). */
   public static isBookkeeping(tx: Pick<Transaction, 'tags'>): boolean {
-    return this.isGoalFunding(tx) || this.isBalanceAdjustment(tx);
+    return this.isGoalFunding(tx) || this.isGoalWithdrawal(tx) || this.isBalanceAdjustment(tx);
   }
 
   /**
@@ -216,7 +224,7 @@ export class TransactionEngine {
 
     for (const tx of transactions) {
       if (tx.status === 'PENDING') continue;
-      if (TransactionEngine.isGoalFunding(tx)) continue; // reservations are not spending
+      if (TransactionEngine.isBookkeeping(tx)) continue; // reservations, withdrawals, adjustments are not economic activity
       if (currencyFilter && tx.currency !== currencyFilter) continue; // never mix currencies
       if (!DateUtils.isDateInRange(tx.date, startDate, endDate)) continue;
 

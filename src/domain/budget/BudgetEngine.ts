@@ -40,6 +40,7 @@ export class BudgetEngine {
     for (const tx of transactions) {
       if (tx.type !== 'EXPENSE' || tx.status === 'PENDING') continue;
       if (TransactionEngine.isBookkeeping(tx)) continue; // reservations + adjustments are not budget spend
+      if (budget.currency && tx.currency !== budget.currency) continue; // never mix currencies (matches rollover)
       if (!DateUtils.isDateInRange(tx.date, budget.startDate, budget.endDate)) continue;
 
       const attributed = this.attributedAmount(tx, budget);

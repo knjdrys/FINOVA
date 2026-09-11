@@ -53,18 +53,32 @@ function autoPostPass(
   const result = FutureFinanceEngine.autoPostDueCommitments(due, accounts, txs, TODAY);
   if (result.postedCount === 0) return { accounts, commitments, recurring, txs, posted: 0 };
   const postedIds = new Set(result.commitments.filter((c) => c.status === 'AUTO_POSTED').map((c) => c.id));
-  const postedRecs = new Set(
-    result.commitments.filter((c) => postedIds.has(c.id) && c.relatedRecurringTransactionId)
-      .map((c) => c.relatedRecurringTransactionId as string)
-  );
+  const postedDueByRule = new Map<string, string>();
+  for (const c of result.commitments) {
+    if (c.status === 'AUTO_POSTED' && c.relatedRecurringTransactionId) {
+      const prevDue = postedDueByRule.get(c.relatedRecurringTransactionId);
+      if (!prevDue || c.dueDate > prevDue) postedDueByRule.set(c.relatedRecurringTransactionId, c.dueDate);
+    }
+  }
+  const unpaidDueByRule = new Map<string, string>();
+  for (const c of due) {
+    if (postedIds.has(c.id) || !c.relatedRecurringTransactionId) continue;
+    const prevDue = unpaidDueByRule.get(c.relatedRecurringTransactionId);
+    if (!prevDue || c.dueDate < prevDue) unpaidDueByRule.set(c.relatedRecurringTransactionId, c.dueDate);
+  }
   return {
     accounts: result.accounts,
     commitments: commitments.map((c) =>
       postedIds.has(c.id) ? { ...c, status: 'AUTO_POSTED' as const } : c),
-    recurring: recurring.map((r) =>
-      postedRecs.has(r.id)
-        ? { ...r, nextOccurrence: FutureFinanceEngine.advanceOccurrence(r.nextOccurrence, r.frequency) }
-        : r),
+    recurring: recurring.map((r) => {
+      const postedDue = postedDueByRule.get(r.id);
+      if (!postedDue) return r;
+      const floor =
+        unpaidDueByRule.get(r.id) ??
+        FutureFinanceEngine.nextAnchoredAfter(r.startDate, r.frequency, postedDue);
+      const nextOccurrence = r.nextOccurrence && r.nextOccurrence > floor ? r.nextOccurrence : floor;
+      return { ...r, nextOccurrence };
+    }),
     txs: result.transactions,
     posted: result.postedCount,
   };
@@ -122,18 +136,59 @@ describe('double-fire idempotency (StrictMode / re-fire)', () => {
     expect(second.accounts[0].currentBalance).toBe(first.accounts[0].currentBalance);
   });
 
-  it('stale rules post the current occurrence only — no backlog dump; rerun adds nothing', () => {
-    // No-backlog policy: months before today never materialize (horizon starts
-    // today), so a stale rule posts exactly the current on-grid occurrence.
+  it('stale rules surface overdue occurrences but only auto-post within the catch-up window', () => {
+    // Bounded policy: occurrences due in the last 31 days materialize (older
+    // backlog stays out of projections); auto-post settles only bills due
+    // within the last 7 days — older bills wait for an explicit tap, so the
+    // app never double-pays a bill settled outside during the gap.
     const accounts = [acc(P(2500))];
     const recs = [rule({ id: 'r-old', amount: P(1000), startDate: '2026-06-15', nextOccurrence: '2026-06-15' })];
+    const resolved = FutureFinanceEngine.resolveCommitments(
+      recs, [], [], TODAY, DateUtils.addDaysISO(TODAY, 30), TODAY
+    );
+    // Grid Jun 15 → Sep 15; the 31-day lookback surfaces Aug 15 (overdue) + Sep 15.
+    expect(resolved.map((c) => c.dueDate)).toEqual(['2026-08-15', '2026-09-15', '2026-10-15']);
+    expect(resolved[0].status).toBe('OVERDUE');
+
     const first = autoPostPass(accounts, [], recs, []);
-    // Anchored grid from Jun 15: only Sep 15 falls in [today, today+30].
+    // Sep 15 posts (in window); Aug 15 stays overdue and unposted.
     expect(first.posted).toBe(1);
     expect(first.accounts[0].currentBalance).toBe(P(1500));
+    // The floor pins at the earliest unpaid due date — never leapfrogs it.
+    expect(first.recurring[0].nextOccurrence).toBe('2026-08-15');
+
     const second = autoPostPass(first.accounts, first.commitments, first.recurring, first.txs);
     expect(second.posted).toBe(0);
     expect(second.txs).toHaveLength(first.txs.length);
+    // Aug 15 is still visible and overdue after the rerun (no silent drop).
+    const re = FutureFinanceEngine.resolveCommitments(
+      second.recurring, second.commitments, second.txs, TODAY, DateUtils.addDaysISO(TODAY, 30), TODAY
+    );
+    expect(re.find((c) => c.dueDate === '2026-08-15')?.status).toBe('OVERDUE');
+    // And the posted Sep 15 occurrence never reappears (settlement dedupe).
+    expect(re.some((c) => c.dueDate === '2026-09-15')).toBe(false);
+  });
+
+  it('catch-up window boundary: 7 days overdue posts, 8 days waits for a tap', () => {
+    const mk = (due: string) => commitment({ id: `c-${due}`, dueDate: due, status: 'PROJECTED' });
+    const accounts = [acc(P(99999))];
+    const inWindow = FutureFinanceEngine.autoPostDueCommitments([mk('2026-09-08')], accounts, [], TODAY);
+    expect(inWindow.postedCount).toBe(1);
+    const stale = FutureFinanceEngine.autoPostDueCommitments([mk('2026-09-07')], accounts, [], TODAY);
+    expect(stale.postedCount).toBe(0);
+    expect(stale.accounts[0].currentBalance).toBe(P(99999));
+  });
+
+  it('overdraft-skipped bills stay overdue and visible; the floor never leapfrogs them', () => {
+    const accounts = [acc(P(500))]; // cannot cover P(1000)
+    const recs = [rule({ id: 'r-poor', amount: P(1000), startDate: '2026-09-15', nextOccurrence: '2026-09-15' })];
+    const first = autoPostPass(accounts, [], recs, []);
+    expect(first.posted).toBe(0);
+    expect(first.recurring[0].nextOccurrence).toBe('2026-09-15');
+    const resolved = FutureFinanceEngine.resolveCommitments(
+      first.recurring, first.commitments, first.txs, TODAY, DateUtils.addDaysISO(TODAY, 30), TODAY
+    );
+    expect(resolved.some((c) => c.dueDate === '2026-09-15' && c.status !== 'AUTO_POSTED')).toBe(true);
   });
 });
 
