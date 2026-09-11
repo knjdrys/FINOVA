@@ -385,6 +385,7 @@ export const fil = {
     goalTxLocked: 'Ang transaksyong ito ay naka-link sa savings goal. Mag-fund o mag-withdraw mula sa goal — ang pagbabago dito ay sisira sa progress mo.',
     settleTxLocked: 'Ang bayad na ito ay naka-link sa bill. Burahin ito para muling buksan ang bill, saka magbayad ulit nang tama.',
     goalFundedHint: 'May {amount} pa ang goal na ito. I-withdraw muna ito sa account.',
+    storageFull: 'Hindi makapag-save — puno ang storage ng device. Mag-download ng backup, magbura ng resibo, saka magluwag ng espasyo.',
     deleteBill: 'Burahin ang bayaring ito?',
     deleteBillHint: 'Hindi na ito lalabas sa timeline o projections mo.',
     cancelCommitment: 'Kanselahin ang commitment na ito?',
@@ -666,6 +667,7 @@ export const fil = {
     downloaded: 'Na-download ang backup.',
     invalidFile: 'Hindi ito valid na PALDO backup file.',
     versionNew: 'Galing ang backup na ito sa mas bagong PALDO — i-update muna ang app.',
+    restoredWithSkips: 'Na-restore ang backup. {count} sirang rows ang nilaktawan.',
   },
 
   import: {

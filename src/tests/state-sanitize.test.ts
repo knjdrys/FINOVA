@@ -1,0 +1,101 @@
+/**
+ * DESTRUCTION TEST — persistence robustness.
+ * Loads and restores used to trust every row's shape: one corrupt row
+ * (string amount, missing date, NaN balance) poisoned arithmetic app-wide.
+ * Corrupt rows are now dropped (accounts coerced, never dropped) and counted.
+ */
+import { describe, it, expect } from 'vitest';
+import { sanitizeState, totalDropped } from '../services/storage/stateValidation';
+import { BackupService } from '../services/backup/BackupService';
+import { CLEAN_ZERO_STATE } from '../services/storage/FinovaStorage';
+
+const baseState = () => structuredClone(CLEAN_ZERO_STATE);
+
+describe('sanitizeState', () => {
+  it('drops transactions with invalid money, type, or date — keeps valid rows', () => {
+    const s = baseState();
+    const good = {
+      id: 'tx-good', userId: 'u', type: 'EXPENSE', amount: 100, currency: 'PHP',
+      categoryId: 'c', accountId: 'a', date: '2026-09-10', time: '10:00',
+      tags: [], status: 'CONFIRMED', createdAt: '', updatedAt: '',
+    };
+    s.transactions = [
+      good,
+      { ...good, id: 'bad-amount', amount: '250' }, // string money
+      { ...good, id: 'bad-nan', amount: NaN }, // NaN poison
+      { ...good, id: 'bad-neg', amount: -5 }, // negative
+      { ...good, id: 'bad-type', type: 'YOLO' }, // unknown type
+      { ...good, id: 'bad-date', date: 'Sept 10' }, // undated money
+      null,
+    ] as unknown as typeof s.transactions;
+    const { state, report } = sanitizeState(s);
+    expect(state.transactions.map((t) => t.id)).toEqual(['tx-good']);
+    expect(report.droppedTransactions).toBe(6);
+  });
+
+  it('coerces soft fields without touching money', () => {
+    const s = baseState();
+    s.transactions = [{
+      id: 'tx-soft', userId: 'u', type: 'EXPENSE', amount: 100.4, currency: 'PHP',
+      categoryId: 'c', accountId: 'a', date: '2026-09-10', time: '10:00',
+      tags: 'oops', status: 'WEIRD', createdAt: '', updatedAt: '',
+    }] as unknown as typeof s.transactions;
+    const { state, report } = sanitizeState(s);
+    expect(state.transactions).toHaveLength(1);
+    expect(state.transactions[0].status).toBe('CONFIRMED');
+    expect(state.transactions[0].tags).toEqual([]);
+    expect(state.transactions[0].amount).toBe(100);
+    expect(report.droppedTransactions).toBe(0);
+  });
+
+  it('coerces corrupt account balances to 0 (accounts are never dropped)', () => {
+    const s = baseState();
+    s.accounts = [{
+      id: 'a1', userId: 'u', name: 'Broken', type: 'BANK', currency: 'PHP',
+      initialBalance: NaN, currentBalance: 'lots',
+      icon: '', color: '', includeInTotalBalance: true, isArchived: false,
+      createdAt: '', updatedAt: '',
+    }] as unknown as typeof s.accounts;
+    const { state, report } = sanitizeState(s);
+    expect(state.accounts).toHaveLength(1);
+    expect(state.accounts[0].currentBalance).toBe(0);
+    expect(state.accounts[0].initialBalance).toBe(0);
+    expect(report.coercedAccounts).toBe(1);
+  });
+
+  it('drops plans with invalid money and coerces minimumReserve', () => {
+    const s = baseState();
+    s.budgets = [{ id: 'b1', amount: NaN }] as unknown as typeof s.budgets;
+    s.goals = [{ id: 'g1', targetAmount: 100, currentAmount: 50 }] as unknown as typeof s.goals;
+    s.commitments = [{ id: 'c1', amount: -1 }] as unknown as typeof s.commitments;
+    s.recurring = [{ id: 'r1', amount: 100 }] as unknown as typeof s.recurring;
+    (s.settings as unknown as Record<string, unknown>).minimumReserve = 'high';
+    const { state, report } = sanitizeState(s);
+    expect(state.budgets).toHaveLength(0);
+    expect(state.goals).toHaveLength(1);
+    expect(state.commitments).toHaveLength(0);
+    expect(state.recurring).toHaveLength(1);
+    expect(state.settings.minimumReserve).toBe(0);
+    expect(totalDropped(report)).toBe(2);
+  });
+});
+
+describe('parseBackup reports dropped rows', () => {
+  it('restores with a droppedRows count instead of bricking', () => {
+    const state = baseState();
+    (state.transactions as unknown[]) = [
+      {
+        id: 'tx-good', userId: 'u', type: 'EXPENSE', amount: 100, currency: 'PHP',
+        categoryId: 'c', accountId: 'a', date: '2026-09-10', createdAt: '', updatedAt: '',
+      },
+      { id: 'tx-bad', type: 'EXPENSE', amount: 'NaN-cheque' },
+    ];
+    const json = BackupService.createBackup(state);
+    const parsed = BackupService.parseBackup(json);
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.state.transactions.map((t) => t.id)).toEqual(['tx-good']);
+      expect(parsed.droppedRows).toBe(1);
+    }
+  });
+});

@@ -189,6 +189,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleDownloadBackup = () => {
@@ -221,7 +222,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       danger: true,
       confirmLabel: t('backup.restore'),
     });
-    if (ok) onRestoreBackup(result.state);
+    if (ok) {
+      onRestoreBackup(result.state);
+      if (result.droppedRows > 0) {
+        notice(t('backup.restoredWithSkips', { count: result.droppedRows }));
+      }
+    }
   };
 
   const importReason = (code: ImportRejectCode, params: Record<string, string>): string => {

@@ -224,9 +224,18 @@ export function App() {
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [authUser?.id, authUser?.fullName, authUser?.email, authUser?.isGuest]);
 
-  // Sync state to local storage & queue the cloud push
+  // Sync state to local storage & queue the cloud push. A failed save warns
+  // once per failure streak — silent failures would lose every change since
+  // the last successful save on the next reload.
+  const storageWarnedRef = useRef(false);
   useEffect(() => {
-    FinovaStorage.saveState(state);
+    const saved = FinovaStorage.saveState(state);
+    if (!saved && !storageWarnedRef.current) {
+      storageWarnedRef.current = true;
+      notice(t('dialog.storageFull'));
+    } else if (saved) {
+      storageWarnedRef.current = false;
+    }
     if (authUser && !authUser.isGuest) {
       getSyncManager()?.requestSync();
     }

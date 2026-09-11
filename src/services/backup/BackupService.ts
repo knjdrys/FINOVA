@@ -1,4 +1,5 @@
 import { CLEAN_ZERO_STATE, FinovaState, INITIAL_CATEGORIES } from '../storage/FinovaStorage';
+import { sanitizeState, totalDropped } from '../storage/stateValidation';
 
 /**
  * Full-state backup & restore for the local-first data model.
@@ -25,7 +26,7 @@ export interface BackupFile {
 export type BackupParseError = 'invalid' | 'version';
 
 export type BackupParseResult =
-  | { ok: true; state: FinovaState; exportedAt: string }
+  | { ok: true; state: FinovaState; exportedAt: string; droppedRows: number }
   | { ok: false; error: BackupParseError };
 
 function asArray<T>(v: unknown): T[] {
@@ -82,7 +83,7 @@ export class BackupService {
     }
 
     const categories = asArray(s.categories);
-    const state: FinovaState = {
+    const raw: FinovaState = {
       accounts: asArray(s.accounts),
       transactions: asArray(s.transactions),
       categories: (categories.length > 0 ? categories : INITIAL_CATEGORIES) as FinovaState['categories'],
@@ -96,10 +97,14 @@ export class BackupService {
         ...(s.settings as object),
       } as FinovaState['settings'],
     };
+    // Row-level sanitize: a corrupt row must never brick a restore. Dropped
+    // rows are counted and reported so the restore stays honest.
+    const { state, report } = sanitizeState(raw);
     return {
       ok: true,
       state,
       exportedAt: typeof doc.exportedAt === 'string' ? doc.exportedAt : '',
+      droppedRows: totalDropped(report),
     };
   }
 }

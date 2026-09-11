@@ -10,6 +10,7 @@ import {
   Transaction,
   UserSettings,
 } from '../../types';
+import { sanitizeState, totalDropped } from './stateValidation';
 
 export interface FinovaState {
   accounts: Account[];
@@ -350,7 +351,7 @@ export class FinovaStorage {
         // Deep-clone fallback arrays: returning references into the shared
         // CLEAN_ZERO_STATE singleton lets one caller's in-place mutation
         // leak into the next caller's "clean" state.
-        return structuredClone({
+        const raw: FinovaState = {
           accounts: parsed.accounts || CLEAN_ZERO_STATE.accounts,
           transactions: parsed.transactions || [],
           categories: backfilledCategories,
@@ -360,7 +361,14 @@ export class FinovaStorage {
           recurring: parsed.recurring || [],
           readNotificationIds: parsed.readNotificationIds || [],
           settings: loadedSettings,
-        });
+        };
+        // Row-level sanitize: corrupted storage must degrade to dropped rows,
+        // never to NaN balances bricking the app.
+        const { state, report } = sanitizeState(raw);
+        if (totalDropped(report) > 0) {
+          console.warn('FinovaStorage sanitized corrupt rows on load', report);
+        }
+        return structuredClone(state);
       }
     } catch (e) {
       console.warn('FinovaStorage load error, falling back to clean state', e);
@@ -369,11 +377,18 @@ export class FinovaStorage {
     return structuredClone(CLEAN_ZERO_STATE);
   }
 
-  public static saveState(state: FinovaState): void {
+  /**
+   * Persists state. Returns false when the write fails (most commonly a full
+   * quota from receipt photos) so the UI can warn — a silent failure would
+   * lose every change since the last successful save on reload.
+   */
+  public static saveState(state: FinovaState): boolean {
     try {
       localStorage.setItem(FinovaStorage.scopedKey(), JSON.stringify(state));
+      return true;
     } catch (e) {
       console.error('FinovaStorage save error', e);
+      return false;
     }
   }
 

@@ -376,6 +376,7 @@ export const en = {
     goalTxLocked: 'This transaction is linked to a savings goal. Fund or withdraw from the goal instead — changing it here would desync your progress.',
     settleTxLocked: 'This payment is linked to a bill. Delete it to reopen the bill, then pay again with the right details.',
     goalFundedHint: 'This goal still holds {amount}. Withdraw it to an account first.',
+    storageFull: 'Could not save — device storage is full. Download a backup, remove receipt photos, then free space.',
     deleteBill: 'Delete this bill?',
     deleteBillHint: 'It will no longer appear in your timeline or projections.',
     cancelCommitment: 'Cancel this commitment?',
@@ -657,6 +658,7 @@ export const en = {
     downloaded: 'Backup downloaded.',
     invalidFile: 'That file is not a valid PALDO backup.',
     versionNew: 'This backup is from a newer PALDO — update the app first.',
+    restoredWithSkips: 'Backup restored. {count} corrupt rows were skipped.',
   },
 
   import: {
