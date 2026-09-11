@@ -345,6 +345,10 @@ export const en = {
     safeFact: 'You have {pool} available for the next {days} days.',
     safeCalc: 'Total money minus upcoming bills ({bills}), savings ({savings}), and emergency cushion ({reserve}).',
     safeInterp: 'Spending within this daily amount keeps all your upcoming bills and savings completely protected.',
+    fxExcludedTitle: 'Foreign-currency money sits outside your spending limit',
+    fxExcludedFact: '{names} hold money your daily limit ignores — pools never mix currencies.',
+    fxExcludedCalc: 'Your spending limit pools {currency} accounts only; {excluded} stay out.',
+    fxExcludedInterp: 'Track those accounts normally — their money is real, it just stays out of the {currency} pool.',
   },
 
   insightCat: {

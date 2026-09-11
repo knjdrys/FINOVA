@@ -354,6 +354,10 @@ export const fil = {
     safeFact: 'May {pool} kang puwedeng gamitin sa susunod na {days} araw.',
     safeCalc: 'Kabuuan ng pera minus mga bayarin ({bills}), ipon ({savings}), at emergency fund ({reserve}).',
     safeInterp: 'Kung hindi lumampas sa araw-araw na halagang ito, protektado ang lahat ng bayarin at ipon mo.',
+    fxExcludedTitle: 'Ang perang foreign-currency ay labas sa spending limit mo',
+    fxExcludedFact: 'Ang {names} ay may perang hindi binibilang ng daily limit mo — hindi hinahalo ang mga pera.',
+    fxExcludedCalc: 'Ang spending limit mo ay {currency} accounts lang; labas ang {excluded}.',
+    fxExcludedInterp: 'Subaybayan pa rin ang mga account na iyon — tunay ang pera nila, labas lang sa {currency} pool.',
   },
 
   insightCat: {

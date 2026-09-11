@@ -12,6 +12,7 @@ import { TransactionEngine } from '../domain/transaction/TransactionEngine';
 import { t, categoryName, monthAbbr } from '../i18n';
 import {
   PieChart,
+  Globe,
   Sparkles,
   TrendingDown,
   TrendingUp,
@@ -33,6 +34,7 @@ interface InsightsScreenProps {
 }
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  Globe,
   TrendingDown,
   TrendingUp,
   AlertOctagon,

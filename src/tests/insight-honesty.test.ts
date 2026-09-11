@@ -44,6 +44,37 @@ const run = (txs: Transaction[], budgets: Budget[] = [], goals: SavingsGoal[] = 
     [baseAcc()], txs, budgets, goals, [], [cat('cat-food')], settings(), TODAY
   );
 
+describe('foreign-currency pool honesty', () => {
+  const runWith = (accounts: Account[]) =>
+    InsightEngine.generateInsights(accounts, [], [], [], [], [cat('cat-food')], settings(), TODAY);
+
+  it('flags foreign-currency accounts excluded from the spending-limit pool', () => {
+    const insights = runWith([
+      baseAcc({ id: 'a1', name: 'GRBank' }),
+      baseAcc({ id: 'a2', name: 'Wise USD', currency: 'USD' }),
+    ]);
+    const fx = insights.find((i) => i.id === 'insight-fx-excluded');
+    expect(fx).toBeDefined();
+    expect(fx?.fact).toContain('Wise USD');
+    expect(fx?.calculation).toContain('USD');
+    expect(fx?.severity).toBe('NEUTRAL');
+  });
+
+  it('stays silent when every included account matches the pool currency', () => {
+    const insights = runWith([baseAcc({ id: 'a1' })]);
+    expect(insights.some((i) => i.id === 'insight-fx-excluded')).toBe(false);
+  });
+
+  it('ignores archived and untracked foreign accounts (already visibly out)', () => {
+    const insights = runWith([
+      baseAcc({ id: 'a1' }),
+      baseAcc({ id: 'a2', currency: 'USD', isArchived: true }),
+      baseAcc({ id: 'a3', currency: 'EUR', includeInTotalBalance: false }),
+    ]);
+    expect(insights.some((i) => i.id === 'insight-fx-excluded')).toBe(false);
+  });
+});
+
 describe('like-for-like month comparison', () => {
   it('does not praise a "drop" that is just the calendar (Sep 5 vs full August)', () => {
     // August: 3,000 spread across the month. September so far: 500 (on pace!).

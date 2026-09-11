@@ -281,6 +281,29 @@ export class InsightEngine {
       });
     }
 
+    // Foreign-currency accounts are silently excluded from the spending-limit
+    // pool (pools never mix currencies) — say so, or users wonder where their
+    // money went. FYI rank: below actionable items, above silence.
+    const fxExcluded = accounts.filter(
+      (a) => a.includeInTotalBalance && !a.isArchived && a.currency !== currency
+    );
+    if (fxExcluded.length > 0) {
+      const names = fxExcluded.map((a) => a.name).join(', ');
+      const excluded = [...new Set(fxExcluded.map((a) => a.currency))].join(', ');
+      insights.push({
+        id: 'insight-fx-excluded',
+        category: 'CASH_FLOW',
+        title: t('insights.fxExcludedTitle'),
+        fact: t('insights.fxExcludedFact', { names }),
+        calculation: t('insights.fxExcludedCalc', { currency, excluded }),
+        interpretation: t('insights.fxExcludedInterp', { currency }),
+        severity: 'NEUTRAL',
+        score: 60,
+        iconName: 'Globe',
+        createdAt: todayISO,
+      });
+    }
+
     // Sort by score descending (most important first)
     return insights.sort((a, b) => b.score - a.score);
   }
