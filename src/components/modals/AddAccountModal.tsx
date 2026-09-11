@@ -180,6 +180,7 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
           <div>
             <label className="text-xs font-bold text-(--ink-2) block mb-1">Account Name</label>
             <input
+              aria-label="Account Name"
               type="text"
               required
               value={name}
@@ -193,6 +194,7 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
             <div>
               <label className="text-xs font-bold text-(--ink-2) block mb-1">Account Type</label>
               <select
+                aria-label="Account Type"
                 value={accountType}
                 onChange={(e) => setAccountType(e.target.value as AccountType)}
                 className="w-full rounded-xl border border-(--line) bg-(--surface) px-3 py-2 text-xs font-semibold text-(--ink) outline-none focus:border-emerald-600 cursor-pointer"
@@ -209,6 +211,7 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
             <div>
               <label className="text-xs font-bold text-(--ink-2) block mb-1">Last 4 Digits (Optional)</label>
               <input
+                aria-label="Last 4 Digits (Optional)"
                 type="text"
                 value={accountNumberMask}
                 onChange={(e) => setAccountNumberMask(e.target.value)}
@@ -225,6 +228,7 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
               <div className="flex items-center gap-1.5 rounded-xl border border-(--line) bg-(--surface) px-3 py-1.5 focus-within:border-emerald-600">
                 <span className="text-xs font-bold text-(--ink-3)">{currencySymbol}</span>
                 <input
+                  aria-label="Current Balance"
                   type="number"
                   step="any"
                   min="0"
@@ -276,6 +280,7 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
               <span className="text-[11px] text-(--ink-3)">Count this money toward your daily spending limit</span>
             </div>
             <input
+              aria-label="Include in Total Balance"
               type="checkbox"
               checked={includeInTotalBalance}
               onChange={(e) => setIncludeInTotalBalance(e.target.checked)}

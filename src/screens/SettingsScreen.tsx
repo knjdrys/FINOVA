@@ -1079,6 +1079,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         </div>
 
         <input
+          aria-label="Your Name"
           type="text"
           value={settings.userName}
           onChange={(e) => onUpdateSettings({ ...settings, userName: e.target.value })}
@@ -1105,6 +1106,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         <div className="flex items-center gap-2 rounded-xl border border-(--line) bg-(--surface) px-3 py-1.5 focus-within:border-emerald-600">
           <span className="text-xs font-bold text-(--ink-3)">{currentSymbol}</span>
           <input
+            aria-label="Emergency Savings Cushion"
             type="number"
             min="0"
             step={MoneyValue.fromMinorUnits(1, currentCurrency).getMajorUnits().toString()}

@@ -348,6 +348,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                   <div className="relative">
                     <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-(--ink-3) h-4 w-4" />
                     <input
+                      aria-label="Your Full Name"
                       type="text"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
@@ -366,6 +367,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-(--ink-3) h-4 w-4" />
                   <input
+                    aria-label="Email Address"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -383,6 +385,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-(--ink-3) h-4 w-4" />
                   <input
+                    aria-label="Password"
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}

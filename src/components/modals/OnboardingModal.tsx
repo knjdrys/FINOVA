@@ -102,6 +102,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
                   {t('onboard.namePrompt')}
                 </label>
                 <input
+                  aria-label={t('onboard.namePrompt')}
                   type="text"
                   placeholder={t('onboard.namePlaceholder')}
                   value={userName}
@@ -115,6 +116,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
                   {t('onboard.currencyPrompt')}
                 </label>
                 <select
+                  aria-label={t('onboard.currencyPrompt')}
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
                   className="w-full rounded-xl border border-(--line) bg-(--surface) px-3 py-2.5 text-xs sm:text-sm font-bold text-(--ink) outline-none focus:border-emerald-600 cursor-pointer"
@@ -209,6 +211,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
               <div className="flex items-center gap-1.5 rounded-xl border border-(--line) bg-(--surface) px-3 py-1.5 focus-within:border-emerald-600">
                 <span className="text-sm font-black text-(--ink-3)">{currencySymbol}</span>
                 <input
+                  aria-label={t('onboard.startingBalanceLabel')}
                   type="number"
                   step="any"
                   min="0"

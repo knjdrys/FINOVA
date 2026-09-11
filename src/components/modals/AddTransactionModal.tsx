@@ -722,6 +722,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           <div>
             <label className="text-xs font-bold text-(--ink-2) block mb-1.5">Merchant / Payee</label>
             <input
+              aria-label="Merchant / Payee"
               type="text"
               placeholder="e.g. S&R"
               value={merchant}
@@ -732,6 +733,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           <div>
             <label className="text-xs font-bold text-(--ink-2) block mb-1.5">Note / Subtext</label>
             <input
+              aria-label="Note / Subtext"
               type="text"
               placeholder="e.g. Weekly groceries"
               value={note}
@@ -745,6 +747,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         <div>
           <label className="text-xs font-bold text-(--ink-2) block mb-1.5">Tags (comma separated)</label>
           <input
+            aria-label="Tags (comma separated)"
             type="text"
             placeholder="groceries, shopping, weekend"
             value={tagsStr}

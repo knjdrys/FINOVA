@@ -625,13 +625,14 @@ const GoalsView: React.FC<{
                     </button>
                   )}
                   <input
+                    aria-label="Fund amount"
                     type="number"
                     value={fundAmount}
                     onChange={(e) => setFundAmount(e.target.value)}
                     placeholder="Amount"
                     className="w-full rounded-lg border border-(--line) px-3 py-2 text-sm"
                   />
-                  <select value={fundSource} onChange={(e) => setFundSource(e.target.value)} className="w-full rounded-lg border border-(--line) px-3 py-2 text-sm">
+                  <select aria-label="Funding source account" value={fundSource} onChange={(e) => setFundSource(e.target.value)} className="w-full rounded-lg border border-(--line) px-3 py-2 text-sm">
                     <option value="">From account…</option>
                     {accounts.filter((a) => a.currency === (goal.currency || currency)).map((a) => (
                       <option key={a.id} value={a.id}>{a.name} ({MoneyValue.fromMinorUnits(a.currentBalance, a.currency).format()})</option>
@@ -674,13 +675,14 @@ const GoalsView: React.FC<{
               {withdrawingId === goal.id ? (
                 <div className="mt-2 space-y-2 rounded-xl bg-amber-50/60 p-3 border border-amber-100">
                   <input
+                    aria-label="Withdraw amount"
                     type="number"
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
                     placeholder="Amount"
                     className="w-full rounded-lg border border-(--line) px-3 py-2 text-sm"
                   />
-                  <select value={withdrawDest} onChange={(e) => setWithdrawDest(e.target.value)} className="w-full rounded-lg border border-(--line) px-3 py-2 text-sm">
+                  <select aria-label="Withdrawal destination account" value={withdrawDest} onChange={(e) => setWithdrawDest(e.target.value)} className="w-full rounded-lg border border-(--line) px-3 py-2 text-sm">
                     <option value="">To account…</option>
                     {accounts.filter((a) => a.currency === (goal.currency || currency)).map((a) => (
                       <option key={a.id} value={a.id}>{a.name} ({MoneyValue.fromMinorUnits(a.currentBalance, a.currency).format()})</option>
@@ -877,6 +879,7 @@ const BillsView: React.FC<{
                     type="date"
                     value={reschedDate}
                     onChange={(e) => setReschedDate(e.target.value)}
+                    aria-label="New due date"
                     className="rounded-lg border border-(--line) px-2 py-1 text-xs"
                   />
                   <button
