@@ -296,6 +296,25 @@ describe('TransactionEngine.filterTransactions', () => {
     expect(TransactionEngine.filterTransactions(all, { searchQuery: 'payroll' }).map((t) => t.id)).toEqual(['tx-c']);
   });
 
+  it('text search covers subtitle, tags, and category/account names', () => {
+    const sub = tx({ id: 'tx-s', subtitle: 'Birthday gift', merchant: undefined, note: undefined, tags: [] });
+    expect(TransactionEngine.filterTransactions([sub], { searchQuery: 'birthday' }).map((t) => t.id)).toEqual(['tx-s']);
+    const names = {
+      categoryNames: new Map([['cat-food', 'Food'], ['cat-salary', 'Salary']]),
+      accountNames: new Map([['acc-1', 'BPI Savings']]),
+    };
+    expect(TransactionEngine.filterTransactions(all, { searchQuery: 'salary', ...names }).map((t) => t.id)).toEqual(['tx-c']);
+    expect(TransactionEngine.filterTransactions(all, { searchQuery: 'bpi', ...names })).toHaveLength(4);
+  });
+
+  it('numeric search matches amounts exactly (no substring traps)', () => {
+    // tx-a = 500.00; tx-b = 1200.00; tx-c = 40000.00; tx-d = 3000.00
+    expect(TransactionEngine.filterTransactions(all, { searchQuery: '500' }).map((t) => t.id)).toEqual(['tx-a']);
+    expect(TransactionEngine.filterTransactions(all, { searchQuery: '500.00' }).map((t) => t.id)).toEqual(['tx-a']);
+    expect(TransactionEngine.filterTransactions(all, { searchQuery: '50' })).toHaveLength(0);
+    expect(TransactionEngine.filterTransactions(all, { searchQuery: '00' })).toHaveLength(0);
+  });
+
   it('sorts by amount and date', () => {
     expect(TransactionEngine.filterTransactions(all, { sortBy: 'HIGHEST_AMOUNT' }).map((t) => t.id)).toEqual([
       'tx-c',

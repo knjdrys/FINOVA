@@ -6,7 +6,7 @@ import { TransactionItem } from '../components/ui/TransactionItem';
 import { DateUtils } from '../domain/date/DateUtils';
 import { MoneyValue } from '../domain/money/MoneyValue';
 import { TransactionEngine, TransactionFilterOptions } from '../domain/transaction/TransactionEngine';
-import { ChevronLeft, Download, Search, SlidersHorizontal, X, ReceiptText } from 'lucide-react';
+import { ChevronLeft, Download, Search, SlidersHorizontal, X, ReceiptText, Upload } from 'lucide-react';
 import { FinovaStorage } from '../services/storage/FinovaStorage';
 import { t } from '../i18n/core';
 import { notice } from '../components/ui/dialog';
@@ -18,6 +18,7 @@ interface AllExpensesScreenProps {
   settings: UserSettings;
   onBackToHome: () => void;
   onSelectTransaction: (tx: Transaction) => void;
+  onOpenImport: () => void;
 }
 
 type PeriodFilter = 'ALL' | 'THIS_MONTH' | 'LAST_MONTH' | 'CUSTOM';
@@ -40,6 +41,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
   settings,
   onBackToHome,
   onSelectTransaction,
+  onOpenImport,
 }) => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,6 +59,8 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
 
   const categoryMap = new Map(categories.map((c) => [c.id, c]));
   const accountMap = new Map(accounts.map((a) => [a.id, a]));
+  const categoryNames = new Map(categories.map((c) => [c.id, c.name]));
+  const accountNames = new Map(accounts.map((a) => [a.id, a.name]));
   const currency = settings.currency || 'PHP';
   const currencySymbol = MoneyValue.zero(currency).getCurrencySymbol();
 
@@ -86,6 +90,8 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
     minAmount: minMinor,
     maxAmount: maxMinor,
     sortBy,
+    categoryNames,
+    accountNames,
   });
 
   const activeFilterCount =
@@ -169,6 +175,7 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const selectCls =
@@ -191,15 +198,26 @@ export const AllExpensesScreen: React.FC<AllExpensesScreenProps> = ({
           {t('tx.title')}
         </h2>
 
-        <button
-          type="button"
-          onClick={handleExport}
-          title={t('tx.exportCsv')}
-          aria-label={t('tx.exportCsv')}
-          className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-2xl bg-(--surface) text-(--ink) shadow-xs border border-(--line)/80 hover:bg-(--surface-2) transition-colors cursor-pointer"
-        >
-          <Download className="h-4 w-4 sm:h-5 sm:w-5 stroke-[2.2]" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onOpenImport}
+            title={t('tx.importCsv')}
+            aria-label={t('tx.importCsv')}
+            className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-2xl bg-(--surface) text-(--ink) shadow-xs border border-(--line)/80 hover:bg-(--surface-2) transition-colors cursor-pointer"
+          >
+            <Upload className="h-4 w-4 sm:h-5 sm:w-5 stroke-[2.2]" />
+          </button>
+          <button
+            type="button"
+            onClick={handleExport}
+            title={t('tx.exportCsv')}
+            aria-label={t('tx.exportCsv')}
+            className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-2xl bg-(--surface) text-(--ink) shadow-xs border border-(--line)/80 hover:bg-(--surface-2) transition-colors cursor-pointer"
+          >
+            <Download className="h-4 w-4 sm:h-5 sm:w-5 stroke-[2.2]" />
+          </button>
+        </div>
       </div>
 
       {/* 2. Adaptive Summary WaveCard */}

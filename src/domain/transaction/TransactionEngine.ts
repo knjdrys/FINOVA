@@ -13,6 +13,9 @@ export interface TransactionFilterOptions {
   minAmount?: number;
   maxAmount?: number;
   sortBy?: 'NEWEST' | 'OLDEST' | 'HIGHEST_AMOUNT' | 'LOWEST_AMOUNT';
+  /** Optional name lookups that extend text search to category/account names. */
+  categoryNames?: Map<string, string>;
+  accountNames?: Map<string, string>;
 }
 
 export class TransactionEngine {
@@ -295,13 +298,35 @@ export class TransactionEngine {
         return false;
       }
 
-      // Search query (matches merchant, note, tags)
+      // Search query (merchant, subtitle, note, tags, exact amount, and —
+      // when the caller supplies name maps — category + account names).
       if (filters.searchQuery) {
         const query = filters.searchQuery.toLowerCase().trim();
         const merchantMatch = tx.merchant?.toLowerCase().includes(query) ?? false;
+        const subtitleMatch = tx.subtitle?.toLowerCase().includes(query) ?? false;
         const noteMatch = tx.note?.toLowerCase().includes(query) ?? false;
         const tagMatch = tx.tags?.some((t) => t.toLowerCase().includes(query)) ?? false;
-        if (!merchantMatch && !noteMatch && !tagMatch) {
+        const categoryMatch =
+          filters.categoryNames?.get(tx.categoryId)?.toLowerCase().includes(query) ?? false;
+        const accountMatch =
+          filters.accountNames?.get(tx.accountId)?.toLowerCase().includes(query) ?? false;
+        // Numeric queries match the amount EXACTLY (minor units per the row's
+        // own currency): "50" must not match ₱500.00 or ₱1,500.00.
+        let amountMatch = false;
+        const numericQuery = Number(query.replace(/[^0-9.\-]/g, ''));
+        if (query !== '' && Number.isFinite(numericQuery) && /[0-9]/.test(query)) {
+          const multiplier = CURRENCY_CONFIGS[tx.currency]?.minorUnitMultiplier ?? 100;
+          amountMatch = tx.amount === Math.round(Math.abs(numericQuery) * multiplier);
+        }
+        if (
+          !merchantMatch &&
+          !subtitleMatch &&
+          !noteMatch &&
+          !tagMatch &&
+          !categoryMatch &&
+          !accountMatch &&
+          !amountMatch
+        ) {
           return false;
         }
       }

@@ -74,6 +74,7 @@ import { AddCommitmentModal } from './components/modals/AddCommitmentModal';
 import { AddRecurringModal } from './components/modals/AddRecurringModal';
 import { SafeToSpendExplainerModal } from './components/modals/SafeToSpendExplainerModal';
 import { WhatIfModal } from './components/modals/WhatIfModal';
+import { ImportTransactionsModal } from './components/modals/ImportTransactionsModal';
 import { OnboardingModal } from './components/modals/OnboardingModal';
 import { GuidedAppTour } from './components/tutorial/GuidedAppTour';
 
@@ -93,6 +94,7 @@ export function App() {
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [isSafeToSpendOpen, setIsSafeToSpendOpen] = useState(false);
   const [isWhatIfOpen, setIsWhatIfOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [isTourOpen, setIsTourOpen] = useState(false);
   const [isAddBudgetOpen, setIsAddBudgetOpen] = useState(false);
   const [isAddGoalOpen, setIsAddGoalOpen] = useState(false);
@@ -574,24 +576,59 @@ export function App() {
     });
   };
 
-  // Handler: CSV import — batch-applies pre-validated transactions.
+  // Handler: CSV import — batch-applies pre-validated transactions (both the
+  // Settings quick-import and the review wizard feed this one handler).
   // No overdraft blocking here: this reconstructs history (like a restore),
   // it isn't new spending, so rows apply even when the current balance has
   // moved on since the row's date.
-  const handleImportTransactions = (txs: Transaction[]) => {
-    if (txs.length === 0) {
-      notice(t('import.nothingNew'));
+  // Trust boundary: ids + timestamps are re-assigned (planning twice in one
+  // millisecond must never seed duplicate ids), every row is re-guarded
+  // (positive, known live accounts, matching currencies, sane transfers),
+  // and the fold runs INSIDE the functional update — the old code folded
+  // over a stale outer `state.accounts` while prepending to fresh `prev`
+  // transactions, desyncing balances under concurrent updates.
+  const handleImportTransactions = (
+    rows: Array<Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>>,
+    opts?: { silent?: boolean }
+  ) => {
+    if (rows.length === 0) {
+      if (!opts?.silent) notice(t('import.nothingNew'));
       return;
     }
-    let accounts = state.accounts;
-    for (const tx of txs) {
-      accounts = TransactionEngine.applyTransactionToAccounts(tx, accounts);
-    }
-    setState((prev) => ({ ...prev, accounts, transactions: [...txs, ...prev.transactions] }));
+    const nowISO = new Date().toISOString();
+    setState((prev) => {
+      const byId = new Map(prev.accounts.map((a) => [a.id, a]));
+      const clean = rows.filter((r) => {
+        if (!(r.amount > 0)) return false;
+        if (r.status !== 'CONFIRMED' && r.status !== 'PENDING' && r.status !== 'CLEARED') return false;
+        const source = byId.get(r.accountId);
+        if (!source || source.isArchived) return false;
+        if (r.currency !== source.currency) return false;
+        if (r.type === 'TRANSFER') {
+          const dest = r.destinationAccountId ? byId.get(r.destinationAccountId) : undefined;
+          if (!dest || dest.isArchived || dest.id === source.id) return false;
+          if (dest.currency !== source.currency) return false;
+        }
+        return true;
+      });
+      if (clean.length === 0) return prev;
+      const txs: Transaction[] = clean.map((r) => ({
+        ...r,
+        id: newId('tx'),
+        tags: Array.from(new Set([...(r.tags || []), 'imported'])),
+        createdAt: nowISO,
+        updatedAt: nowISO,
+      }));
+      const updatedAccounts = txs.reduce(
+        (accs, tx) => TransactionEngine.applyTransactionToAccounts(tx, accs),
+        prev.accounts
+      );
+      return { ...prev, accounts: updatedAccounts, transactions: [...txs, ...prev.transactions] };
+    });
     if (authUser && !authUser.isGuest) {
       getSyncManager()?.requestSync();
     }
-    notice(t('import.done', { count: txs.length }));
+    if (!opts?.silent) notice(t('import.done', { count: rows.length }));
   };
 
   // Handler: Restore a downloaded backup (replace-all with ownership kept).
@@ -1394,6 +1431,7 @@ export function App() {
               settings={settings}
               onBackToHome={() => setCurrentTab('HOME')}
               onSelectTransaction={(tx) => setSelectedTxForDetail(tx)}
+              onOpenImport={() => setIsImportOpen(true)}
             />
           )}
 
@@ -1567,6 +1605,16 @@ export function App() {
         commitments={commitments}
         categories={categories}
         settings={settings}
+      />
+
+      <ImportTransactionsModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        accounts={accounts}
+        categories={categories}
+        transactions={transactions}
+        settings={settings}
+        onImport={handleImportTransactions}
       />
 
       {/* 5. Plans — Create/Edit modals (contextual, no new top-level nav) */}
