@@ -123,3 +123,26 @@ describe('AccountEngine.archiveAccount', () => {
     expect(recs[0].isActive).toBe(true);
   });
 });
+
+describe('AccountEngine.unarchiveAccount', () => {
+  it('restores the account to totals without touching anything else', () => {
+    const archived = { ...acc('a1', 2000000), isArchived: true };
+    const next = AccountEngine.unarchiveAccount([archived, acc('a2', 1000)], 'a1', todayISO);
+    expect(next.find((a) => a.id === 'a1')!.isArchived).toBe(false);
+    expect(next.find((a) => a.id === 'a2')!.isArchived).toBe(false);
+    expect(AccountEngine.calculateTotalBalance(next.filter((a) => !a.isArchived)).getMinorUnits()).toBe(2001000);
+    // Pure: the archived input is untouched.
+    expect(archived.isArchived).toBe(true);
+  });
+
+  it('full lifecycle: archive keeps history, restore returns the account', () => {
+    const accounts = [acc('a1', 2000000)];
+    const txs = [expense('tx-1', 'a1', 50000)];
+    expect(AccountEngine.hasHistory(txs, 'a1')).toBe(true);
+    const settled = AccountEngine.archiveAccount(accounts, [], [], 'a1', todayISO);
+    expect(settled.accounts[0].isArchived).toBe(true);
+    const restored = AccountEngine.unarchiveAccount(settled.accounts, 'a1', todayISO);
+    expect(restored[0].isArchived).toBe(false);
+    expect(txs).toHaveLength(1);
+  });
+});

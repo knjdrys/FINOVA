@@ -492,6 +492,8 @@ export const en = {
     language: 'Language',
     languageHint: 'Choose how PALDO talks to you.',
     currency: 'Default currency',
+    currencyLocked: 'Currency is locked once you add money — start fresh to change it.',
+    currencyLockedNote: 'Locked — your currency is set when you start.',
     notifications: 'Notifications',
     notificationsEnabled: 'Enable notifications',
     budgetWarning: 'Budget warning threshold',

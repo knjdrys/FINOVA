@@ -429,7 +429,26 @@ export class FinovaStorage {
     return demo;
   }
 
+  /**
+   * Currency-change gate. There is no FX engine, so switching currency after
+   * money exists would silently rewrite what every amount MEANS (₱50,000
+   * becoming $50,000). The app therefore locks the currency once any
+   * financial data exists; changing it is only safe on a clean slate.
+   */
+  public static canChangeGlobalCurrency(state: FinovaState): boolean {
+    if (state.transactions.length > 0) return false;
+    if (state.budgets.length > 0) return false;
+    if (state.goals.length > 0) return false;
+    if (state.commitments.length > 0) return false;
+    if (state.recurring.length > 0) return false;
+    return state.accounts.every((a) => a.initialBalance === 0 && a.currentBalance === 0);
+  }
+
   public static setGlobalCurrency(state: FinovaState, newCurrency: CurrencyCode): FinovaState {
+    if (state.settings.currency === newCurrency) return state;
+    // Defense in depth: callers check canChangeGlobalCurrency first (to
+    // explain the lock), but the relabel itself never runs on live data.
+    if (!FinovaStorage.canChangeGlobalCurrency(state)) return state;
     const updatedState: FinovaState = {
       ...state,
       settings: {
@@ -438,7 +457,10 @@ export class FinovaStorage {
       },
       accounts: state.accounts.map((a) => ({ ...a, currency: newCurrency })),
       transactions: state.transactions.map((t) => ({ ...t, currency: newCurrency })),
+      budgets: state.budgets.map((b) => ({ ...b, currency: newCurrency })),
+      goals: state.goals.map((g) => ({ ...g, currency: newCurrency })),
       commitments: state.commitments.map((c) => ({ ...c, currency: newCurrency })),
+      recurring: state.recurring.map((r) => ({ ...r, currency: newCurrency })),
     };
     this.saveState(updatedState);
     return updatedState;

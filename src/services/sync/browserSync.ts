@@ -51,9 +51,18 @@ export function initSyncManager(opts: {
     },
     pushDeleteEntity: async (table, entityId) => {
       if (!authUser) return false;
-      return table === 'money_commitments'
-        ? CloudSyncService.deleteCommitmentFromCloud(entityId, authUser)
-        : CloudSyncService.deleteRecurringFromCloud(entityId, authUser);
+      switch (table) {
+        case 'money_commitments':
+          return CloudSyncService.deleteCommitmentFromCloud(entityId, authUser);
+        case 'recurring_transactions':
+          return CloudSyncService.deleteRecurringFromCloud(entityId, authUser);
+        case 'accounts':
+          return CloudSyncService.deleteAccountFromCloud(entityId, authUser);
+        case 'budgets':
+          return CloudSyncService.deleteBudgetFromCloud(entityId, authUser);
+        case 'savings_goals':
+          return CloudSyncService.deleteGoalFromCloud(entityId, authUser);
+      }
     },
     onStatus: (s) => listeners.forEach((l) => l(s)),
   });

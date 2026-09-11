@@ -17,13 +17,21 @@
  *    mid-flush the op is re-queued (dirty flag), never lost.
  */
 
+/** Cloud tables addressable by delete-entity ops (final allow-list). */
+export type DeleteEntityTable =
+  | 'money_commitments'
+  | 'recurring_transactions'
+  | 'accounts'
+  | 'budgets'
+  | 'savings_goals';
+
 export interface QueueOp {
   /** Stable dedupe key: 'state-sync', `delete-tx:<id>`, or `delete:<table>:<id>`. */
   id: string;
   kind: 'state-sync' | 'delete-tx' | 'delete-entity';
   txId?: string;
   /** Cloud table + row for 'delete-entity' ops (whitelisted at the service layer). */
-  entityTable?: 'money_commitments' | 'recurring_transactions';
+  entityTable?: DeleteEntityTable;
   entityId?: string;
   attempts: number;
   /** Epoch ms before which the op should not be retried (backoff). */
@@ -94,9 +102,9 @@ export class SyncQueue {
     this.storage.save(this.ops);
   }
 
-  /** Enqueue a commitment/recurring delete, deduped per table+id. */
+  /** Enqueue an entity delete, deduped per table+id. */
   enqueueDeleteEntity(
-    table: 'money_commitments' | 'recurring_transactions',
+    table: DeleteEntityTable,
     entityId: string,
     now: number
   ): void {
@@ -161,8 +169,8 @@ export interface SyncDeps {
   pushState: () => Promise<boolean>;
   /** Delete one tx cloud-side; resolves true on confirmed success. */
   pushDelete: (txId: string) => Promise<boolean>;
-  /** Delete one commitment/recurring row cloud-side; true on confirmed success. */
-  pushDeleteEntity?: (table: 'money_commitments' | 'recurring_transactions', entityId: string) => Promise<boolean>;
+  /** Delete one entity row cloud-side; true on confirmed success. */
+  pushDeleteEntity?: (table: DeleteEntityTable, entityId: string) => Promise<boolean>;
   /** Whether cloud sync is possible at all (configured + real user). */
   cloudAvailable: () => boolean;
   onStatus?: (s: SyncStatus) => void;
@@ -233,8 +241,8 @@ export class SyncManager {
     void this.flush();
   }
 
-  /** A commitment/recurring row was deleted locally; the cloud delete is owed. */
-  requestDeleteEntity(table: 'money_commitments' | 'recurring_transactions', entityId: string): void {
+  /** An entity row was deleted locally; the cloud delete is owed. */
+  requestDeleteEntity(table: DeleteEntityTable, entityId: string): void {
     if (!this.deps.cloudAvailable()) {
       this.emit('local-only');
       return;

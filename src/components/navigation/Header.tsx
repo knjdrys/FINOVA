@@ -196,7 +196,7 @@ export const Header: React.FC<HeaderProps> = ({
               value={settings.currency}
               onChange={(e) => onSelectCurrency(e.target.value as CurrencyCode)}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              aria-label="Select Currency"
+              aria-label={t('settings.currency')}
             >
               {ALL_CURRENCIES.map((c) => (
                 <option key={c.code} value={c.code}>

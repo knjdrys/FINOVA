@@ -58,3 +58,37 @@ describe('system category seeds', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 });
+
+describe('global currency lock', () => {
+  const tx: import('../types').Transaction = { id: 'tx-1', userId: 'u', type: 'EXPENSE', amount: 100, currency: 'PHP', categoryId: 'cat-food', accountId: 'acc-main', date: '2026-09-01', tags: [], status: 'CONFIRMED', createdAt: '', updatedAt: '' };
+
+  it('allows the switch on a clean slate and relabels every slice consistently', () => {
+    const clean = structuredClone(CLEAN_ZERO_STATE);
+    expect(FinovaStorage.canChangeGlobalCurrency(clean)).toBe(true);
+    const next = FinovaStorage.setGlobalCurrency(clean, 'USD');
+    expect(next.settings.currency).toBe('USD');
+    expect(next.accounts.every((a) => a.currency === 'USD')).toBe(true);
+    expect(next.transactions.every((t) => t.currency === 'USD')).toBe(true);
+    expect(next.budgets.every((b) => b.currency === 'USD')).toBe(true);
+    expect(next.goals.every((g) => g.currency === 'USD')).toBe(true);
+    expect(next.commitments.every((c) => c.currency === 'USD')).toBe(true);
+    expect(next.recurring.every((r) => (r.currency || 'USD') === 'USD')).toBe(true);
+  });
+
+  it('refuses to rewrite amounts once any financial data exists', () => {
+    const withTx = structuredClone(CLEAN_ZERO_STATE);
+    withTx.transactions = [{ ...tx }];
+    expect(FinovaStorage.canChangeGlobalCurrency(withTx)).toBe(false);
+    expect(FinovaStorage.setGlobalCurrency(withTx, 'USD')).toBe(withTx);
+
+    const withBalance = structuredClone(CLEAN_ZERO_STATE);
+    withBalance.accounts[0].currentBalance = 5000;
+    expect(FinovaStorage.canChangeGlobalCurrency(withBalance)).toBe(false);
+
+    for (const slice of ['budgets', 'goals', 'commitments', 'recurring'] as const) {
+      const s = structuredClone(CLEAN_ZERO_STATE);
+      (s[slice] as unknown[]).push({ id: 'x', currency: 'PHP' });
+      expect(FinovaStorage.canChangeGlobalCurrency(s)).toBe(false);
+    }
+  });
+});

@@ -186,6 +186,36 @@ describe('SyncManager — offline/online transitions', () => {
     expect(queue.size()).toBe(0);
   });
 
+  it('entity deletes cover every table and flush ahead of the state-sync', async () => {
+    const { m, queue, pushDeleteEntity, pushState } = makeManager();
+    const calls: string[] = [];
+    pushDeleteEntity.mockImplementation(async (...args: unknown[]) => {
+      calls.push(`${args[0]}:${args[1]}`);
+      return true;
+    });
+    pushState.mockImplementation(async () => {
+      calls.push('state-sync');
+      return true;
+    });
+    m.setOnline(false);
+    // Whole-state replacement order: tombstones first, state-sync last.
+    m.requestDeleteEntity('accounts', 'acc-1');
+    m.requestDeleteEntity('accounts', 'acc-1');
+    m.requestDeleteEntity('budgets', 'bud-1');
+    m.requestDeleteEntity('savings_goals', 'goal-1');
+    m.requestSync();
+    expect(queue.size()).toBe(4);
+    m.setOnline(true);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(calls).toEqual([
+      'accounts:acc-1',
+      'budgets:bud-1',
+      'savings_goals:goal-1',
+      'state-sync',
+    ]);
+    expect(queue.size()).toBe(0);
+  });
+
   it('edit during an in-flight flush re-runs the flush (dirty flag, nothing lost)', async () => {
     const resolvers: Array<(v: boolean) => void> = [];
     const pushState = vi.fn(() => new Promise<boolean>((r) => { resolvers.push(r); }));

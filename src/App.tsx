@@ -421,8 +421,12 @@ export function App() {
 
   // Handler: Change Global Currency across the entire system
   const handleSelectCurrency = (newCurrency: CurrencyCode) => {
-    const updated = FinovaStorage.setGlobalCurrency(state, newCurrency);
-    setState(updated);
+    if (newCurrency === state.settings.currency) return;
+    if (!FinovaStorage.canChangeGlobalCurrency(state)) {
+      notice(t('settings.currencyLocked'));
+      return;
+    }
+    setState(FinovaStorage.setGlobalCurrency(state, newCurrency));
   };
 
   // Handler: Add New Account / Bank
@@ -545,6 +549,7 @@ export function App() {
 
   // Handler: Restore a downloaded backup (replace-all with ownership kept).
   const handleRestoreBackup = (restored: FinovaState) => {
+    tombstoneAllCloudRows();
     const next: FinovaState = {
       ...restored,
       settings: {
@@ -597,12 +602,28 @@ export function App() {
         accounts: state.accounts.filter((a) => a.id !== accountId),
       };
       setState(nextState);
+      // Hard delete: the cloud row must go too, or it resurrects on restore.
+      if (authUser && !authUser.isGuest) {
+        getSyncManager()?.requestDeleteEntity('accounts', accountId);
+      }
     }
     if (authUser && !authUser.isGuest) {
       getSyncManager()?.requestSync();
     }
     if (selectedAccountId === accountId) {
       setSelectedAccountId('ALL');
+    }
+  };
+
+  // Handler: Restore an archived account (history was never deleted).
+  const handleRestoreAccount = (accountId: string) => {
+    const nowISO = new Date().toISOString();
+    setState((prev) => ({
+      ...prev,
+      accounts: AccountEngine.unarchiveAccount(prev.accounts, accountId, nowISO),
+    }));
+    if (authUser && !authUser.isGuest) {
+      getSyncManager()?.requestSync();
     }
   };
 
@@ -963,14 +984,31 @@ export function App() {
     });
   };
 
+  // Whole-state replacement (reset, demo load) must tombstone every cloud
+  // row FIRST, or the next pull resurrects/merges stale rows over the new
+  // state. Queued deletes flush in insertion order, ahead of the state-sync
+  // the replacement itself triggers.
+  const tombstoneAllCloudRows = () => {
+    if (!authUser || authUser.isGuest) return;
+    const mgr = getSyncManager();
+    for (const tx of state.transactions) mgr?.requestDelete(tx.id);
+    for (const c of state.commitments) mgr?.requestDeleteEntity('money_commitments', c.id);
+    for (const r of state.recurring) mgr?.requestDeleteEntity('recurring_transactions', r.id);
+    for (const b of state.budgets) mgr?.requestDeleteEntity('budgets', b.id);
+    for (const g of state.goals) mgr?.requestDeleteEntity('savings_goals', g.id);
+    for (const a of state.accounts) mgr?.requestDeleteEntity('accounts', a.id);
+  };
+
   // Handler: Reset to Clean 0 Slate (For Real Life)
   const handleResetToCleanSlate = () => {
+    tombstoneAllCloudRows();
     const clean = FinovaStorage.resetToCleanSlate(currency, authUser?.fullName || settings.userName);
     setState(clean);
   };
 
   // Handler: Load Demo Showcase Data
   const handleLoadDemoData = () => {
+    tombstoneAllCloudRows();
     const demo = FinovaStorage.loadDemoShowcaseData();
     setState(demo);
   };
@@ -1216,10 +1254,12 @@ export function App() {
                 NotificationPrefsService.savePrefs(p);
               }}
               onSelectCurrency={handleSelectCurrency}
+              currencyLocked={!FinovaStorage.canChangeGlobalCurrency(state)}
               accounts={accounts}
               onAddAccount={handleAddAccount}
               onUpdateAccount={handleUpdateAccount}
               onDeleteAccount={handleDeleteAccount}
+              onRestoreAccount={handleRestoreAccount}
               onAddCategory={handleAddCategory}
               onUpdateCategory={handleUpdateCategory}
               onToggleCategoryArchive={handleToggleCategoryArchive}

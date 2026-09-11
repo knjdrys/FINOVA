@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   Account,
+  Budget,
   Category,
   CurrencyCode,
   TrackingPeriodPreference,
@@ -63,10 +64,12 @@ interface SettingsScreenProps {
   notifPrefs: NotificationPreferences;
   onUpdateNotifPrefs: (prefs: NotificationPreferences) => void;
   onSelectCurrency: (currency: CurrencyCode) => void;
+  currencyLocked: boolean;
   accounts: Account[];
   onAddAccount: (newAccount: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>) => void;
   onUpdateAccount: (accountId: string, data: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>, reconcileToMinor?: number) => void;
   onDeleteAccount: (accountId: string) => void;
+  onRestoreAccount: (accountId: string) => void;
   onAddCategory: (data: Omit<Category, 'id' | 'userId'>) => void;
   onUpdateCategory: (id: string, data: Omit<Category, 'id' | 'userId'>) => void;
   onToggleCategoryArchive: (id: string) => void;
@@ -74,7 +77,7 @@ interface SettingsScreenProps {
   onImportTransactions: (txs: Transaction[]) => void;
   transactions: Transaction[];
   categories: Category[];
-  budgets: any[];
+  budgets: Budget[];
   onResetToCleanSlate: () => void;
   onLoadDemoData: () => void;
   onStartAppTour: () => void;
@@ -88,10 +91,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   notifPrefs,
   onUpdateNotifPrefs,
   onSelectCurrency,
+  currencyLocked,
   accounts,
   onAddAccount,
   onUpdateAccount,
   onDeleteAccount,
+  onRestoreAccount,
   onAddCategory,
   onUpdateCategory,
   onToggleCategoryArchive,
@@ -559,7 +564,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         {/* Accounts List */}
         <div className="space-y-2">
           {accounts.map((acc) => {
-            const money = MoneyValue.fromMinorUnits(acc.currentBalance, currentCurrency);
+            const money = MoneyValue.fromMinorUnits(acc.currentBalance, acc.currency);
             const isWallet = acc.type === 'E_WALLET';
             const isCash = acc.type === 'CASH';
             const isGrbi = acc.bankPresetId === 'grbi' || acc.name.toLowerCase().includes('guagua') || acc.name.toLowerCase().includes('grbank');
@@ -567,7 +572,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             return (
               <div
                 key={acc.id}
-                className="flex items-center justify-between p-3 rounded-2xl bg-(--surface-2) border border-(--line)/70"
+                className={`flex items-center justify-between p-3 rounded-2xl bg-(--surface-2) border border-(--line)/70 ${acc.isArchived ? 'opacity-60' : ''}`}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div
@@ -585,7 +590,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                     )}
                   </div>
                   <div className="min-w-0">
-                    <h5 className="truncate text-xs font-black text-(--ink)">{acc.name}</h5>
+                    <h5 className="truncate text-xs font-black text-(--ink)">
+                      {acc.name}
+                      {acc.isArchived ? ` · ${t('categories.archivedBadge')}` : ''}
+                    </h5>
                     <p className="text-[11px] font-semibold text-(--ink-3)">
                       {acc.type.replace('_', ' ')} {acc.accountNumberMask ? `• ${acc.accountNumberMask}` : ''}
                     </p>
@@ -600,11 +608,20 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                     type="button"
                     onClick={() => { setEditingAccount(acc); setIsAddAccountOpen(true); }}
                     aria-label={t('modal.editAccount')}
-                    className="text-[11px] font-bold text-(--ink-3) hover:text-emerald-700 transition-colors cursor-pointer"
+                    className="p-2 -m-1 text-[11px] font-bold text-(--ink-3) hover:text-emerald-700 transition-colors cursor-pointer"
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </button>
-                  {accounts.length > 1 && (
+                  {acc.isArchived ? (
+                    <button
+                      type="button"
+                      onClick={() => onRestoreAccount(acc.id)}
+                      className="flex items-center gap-1 text-[11px] font-bold text-(--ink-3) hover:text-emerald-700 transition-colors cursor-pointer"
+                    >
+                      <ArchiveRestore className="h-3.5 w-3.5" />
+                      {t('plans.restoreBtn')}
+                    </button>
+                  ) : accounts.length > 1 && (
                     <button
                       type="button"
                       onClick={async () => {
@@ -614,7 +631,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                       }}
                       className="text-[11px] font-bold text-(--ink-3) hover:text-rose-600 transition-colors cursor-pointer"
                     >
-                      Delete
+                      {t('common.delete')}
                     </button>
                   )}
                 </div>
@@ -684,7 +701,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                           type="button"
                           onClick={() => { setEditingCategory(c); setIsCategoryModalOpen(true); }}
                           aria-label={t('categories.edit')}
-                          className="text-(--ink-3) hover:text-emerald-700 transition-colors cursor-pointer"
+                          className="p-2 -m-1 text-(--ink-3) hover:text-emerald-700 transition-colors cursor-pointer"
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
@@ -693,7 +710,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                         type="button"
                         onClick={() => onToggleCategoryArchive(c.id)}
                         aria-label={c.isArchived ? t('categories.restore') : t('categories.archive')}
-                        className="text-(--ink-3) hover:text-emerald-700 transition-colors cursor-pointer"
+                        className="p-2 -m-1 text-(--ink-3) hover:text-emerald-700 transition-colors cursor-pointer"
                       >
                         {c.isArchived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
                       </button>
@@ -1009,7 +1026,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           <div>
             <h4 className="text-xs sm:text-sm font-black text-(--ink)">App Currency</h4>
             <p className="text-[11px] sm:text-xs text-(--ink-3)">
-              Select your currency. Updates all cards, transactions, and formulas.
+              {currencyLocked
+                ? t('settings.currencyLockedNote')
+                : 'Select your currency. Updates all cards, transactions, and formulas.'}
             </p>
           </div>
         </div>

@@ -110,6 +110,18 @@ export class AccountEngine {
     };
   }
 
+  /**
+   * Restore rule. Only the flag flips: commitments cancelled by the archive
+   * stay cancelled (they may be stale) and paused recurring rules stay
+   * paused — the user resumes them explicitly, so nothing auto-posts into
+   * a freshly restored account by surprise.
+   */
+  public static unarchiveAccount(accounts: Account[], accountId: string, nowISO: string): Account[] {
+    return accounts.map((a) =>
+      a.id === accountId ? { ...a, isArchived: false, updatedAt: nowISO } : a
+    );
+  }
+
   /** An account is safe to hard-delete only when no transaction touches it. */
   public static hasHistory(transactions: Transaction[], accountId: string): boolean {
     return transactions.some((tx) => tx.accountId === accountId || tx.destinationAccountId === accountId);

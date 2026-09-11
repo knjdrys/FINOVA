@@ -501,6 +501,8 @@ export const fil = {
     language: 'Wika',
     languageHint: 'Piliin kung paano kausapin ka ng PALDO.',
     currency: 'Default na pera',
+    currencyLocked: 'Naka-lock ang currency kapag may pera na — magsimula ulit para palitan ito.',
+    currencyLockedNote: 'Naka-lock — itinakda ang currency noong nagsimula ka.',
     notifications: 'Mga Abiso',
     notificationsEnabled: 'Paganahin ang abiso',
     budgetWarning: 'Babala sa budget kapag umabot ng',
