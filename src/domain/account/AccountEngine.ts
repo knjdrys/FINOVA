@@ -88,6 +88,31 @@ export class AccountEngine {
    *
    * Pure: returns the next slices, mutates nothing.
    */
+  /**
+   * A commitment still "points at" its account while it can act: terminal
+   * rows (COMPLETED/CANCELLED/AUTO_POSTED) are history and don't block a
+   * hard delete; everything else does.
+   */
+  public static isLiveCommitment(c: MoneyCommitment): boolean {
+    return c.status !== 'COMPLETED' && c.status !== 'CANCELLED' && c.status !== 'AUTO_POSTED';
+  }
+
+  /**
+   * True when a non-terminal commitment or an active recurring rule names
+   * the account. The delete handler archives (never hard-deletes) such
+   * accounts: hard-deleting would orphan the bill/rule on a dead accountId.
+   */
+  public static hasLiveLinks(
+    commitments: MoneyCommitment[],
+    recurring: RecurringTransaction[],
+    accountId: string
+  ): boolean {
+    return (
+      commitments.some((c) => c.accountId === accountId && AccountEngine.isLiveCommitment(c)) ||
+      recurring.some((r) => r.accountId === accountId && r.isActive)
+    );
+  }
+
   public static archiveAccount(
     accounts: Account[],
     commitments: MoneyCommitment[],
@@ -100,7 +125,7 @@ export class AccountEngine {
         a.id === accountId ? { ...a, isArchived: true, updatedAt: nowISO } : a
       ),
       commitments: commitments.map((c) =>
-        c.accountId === accountId && c.status !== 'COMPLETED' && c.status !== 'CANCELLED' && c.status !== 'AUTO_POSTED'
+        c.accountId === accountId && AccountEngine.isLiveCommitment(c)
           ? { ...c, status: 'CANCELLED' as const, updatedAt: nowISO }
           : c
       ),
@@ -122,7 +147,11 @@ export class AccountEngine {
     );
   }
 
-  /** An account is safe to hard-delete only when no transaction touches it. */
+  /**
+   * Transaction touch check. Note: this ALONE no longer decides delete-vs-
+   * archive — the handler also requires hasLiveLinks() to be false, so a
+   * bill/rule linked to a transaction-less account still archives safely.
+   */
   public static hasHistory(transactions: Transaction[], accountId: string): boolean {
     return transactions.some((tx) => tx.accountId === accountId || tx.destinationAccountId === accountId);
   }

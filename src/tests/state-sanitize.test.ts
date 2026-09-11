@@ -155,6 +155,31 @@ describe('sanitizeState hardened lists', () => {
     expect(report.droppedRecurring).toBe(2);
   });
 
+  it('auto-settles PENDING rows older than 7 days, keeps fresh ones pending', () => {
+    const s = baseState();
+    const mk = (id: string, status: string, date: string) => ({
+      id, userId: 'u', type: 'EXPENSE', amount: 100, currency: 'PHP',
+      categoryId: 'c', accountId: 'a', date, time: '10:00',
+      tags: [], status, createdAt: '', updatedAt: '',
+    });
+    s.transactions = [
+      mk('tx-stale', 'PENDING', '2026-08-20'), // 22 days before ref
+      mk('tx-edge7', 'PENDING', '2026-09-04'), // exactly 7 days before ref
+      mk('tx-edge8', 'PENDING', '2026-09-03'), // 8 days before ref
+      mk('tx-fresh', 'PENDING', '2026-09-10'), // 1 day before ref
+      mk('tx-conf', 'CONFIRMED', '2026-08-01'),
+    ] as unknown as typeof s.transactions;
+    const { state, report } = sanitizeState(s, '2026-09-11');
+    const byId = new Map(state.transactions.map((t) => [t.id, t.status]));
+    expect(byId.get('tx-stale')).toBe('CONFIRMED');
+    expect(byId.get('tx-edge7')).toBe('PENDING'); // exactly 7 days: not older
+    expect(byId.get('tx-edge8')).toBe('CONFIRMED'); // 8 days: older, settles
+    expect(byId.get('tx-fresh')).toBe('PENDING');
+    expect(byId.get('tx-conf')).toBe('CONFIRMED');
+    expect(report.settledPending).toBe(2);
+    expect(totalDropped(report)).toBe(0); // settlement is routine, not corruption
+  });
+
   it('drops null accounts/categories instead of crashing downstream maps', () => {
     const s = baseState();
     s.accounts = [{ id: 'a1', initialBalance: 0, currentBalance: 0 }, null] as unknown as typeof s.accounts;

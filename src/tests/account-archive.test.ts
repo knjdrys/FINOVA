@@ -67,6 +67,31 @@ describe('AccountEngine.archiveAccount', () => {
     expect(AccountEngine.hasHistory([transfer], 'a2')).toBe(true);
   });
 
+  it('hasLiveLinks fires on live bills/rules, ignores terminal and foreign rows', () => {
+    const comms = [
+      commitment('c1', 'a1', 'PROJECTED'),
+      commitment('c2', 'a1', 'COMPLETED'),
+      commitment('c3', 'a1', 'CANCELLED'),
+      commitment('c4', 'a1', 'AUTO_POSTED'),
+      commitment('c5', 'a1', 'OVERDUE'),
+      commitment('c6', 'a2', 'PROJECTED'),
+    ];
+    const recs = [recurring('r1', 'a1', false), recurring('r2', 'a2', true)];
+    // OVERDUE is live (still owed) even with the rule paused
+    expect(AccountEngine.hasLiveLinks(comms, recs, 'a1')).toBe(true);
+    expect(AccountEngine.hasLiveLinks(comms, recs, 'a2')).toBe(true); // active rule
+    expect(AccountEngine.hasLiveLinks(
+      comms.filter((c) => c.id === 'c2' || c.id === 'c3' || c.id === 'c4'),
+      [recurring('r1', 'a1', false)],
+      'a1'
+    )).toBe(false);
+  });
+
+  it('hasLiveLinks treats an active rule alone as a live link', () => {
+    expect(AccountEngine.hasLiveLinks([], [recurring('r1', 'a1', true)], 'a1')).toBe(true);
+    expect(AccountEngine.hasLiveLinks([], [recurring('r1', 'a1', false)], 'a1')).toBe(false);
+  });
+
   it('archiving excludes the account from totals but keeps every transaction', () => {
     const accounts = [acc('a1', 2000000), acc('a2', 1000000)];
     const txs = [expense('t1', 'a1', 25000)];

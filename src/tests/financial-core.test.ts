@@ -144,6 +144,14 @@ describe('3. Atomic / Positive Mutations Only', () => {
     expect(TransactionEngine.validateTransaction({ type: 'EXPENSE', amount: 100, currency: 'PHP', accountId: 'acc-1' }, accs))
       .toBeNull();
   });
+
+  it('INV: credit-card overdraft says over-limit (balances model available credit)', () => {
+    const accs = [php('card-1', 500000, { type: 'CREDIT_CARD' })];
+    expect(TransactionEngine.validateTransaction({ type: 'EXPENSE', amount: 600000, currency: 'PHP', accountId: 'card-1' }, accs))
+      .toBe("This exceeds the card's available credit.");
+    expect(TransactionEngine.validateTransaction({ type: 'EXPENSE', amount: 100, currency: 'PHP', accountId: 'card-1' }, accs))
+      .toBeNull();
+  });
 });
 
 describe('4. Money Precision', () => {

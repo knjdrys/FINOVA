@@ -507,6 +507,7 @@ export const fil = {
     reconcileLabel: 'Tunay na balanse (reconciliation)',
     reconcileHint: 'Kung iba ang tunay mong balanse, magtatala ang PALDO ng adjustment para manatiling tugma ang libro.',
     reconcileMatch: 'Tugma — walang adjustment na kailangan',
+    creditBalanceHint: 'Para sa credit card, ilagay ang available credit (limit bawas ang kasalukuyang utang) — binabawasan ito ng gastos.',
   },
 
   settings: {
@@ -649,6 +650,7 @@ export const fil = {
     amountPositive: 'Dapat mas mataas sa zero ang halaga.',
     sourceMissing: 'Wala ang pinagkukunan na account.',
     overdraw: 'Mauubusan ang pinagkukunan na account na ito.',
+    overLimit: 'Lalampas ito sa available credit ng card.',
     destRequired: 'Kailangan ng destination account ang transfer.',
     destSame: 'Magkaiba dapat ang pinagkukunan at destination.',
     destMissing: 'Wala ang destination account.',

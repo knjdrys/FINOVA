@@ -498,6 +498,7 @@ export const en = {
     reconcileLabel: 'Actual balance (reconciliation)',
     reconcileHint: 'If your real balance differs, PALDO records an adjustment so the books stay consistent.',
     reconcileMatch: 'Matches — no adjustment needed',
+    creditBalanceHint: 'For credit cards, enter available credit (limit minus current debt) — spending reduces it.',
   },
 
   settings: {
@@ -640,6 +641,7 @@ export const en = {
     amountPositive: 'Amount must be greater than zero.',
     sourceMissing: 'Source account does not exist.',
     overdraw: 'This would overdraw the source account.',
+    overLimit: "This exceeds the card's available credit.",
     destRequired: 'A transfer needs a destination account.',
     destSame: 'Source and destination must differ.',
     destMissing: 'Destination account does not exist.',

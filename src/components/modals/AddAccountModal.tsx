@@ -233,6 +233,9 @@ export const AddAccountModal: React.FC<AddAccountModalProps> = ({
                   className="w-full text-sm font-bold text-(--ink) outline-none"
                 />
               </div>
+              {accountType === 'CREDIT_CARD' && (
+                <p className="mt-1.5 text-[11px] font-medium text-(--ink-3)">{t('modal.creditBalanceHint')}</p>
+              )}
             </div>
           ) : editingAccount ? (
             <div>

@@ -39,6 +39,25 @@ import { MoneyValue } from './domain/money/MoneyValue';
  * created in the same millisecond (batch materialization, rapid taps); a
  * random suffix makes every id unique even within one tick.
  */
+// Import trust boundary: positive, known status, live account, matching
+// currency, sane transfers (live distinct destination, same currency).
+function isImportableRow(
+  r: Omit<Transaction, 'id' | 'createdAt' | 'updatedAt'>,
+  byId: Map<string, Account>
+): boolean {
+  if (!(r.amount > 0)) return false;
+  if (r.status !== 'CONFIRMED' && r.status !== 'PENDING' && r.status !== 'CLEARED') return false;
+  const source = byId.get(r.accountId);
+  if (!source || source.isArchived) return false;
+  if (r.currency !== source.currency) return false;
+  if (r.type === 'TRANSFER') {
+    const dest = r.destinationAccountId ? byId.get(r.destinationAccountId) : undefined;
+    if (!dest || dest.isArchived || dest.id === source.id) return false;
+    if (dest.currency !== source.currency) return false;
+  }
+  return true;
+}
+
 function newId(prefix: string): string {
   const rand =
     typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -482,7 +501,7 @@ export function App() {
   const handleAddAccount = (newAccData: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newAccount: Account = {
       ...newAccData,
-      id: `acc-${Date.now()}`,
+      id: newId('acc'),
       currency,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -516,7 +535,7 @@ export function App() {
       const delta = reconcileToMinor - acc.currentBalance;
       if (delta !== 0) {
         const adjTx: Transaction = {
-          id: `tx-${Date.now()}`,
+          id: newId('tx'),
           userId: 'user-1',
           type: delta > 0 ? 'INCOME' : 'EXPENSE',
           amount: Math.abs(delta),
@@ -596,21 +615,18 @@ export function App() {
       return;
     }
     const nowISO = new Date().toISOString();
+    // Pre-filter for an honest toast count (the updater below re-validates
+    // against fresh prev — the only divergence is a mid-tap account change,
+    // in which case the updater's guard wins; the money itself is always exact).
+    const nowById = new Map(state.accounts.map((a) => [a.id, a]));
+    const preClean = rows.filter((r) => isImportableRow(r, nowById));
+    if (preClean.length === 0) {
+      if (!opts?.silent) notice(t('import.nothingNew'));
+      return;
+    }
     setState((prev) => {
       const byId = new Map(prev.accounts.map((a) => [a.id, a]));
-      const clean = rows.filter((r) => {
-        if (!(r.amount > 0)) return false;
-        if (r.status !== 'CONFIRMED' && r.status !== 'PENDING' && r.status !== 'CLEARED') return false;
-        const source = byId.get(r.accountId);
-        if (!source || source.isArchived) return false;
-        if (r.currency !== source.currency) return false;
-        if (r.type === 'TRANSFER') {
-          const dest = r.destinationAccountId ? byId.get(r.destinationAccountId) : undefined;
-          if (!dest || dest.isArchived || dest.id === source.id) return false;
-          if (dest.currency !== source.currency) return false;
-        }
-        return true;
-      });
+      const clean = preClean.filter((r) => isImportableRow(r, byId));
       if (clean.length === 0) return prev;
       const txs: Transaction[] = clean.map((r) => ({
         ...r,
@@ -628,7 +644,7 @@ export function App() {
     if (authUser && !authUser.isGuest) {
       getSyncManager()?.requestSync();
     }
-    if (!opts?.silent) notice(t('import.done', { count: rows.length }));
+    if (!opts?.silent) notice(t('import.done', { count: preClean.length }));
   };
 
   // Handler: Restore a downloaded backup (replace-all with ownership kept).
@@ -659,11 +675,13 @@ export function App() {
     }
     const acc = state.accounts.find((a) => a.id === accountId);
     const hasHistory = AccountEngine.hasHistory(state.transactions, accountId);
-    // Accounts with history are ARCHIVED, never hard-deleted: hard-deleting
-    // would orphan transactions (balances drop but spend history stays,
-    // breaking every total). Archive excludes the account from totals,
-    // Safe-to-Spend, and pickers while keeping history intact.
-    if (hasHistory && acc) {
+    const hasLinks = AccountEngine.hasLiveLinks(state.commitments, state.recurring, accountId);
+    // Accounts with history or live links are ARCHIVED, never hard-deleted:
+    // hard-deleting would orphan transactions (balances drop but spend
+    // history stays, breaking every total) or strand a bill/rule on a dead
+    // accountId. Archive excludes the account from totals, Safe-to-Spend,
+    // and pickers while keeping history intact.
+    if ((hasHistory || hasLinks) && acc) {
       if (
         !(await confirmDialog({
           title: t('dialog.archiveAccount', { name: acc.name }),
@@ -755,7 +773,7 @@ export function App() {
 
     const newTx: Transaction = {
       ...newTxData,
-      id: `tx-${Date.now()}`,
+      id: newId('tx'),
       currency,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -824,7 +842,7 @@ export function App() {
 
   // Budget CRUD
   const handleAddBudget = (data: Omit<Budget, 'id' | 'createdAt' | 'updatedAt'>) => {
-    mutatePlans({ budgets: [...state.budgets, { ...data, id: `bud-${Date.now()}`, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }] });
+    mutatePlans({ budgets: [...state.budgets, { ...data, id: newId('bud'), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }] });
   };
   const handleUpdateBudget = (id: string, data: Omit<Budget, 'id' | 'createdAt' | 'updatedAt'>) => {
     mutatePlans({ budgets: state.budgets.map((b) => (b.id === id ? { ...b, ...data, updatedAt: new Date().toISOString() } : b)) });
@@ -840,7 +858,7 @@ export function App() {
 
   // Goal CRUD + fund
   const handleAddGoal = (data: Omit<SavingsGoal, 'id' | 'createdAt' | 'updatedAt'>) => {
-    mutatePlans({ goals: [...state.goals, { ...data, id: `goal-${Date.now()}`, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }] });
+    mutatePlans({ goals: [...state.goals, { ...data, id: newId('goal'), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }] });
   };
   const handleUpdateGoal = (id: string, data: Omit<SavingsGoal, 'id' | 'createdAt' | 'updatedAt'>) => {
     mutatePlans({ goals: state.goals.map((g) => (g.id === id ? { ...g, ...data, updatedAt: new Date().toISOString() } : g)) });
@@ -892,7 +910,7 @@ export function App() {
     if (useTransfer && !linked) return;
     const fundTx: Transaction = useTransfer
       ? {
-          id: `tx-${Date.now()}`,
+          id: newId('tx'),
           userId: 'user-1',
           type: 'TRANSFER',
           amount: fundable,
@@ -910,7 +928,7 @@ export function App() {
           updatedAt: new Date().toISOString(),
         }
       : {
-          id: `tx-${Date.now()}`,
+          id: newId('tx'),
           userId: 'user-1',
           type: 'EXPENSE',
           amount: fundable,
@@ -1021,7 +1039,7 @@ export function App() {
 
   // Commitment (Bill) CRUD + mark paid
   const handleAddCommitment = (data: Omit<MoneyCommitment, 'id' | 'createdAt' | 'updatedAt'>) => {
-    mutatePlans({ commitments: [...state.commitments, { ...data, id: `comm-${Date.now()}`, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }] });
+    mutatePlans({ commitments: [...state.commitments, { ...data, id: newId('comm'), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }] });
   };
   const handleUpdateCommitment = (id: string, data: Omit<MoneyCommitment, 'id' | 'createdAt' | 'updatedAt'>) => {
     mutatePlans({ commitments: state.commitments.map((c) => (c.id === id ? { ...c, ...data, updatedAt: new Date().toISOString() } : c)) });
@@ -1163,7 +1181,7 @@ export function App() {
 
   // Recurring Transaction CRUD
   const handleAddRecurring = (data: Omit<RecurringTransaction, 'id' | 'createdAt' | 'updatedAt'>) => {
-    mutatePlans({ recurring: [...state.recurring, { ...data, id: `rec-${Date.now()}`, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }] });
+    mutatePlans({ recurring: [...state.recurring, { ...data, id: newId('rec'), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }] });
   };
   const handleUpdateRecurring = (id: string, data: Omit<RecurringTransaction, 'id' | 'createdAt' | 'updatedAt'>) => {
     mutatePlans({ recurring: state.recurring.map((r) => (r.id === id ? { ...r, ...data, updatedAt: new Date().toISOString() } : r)) });

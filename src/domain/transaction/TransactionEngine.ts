@@ -185,7 +185,9 @@ export class TransactionEngine {
 
     if (tx.type === 'EXPENSE' || tx.type === 'TRANSFER') {
       if (source.currentBalance - tx.amount < 0) {
-        return t('engine.overdraw');
+        // Credit balances model available credit (limit minus debt), so the
+        // same guard is an over-limit guard — say so honestly.
+        return t(source.type === 'CREDIT_CARD' ? 'engine.overLimit' : 'engine.overdraw');
       }
     }
 

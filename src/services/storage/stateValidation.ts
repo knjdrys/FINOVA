@@ -26,6 +26,8 @@ export interface SanitizeReport {
   droppedCategories: number;
   droppedAccounts: number;
   coercedAccounts: number;
+  /** Stale PENDING rows auto-confirmed (bank settlement window passed). */
+  settledPending: number;
 }
 
 const VALID_TX_TYPES = new Set(['INCOME', 'EXPENSE', 'TRANSFER']);
@@ -48,7 +50,10 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
 
-export function sanitizeState(state: FinovaState): { state: FinovaState; report: SanitizeReport } {
+export function sanitizeState(
+  state: FinovaState,
+  todayISO?: string
+): { state: FinovaState; report: SanitizeReport } {
   const report: SanitizeReport = {
     droppedTransactions: 0,
     droppedBudgets: 0,
@@ -58,7 +63,15 @@ export function sanitizeState(state: FinovaState): { state: FinovaState; report:
     droppedCategories: 0,
     droppedAccounts: 0,
     coercedAccounts: 0,
+    settledPending: 0,
   };
+  // Bank authorizations settle in 1-5 business days; a PENDING row older than
+  // 7 days is confirmed money the CSV just never updated. Zero-padded ISO
+  // dates compare lexicographically, so a plain string cutoff is exact.
+  const today = todayISO && isRealDateStr(todayISO) ? todayISO : new Date().toISOString().slice(0, 10);
+  const cutoff = new Date(today + 'T00:00:00Z');
+  cutoff.setUTCDate(cutoff.getUTCDate() - 7);
+  const settleBefore = cutoff.toISOString().slice(0, 10);
 
   const transactions = (Array.isArray(state.transactions) ? state.transactions : []).filter((t) => {
     if (!isRecord(t)) {
@@ -77,6 +90,13 @@ export function sanitizeState(state: FinovaState): { state: FinovaState; report:
     }
     // Coerce soft fields in place (safe defaults, money untouched).
     if (!VALID_TX_STATUS.has(t.status as string)) t.status = 'CONFIRMED';
+    // Auto-settle stale bank pendings: analytics exclude PENDING but balances
+    // include it, so an unsettled-forever row understates spend while the
+    // balance disagrees. Status-only flip — balances are untouched.
+    if (t.status === 'PENDING' && (t.date as string) < settleBefore) {
+      t.status = 'CONFIRMED';
+      report.settledPending++;
+    }
     if (!Number.isInteger(t.amount)) t.amount = Math.round(t.amount as number);
     if (t.tags !== undefined && !Array.isArray(t.tags)) t.tags = [];
     return true;
