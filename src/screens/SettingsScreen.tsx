@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
+import { ChunkErrorBoundary } from '../components/ChunkLoader';
+import { useRetryableLazy } from '../hooks/useRetryableLazy';
 import {
   Account,
   Budget,
@@ -15,9 +17,13 @@ import { DateUtils } from '../domain/date/DateUtils';
 import { FinovaStorage } from '../services/storage/FinovaStorage';
 import { BackupService } from '../services/backup/BackupService';
 import { CsvImportService, ImportRejectCode } from '../services/import/CsvImportService';
-import { AddAccountModal } from '../components/modals/AddAccountModal';
-import { AddCategoryModal } from '../components/modals/AddCategoryModal';
-import { TutorialModal } from '../components/modals/TutorialModal';
+// Settings-owned overlays load on demand (own chunks inside the Settings route).
+const loadAddAccountModal = () =>
+  import('../components/modals/AddAccountModal').then((m) => ({ default: m.AddAccountModal }));
+const loadAddCategoryModal = () =>
+  import('../components/modals/AddCategoryModal').then((m) => ({ default: m.AddCategoryModal }));
+const loadTutorialModal = () =>
+  import('../components/modals/TutorialModal').then((m) => ({ default: m.TutorialModal }));
 import { GrbiLogo } from '../components/ui/GrbiLogo';
 import { AuthUserProfile } from '../services/supabase/authService';
 import { isSupabaseConfigured } from '../services/supabase/supabaseClient';
@@ -110,6 +116,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   authUser,
   onSignOut,
 }) => {
+  const [AddAccountModal, addAccountKey, retryAddAccount] = useRetryableLazy(loadAddAccountModal);
+  const [AddCategoryModal, addCategoryKey, retryAddCategory] = useRetryableLazy(loadAddCategoryModal);
+  const [TutorialModal, tutorialKey, retryTutorial] = useRetryableLazy(loadTutorialModal);
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -1220,6 +1229,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       </div>
 
       {/* Add / Edit Bank Modal */}
+{isAddAccountOpen && (
+      <ChunkErrorBoundary sectionName="Bank form" resetKey={addAccountKey} onRetry={retryAddAccount}>
+        <Suspense fallback={null}>
       <AddAccountModal
         isOpen={isAddAccountOpen}
         onClose={() => { setIsAddAccountOpen(false); setEditingAccount(null); }}
@@ -1230,8 +1242,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         currency={currentCurrency}
         editingAccount={editingAccount}
       />
+        </Suspense>
+      </ChunkErrorBoundary>
+      )}
 
       {/* Add / Edit Category Modal */}
+{isCategoryModalOpen && (
+      <ChunkErrorBoundary sectionName="Category form" resetKey={addCategoryKey} onRetry={retryAddCategory}>
+        <Suspense fallback={null}>
       <AddCategoryModal
         isOpen={isCategoryModalOpen}
         onClose={() => { setIsCategoryModalOpen(false); setEditingCategory(null); }}
@@ -1244,13 +1262,22 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         categories={categories}
         editingCategory={editingCategory}
       />
+        </Suspense>
+      </ChunkErrorBoundary>
+      )}
 
       {/* Interactive Tutorial Modal */}
+{isTutorialOpen && (
+      <ChunkErrorBoundary sectionName="Tutorial" resetKey={tutorialKey} onRetry={retryTutorial}>
+        <Suspense fallback={null}>
       <TutorialModal
         isOpen={isTutorialOpen}
         onClose={() => setIsTutorialOpen(false)}
         currency={currentCurrency}
       />
+        </Suspense>
+      </ChunkErrorBoundary>
+      )}
     </div>
   );
 };

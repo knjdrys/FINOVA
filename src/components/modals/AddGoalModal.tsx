@@ -39,8 +39,8 @@ export const AddGoalModal: React.FC<AddGoalModalProps> = ({ isOpen, onClose, onS
   useResyncOnOpen(isOpen, `${editingGoal?.id ?? 'new'}:${preset?.name ?? ''}:${preset?.targetAmount ?? ''}:${currency}`, () => {
     submittedRef.current = false;
     setName(editingGoal?.name || preset?.name || '');
-    setTargetStr(editingGoal ? MoneyValue.fromMinorUnits(editingGoal.targetAmount, currency).format({ includeSymbol: false }) : preset?.targetAmount ? MoneyValue.fromMinorUnits(preset.targetAmount, currency).format({ includeSymbol: false }) : '');
-    setCurrentStr(editingGoal ? MoneyValue.fromMinorUnits(editingGoal.currentAmount, currency).format({ includeSymbol: false }) : '0');
+    setTargetStr(editingGoal ? MoneyValue.fromMinorUnits(editingGoal.targetAmount, currency).toInputString() : preset?.targetAmount ? MoneyValue.fromMinorUnits(preset.targetAmount, currency).toInputString() : '');
+    setCurrentStr(editingGoal ? MoneyValue.fromMinorUnits(editingGoal.currentAmount, currency).toInputString() : '0');
     setTargetDate(editingGoal?.targetDate || DateUtils.addDaysISO(DateUtils.getTodayISO(), 180));
     setPriority(editingGoal?.priority || 'ESSENTIAL');
     setAccountId(editingGoal?.accountId || '');

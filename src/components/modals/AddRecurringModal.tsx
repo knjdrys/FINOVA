@@ -46,7 +46,7 @@ export const AddRecurringModal: React.FC<AddRecurringModalProps> = ({
   useResyncOnOpen(isOpen, `${editingRecurring?.id ?? 'new'}:${accounts[0]?.id ?? ''}:${currency}`, () => {
     submittedRef.current = false;
     setTitle(editingRecurring?.title || '');
-    setAmountStr(editingRecurring ? MoneyValue.fromMinorUnits(editingRecurring.amount, editingRecurring.currency || currency).format({ includeSymbol: false }) : '');
+    setAmountStr(editingRecurring ? MoneyValue.fromMinorUnits(editingRecurring.amount, editingRecurring.currency || currency).toInputString() : '');
     setType(editingRecurring?.type || 'EXPENSE');
     setFrequency(editingRecurring?.frequency || 'MONTHLY');
     setStartDate(editingRecurring?.startDate || DateUtils.getTodayISO());

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { AccountEngine } from '../domain/account/AccountEngine';
 import { TransactionEngine } from '../domain/transaction/TransactionEngine';
+import { MoneyValue } from '../domain/money/MoneyValue';
 import { SafeToSpendEngine } from '../domain/safe-to-spend/SafeToSpendEngine';
 import { BudgetEngine } from '../domain/budget/BudgetEngine';
 import { TimelineEngine } from '../domain/timeline/TimelineEngine';
@@ -163,6 +164,13 @@ describe('4. Money Precision', () => {
       running = TransactionEngine.applyTransactionToAccounts(tx({ id: `t${i}`, type: 'EXPENSE', accountId: 'acc-1', amount: 1 }), running);
     }
     expect(running.find((a) => a.id === 'acc-1')!.currentBalance).toBe(-1000);
+  });
+
+  it('INV: toInputString never emits grouping commas (number-input safe)', () => {
+    expect(MoneyValue.fromMinorUnits(2500000, 'PHP').toInputString()).toBe('25000');
+    expect(MoneyValue.fromMinorUnits(2500050, 'PHP').toInputString()).toBe('25000.5');
+    expect(MoneyValue.fromMinorUnits(99900, 'PHP').toInputString()).toBe('999');
+    expect(MoneyValue.fromMinorUnits(0, 'PHP').toInputString()).toBe('0');
   });
 });
 

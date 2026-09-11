@@ -17,7 +17,10 @@ import { useState } from 'react';
  */
 export function useResyncOnOpen(isOpen: boolean, entityKey: string, resync: () => void): void {
   const sig = isOpen ? `open:${entityKey}` : 'closed';
-  const [lastSig, setLastSig] = useState(sig);
+  // Sentinel init (NOT useState(sig)): modals mount conditionally, so the
+  // first mount is often already-open — starting "matched" would skip the
+  // initial sync and open edit forms blank.
+  const [lastSig, setLastSig] = useState('__init__');
   if (sig !== lastSig) {
     setLastSig(sig);
     if (isOpen) resync();

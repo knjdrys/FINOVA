@@ -38,7 +38,7 @@ export const AddBudgetModal: React.FC<AddBudgetModalProps> = ({
   useResyncOnOpen(isOpen, `${editingBudget?.id ?? 'new'}:${currency}`, () => {
     submittedRef.current = false;
     setName(editingBudget?.name || '');
-    setAmountStr(editingBudget ? MoneyValue.fromMinorUnits(editingBudget.amount, currency).format({ includeSymbol: false }) : '');
+    setAmountStr(editingBudget ? MoneyValue.fromMinorUnits(editingBudget.amount, currency).toInputString() : '');
     setPeriod((editingBudget?.period as any) || 'MONTHLY');
     setCategoryIds(editingBudget?.categoryIds || []);
     setRollover(editingBudget?.rolloverUnused || false);

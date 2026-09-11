@@ -66,7 +66,7 @@ interface SplitRow {
 }
 
 const toDecimal = (minor: number, currency: CurrencyCode) =>
-  MoneyValue.fromMinorUnits(minor, currency).format({ includeSymbol: false });
+  MoneyValue.fromMinorUnits(minor, currency).toInputString();
 
 export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   isOpen,

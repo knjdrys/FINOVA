@@ -46,7 +46,7 @@ export const AddCommitmentModal: React.FC<AddCommitmentModalProps> = ({
   useResyncOnOpen(isOpen, `${editingCommitment?.id ?? 'new'}:${preset?.type ?? ''}:${preset?.title ?? ''}:${accounts[0]?.id ?? ''}`, () => {
     submittedRef.current = false;
     setTitle(editingCommitment?.title || preset?.title || '');
-    setAmountStr(editingCommitment ? MoneyValue.fromMinorUnits(editingCommitment.amount, editingCommitment.currency).format({ includeSymbol: false }) : '');
+    setAmountStr(editingCommitment ? MoneyValue.fromMinorUnits(editingCommitment.amount, editingCommitment.currency).toInputString() : '');
     setDueDate(editingCommitment?.dueDate || DateUtils.addDaysISO(DateUtils.getTodayISO(), 7));
     setType(editingCommitment?.type || preset?.type || 'BILL');
     setPriority(editingCommitment?.priority || 'ESSENTIAL');

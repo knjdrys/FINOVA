@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import { I18nProvider } from './i18n';
 import { t } from './i18n/core';
 import { DialogProvider } from './components/ui/dialog';
@@ -77,28 +77,70 @@ import type { SyncStatus } from './services/sync/syncQueue';
 import { Header } from './components/navigation/Header';
 import { BottomNavigation, NavTab } from './components/navigation/BottomNavigation';
 import { HomeScreen } from './screens/HomeScreen';
-import { AllExpensesScreen } from './screens/AllExpensesScreen';
-import { InsightsScreen } from './screens/InsightsScreen';
-import { PlansScreen } from './screens/PlansScreen';
-import { SettingsScreen } from './screens/SettingsScreen';
 import { AuthScreen } from './screens/AuthScreen';
+import { ChunkErrorBoundary, TabFallback } from './components/ChunkLoader';
+import { useRetryableLazy } from './hooks/useRetryableLazy';
 
-// Modals & Tours
-import { AddTransactionModal } from './components/modals/AddTransactionModal';
-import { TransactionDetailModal } from './components/modals/TransactionDetailModal';
-import { QuickActionsSheet, type QuickAction } from './components/QuickActionsSheet';
+// Route-level code splitting: secondary tabs + all overlays load on demand
+// (each becomes its own hashed chunk, cached by the service worker after
+// first visit). Home/Auth stay in the main chunk — first paint either way.
+// Chunk failures render a scoped retry (ChunkErrorBoundary), never the
+// top-level crash screen.
+const loadAllExpensesScreen = () =>
+  import('./screens/AllExpensesScreen').then((m) => ({ default: m.AllExpensesScreen }));
+const loadInsightsScreen = () =>
+  import('./screens/InsightsScreen').then((m) => ({ default: m.InsightsScreen }));
+const loadPlansScreen = () =>
+  import('./screens/PlansScreen').then((m) => ({ default: m.PlansScreen }));
+const loadSettingsScreen = () =>
+  import('./screens/SettingsScreen').then((m) => ({ default: m.SettingsScreen }));
+const loadAddTransactionModal = () =>
+  import('./components/modals/AddTransactionModal').then((m) => ({ default: m.AddTransactionModal }));
+const loadTransactionDetailModal = () =>
+  import('./components/modals/TransactionDetailModal').then((m) => ({ default: m.TransactionDetailModal }));
+const loadAddBudgetModal = () =>
+  import('./components/modals/AddBudgetModal').then((m) => ({ default: m.AddBudgetModal }));
+const loadAddGoalModal = () =>
+  import('./components/modals/AddGoalModal').then((m) => ({ default: m.AddGoalModal }));
+const loadAddCommitmentModal = () =>
+  import('./components/modals/AddCommitmentModal').then((m) => ({ default: m.AddCommitmentModal }));
+const loadAddRecurringModal = () =>
+  import('./components/modals/AddRecurringModal').then((m) => ({ default: m.AddRecurringModal }));
+const loadSafeToSpendExplainerModal = () =>
+  import('./components/modals/SafeToSpendExplainerModal').then((m) => ({ default: m.SafeToSpendExplainerModal }));
+const loadWhatIfModal = () =>
+  import('./components/modals/WhatIfModal').then((m) => ({ default: m.WhatIfModal }));
+const loadImportTransactionsModal = () =>
+  import('./components/modals/ImportTransactionsModal').then((m) => ({ default: m.ImportTransactionsModal }));
+const loadOnboardingModal = () =>
+  import('./components/modals/OnboardingModal').then((m) => ({ default: m.OnboardingModal }));
+const loadQuickActionsSheet = () =>
+  import('./components/QuickActionsSheet').then((m) => ({ default: m.QuickActionsSheet }));
+const loadGuidedAppTour = () =>
+  import('./components/tutorial/GuidedAppTour').then((m) => ({ default: m.GuidedAppTour }));
+
+// Modals & Tours (type-only: QuickAction is an interface, erased at build)
+import type { QuickAction } from './components/QuickActionsSheet';
 import { ReceiptText, ArrowDownLeft, ArrowLeftRight, CalendarClock, Wallet, Target, Repeat } from 'lucide-react';
-import { AddBudgetModal } from './components/modals/AddBudgetModal';
-import { AddGoalModal } from './components/modals/AddGoalModal';
-import { AddCommitmentModal } from './components/modals/AddCommitmentModal';
-import { AddRecurringModal } from './components/modals/AddRecurringModal';
-import { SafeToSpendExplainerModal } from './components/modals/SafeToSpendExplainerModal';
-import { WhatIfModal } from './components/modals/WhatIfModal';
-import { ImportTransactionsModal } from './components/modals/ImportTransactionsModal';
-import { OnboardingModal } from './components/modals/OnboardingModal';
-import { GuidedAppTour } from './components/tutorial/GuidedAppTour';
 
 export function App() {
+  // Split-chunk components (same names as before — call-site JSX is untouched).
+  const [AllExpensesScreen, allExpensesKey, retryAllExpenses] = useRetryableLazy(loadAllExpensesScreen);
+  const [InsightsScreen, insightsKey, retryInsights] = useRetryableLazy(loadInsightsScreen);
+  const [PlansScreen, plansKey, retryPlans] = useRetryableLazy(loadPlansScreen);
+  const [SettingsScreen, settingsKey, retrySettings] = useRetryableLazy(loadSettingsScreen);
+  const [AddTransactionModal, addTxKey, retryAddTx] = useRetryableLazy(loadAddTransactionModal);
+  const [TransactionDetailModal, txDetailKey, retryTxDetail] = useRetryableLazy(loadTransactionDetailModal);
+  const [AddBudgetModal, addBudgetKey, retryAddBudget] = useRetryableLazy(loadAddBudgetModal);
+  const [AddGoalModal, addGoalKey, retryAddGoal] = useRetryableLazy(loadAddGoalModal);
+  const [AddCommitmentModal, addCommitmentKey, retryAddCommitment] = useRetryableLazy(loadAddCommitmentModal);
+  const [AddRecurringModal, addRecurringKey, retryAddRecurring] = useRetryableLazy(loadAddRecurringModal);
+  const [SafeToSpendExplainerModal, safeExplainerKey, retrySafeExplainer] = useRetryableLazy(loadSafeToSpendExplainerModal);
+  const [WhatIfModal, whatIfKey, retryWhatIf] = useRetryableLazy(loadWhatIfModal);
+  const [ImportTransactionsModal, importKey, retryImport] = useRetryableLazy(loadImportTransactionsModal);
+  const [OnboardingModal, onboardingKey, retryOnboarding] = useRetryableLazy(loadOnboardingModal);
+  const [QuickActionsSheet, quickActionsKey, retryQuickActions] = useRetryableLazy(loadQuickActionsSheet);
+  const [GuidedAppTour, tourKey, retryTour] = useRetryableLazy(loadGuidedAppTour);
   const [authUser, setAuthUser] = useState<AuthUserProfile | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [state, setState] = useState<FinovaState>(() => FinovaStorage.loadState());
@@ -195,6 +237,22 @@ export function App() {
     } catch {
       // Private-mode storage — the boundary hatch simply stays trip-1-shy.
     }
+    // Warm the two hot modal chunks once the main thread is idle: first
+    // paint stays lean, but add/view opens feel instant (cache hit).
+    const idleWarm = (load: () => Promise<unknown>) => {
+      const run = () => {
+        void load().catch(() => {
+          // Offline or evicted — the boundary offers a retry at open time.
+        });
+      };
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        (window as unknown as { requestIdleCallback: (cb: () => void) => void }).requestIdleCallback(run);
+      } else {
+        setTimeout(run, 1500);
+      }
+    };
+    idleWarm(loadAddTransactionModal);
+    idleWarm(loadTransactionDetailModal);
     registerServiceWorker();
     setupInstallPrompt();
     const unsubInstall = subscribeInstallable(setCanInstall);
@@ -1458,6 +1516,8 @@ export function App() {
           )}
 
           {currentTab === 'ALL_EXPENSES' && (
+            <ChunkErrorBoundary sectionName="Transactions" resetKey={allExpensesKey} onRetry={retryAllExpenses}>
+              <Suspense fallback={<TabFallback />}>
             <AllExpensesScreen
               accounts={activeAccounts}
               transactions={transactions}
@@ -1467,9 +1527,13 @@ export function App() {
               onSelectTransaction={(tx) => setSelectedTxForDetail(tx)}
               onOpenImport={() => setIsImportOpen(true)}
             />
+              </Suspense>
+            </ChunkErrorBoundary>
           )}
 
           {currentTab === 'ANALYTICS' && (
+            <ChunkErrorBoundary sectionName="Analytics" resetKey={insightsKey} onRetry={retryInsights}>
+              <Suspense fallback={<TabFallback />}>
             <InsightsScreen
               transactions={transactions}
               categories={categories}
@@ -1477,9 +1541,13 @@ export function App() {
               insights={insights}
               onOpenWhatIf={() => setIsWhatIfOpen(true)}
             />
+              </Suspense>
+            </ChunkErrorBoundary>
           )}
 
           {currentTab === 'PLANS' && (
+            <ChunkErrorBoundary sectionName="Plans" resetKey={plansKey} onRetry={retryPlans}>
+              <Suspense fallback={<TabFallback />}>
             <PlansScreen
               accounts={activeAccounts}
               transactions={transactions}
@@ -1532,9 +1600,13 @@ export function App() {
               initialSection={plansInitialSection}
               sectionNonce={plansSectionNonce}
             />
+              </Suspense>
+            </ChunkErrorBoundary>
           )}
 
           {currentTab === 'SETTINGS' && (
+            <ChunkErrorBoundary sectionName="Settings" resetKey={settingsKey} onRetry={retrySettings}>
+              <Suspense fallback={<TabFallback />}>
             <SettingsScreen
               settings={settings}
               onUpdateSettings={(newSettings) => setState((prev) => ({ ...prev, settings: newSettings }))}
@@ -1564,6 +1636,8 @@ export function App() {
               authUser={authUser}
               onSignOut={handleSignOut}
             />
+              </Suspense>
+            </ChunkErrorBoundary>
           )}
         </main>
       </div>
@@ -1576,15 +1650,24 @@ export function App() {
       />
 
       {/* LIVE APP TOUR OVERLAY (ANIMATED SPOTLIGHT POINTER) */}
-      <GuidedAppTour
+{isTourOpen && (
+      <ChunkErrorBoundary sectionName="App tour" resetKey={tourKey} onRetry={retryTour}>
+        <Suspense fallback={null}>
+        <GuidedAppTour
         isOpen={isTourOpen}
         onClose={() => setIsTourOpen(false)}
         onNavigateTab={(tab) => setCurrentTab(tab)}
         currency={currency}
       />
+        </Suspense>
+      </ChunkErrorBoundary>
+      )}
 
       {/* FLOATING + → QUICK ACTIONS (discovers every "add" path) */}
-      <QuickActionsSheet
+{isQuickActionsOpen && (
+      <ChunkErrorBoundary sectionName="Quick actions" resetKey={quickActionsKey} onRetry={retryQuickActions}>
+        <Suspense fallback={null}>
+        <QuickActionsSheet
         isOpen={isQuickActionsOpen}
         onClose={() => setIsQuickActionsOpen(false)}
         title={t('quick.title')}
@@ -1592,18 +1675,28 @@ export function App() {
         actions={quickActions}
         onSelect={handleQuickAction}
       />
+        </Suspense>
+      </ChunkErrorBoundary>
+      )}
 
       {/* MODALS */}
       {/* 1. First-Time Welcome Onboarding Wizard */}
       {settings.hasCompletedOnboarding === false && (
+        <ChunkErrorBoundary sectionName="Welcome" resetKey={onboardingKey} onRetry={retryOnboarding}>
+          <Suspense fallback={null}>
         <OnboardingModal
           isOpen={true}
           onComplete={handleOnboardingComplete}
         />
+          </Suspense>
+        </ChunkErrorBoundary>
       )}
 
       {/* 2. Fast Add / Edit Transaction */}
-      <AddTransactionModal
+{isAddTxOpen && (
+      <ChunkErrorBoundary sectionName="Add transaction" resetKey={addTxKey} onRetry={retryAddTx}>
+        <Suspense fallback={null}>
+        <AddTransactionModal
         isOpen={isAddTxOpen}
         onClose={() => { setIsAddTxOpen(false); setEditingTx(null); setQuickAddMode('EXPENSE'); }}
         onSave={handleSaveTransaction}
@@ -1615,17 +1708,29 @@ export function App() {
         editingTx={editingTx}
         initialMode={quickAddMode}
       />
+        </Suspense>
+      </ChunkErrorBoundary>
+      )}
 
       {/* 3. Safe-to-Spend Explainer */}
-      <SafeToSpendExplainerModal
+{isSafeToSpendOpen && (
+      <ChunkErrorBoundary sectionName="Explainer" resetKey={safeExplainerKey} onRetry={retrySafeExplainer}>
+        <Suspense fallback={null}>
+        <SafeToSpendExplainerModal
         isOpen={isSafeToSpendOpen}
         onClose={() => setIsSafeToSpendOpen(false)}
         safeToSpend={safeToSpend}
         settings={settings}
       />
+        </Suspense>
+      </ChunkErrorBoundary>
+      )}
 
       {/* 4. What-If Simulation */}
-      <WhatIfModal
+{isWhatIfOpen && (
+      <ChunkErrorBoundary sectionName="Purchase tester" resetKey={whatIfKey} onRetry={retryWhatIf}>
+        <Suspense fallback={null}>
+        <WhatIfModal
         isOpen={isWhatIfOpen}
         onClose={() => setIsWhatIfOpen(false)}
         onConfirmAsRealTransaction={handleSaveTransaction}
@@ -1637,8 +1742,14 @@ export function App() {
         categories={categories}
         settings={settings}
       />
+        </Suspense>
+      </ChunkErrorBoundary>
+      )}
 
-      <ImportTransactionsModal
+{isImportOpen && (
+      <ChunkErrorBoundary sectionName="Import" resetKey={importKey} onRetry={retryImport}>
+        <Suspense fallback={null}>
+        <ImportTransactionsModal
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         accounts={accounts}
@@ -1647,9 +1758,15 @@ export function App() {
         settings={settings}
         onImport={handleImportTransactions}
       />
+        </Suspense>
+      </ChunkErrorBoundary>
+      )}
 
       {/* 5. Plans — Create/Edit modals (contextual, no new top-level nav) */}
-      <AddBudgetModal
+{isAddBudgetOpen && (
+      <ChunkErrorBoundary sectionName="Budget form" resetKey={addBudgetKey} onRetry={retryAddBudget}>
+        <Suspense fallback={null}>
+        <AddBudgetModal
         isOpen={isAddBudgetOpen}
         onClose={() => { setIsAddBudgetOpen(false); setEditingBudget(null); }}
         onSave={(data) => {
@@ -1661,7 +1778,13 @@ export function App() {
         currency={currency}
         editingBudget={editingBudget}
       />
-      <AddGoalModal
+        </Suspense>
+      </ChunkErrorBoundary>
+      )}
+{isAddGoalOpen && (
+      <ChunkErrorBoundary sectionName="Goal form" resetKey={addGoalKey} onRetry={retryAddGoal}>
+        <Suspense fallback={null}>
+        <AddGoalModal
         isOpen={isAddGoalOpen}
         onClose={() => { setIsAddGoalOpen(false); setEditingGoal(null); setGoalPreset(null); }}
         onSave={(data) => {
@@ -1674,7 +1797,13 @@ export function App() {
         editingGoal={editingGoal}
         preset={goalPreset}
       />
-      <AddCommitmentModal
+        </Suspense>
+      </ChunkErrorBoundary>
+      )}
+{isAddCommitmentOpen && (
+      <ChunkErrorBoundary sectionName="Commitment form" resetKey={addCommitmentKey} onRetry={retryAddCommitment}>
+        <Suspense fallback={null}>
+        <AddCommitmentModal
         isOpen={isAddCommitmentOpen}
         onClose={() => { setIsAddCommitmentOpen(false); setEditingCommitment(null); setCommitmentPreset(null); }}
         onSave={(data) => {
@@ -1688,7 +1817,13 @@ export function App() {
         editingCommitment={editingCommitment}
         preset={commitmentPreset}
       />
-      <AddRecurringModal
+        </Suspense>
+      </ChunkErrorBoundary>
+      )}
+{isAddRecurringOpen && (
+      <ChunkErrorBoundary sectionName="Recurring form" resetKey={addRecurringKey} onRetry={retryAddRecurring}>
+        <Suspense fallback={null}>
+        <AddRecurringModal
         isOpen={isAddRecurringOpen}
         onClose={() => { setIsAddRecurringOpen(false); setEditingRecurring(null); }}
         onSave={(data) => {
@@ -1701,9 +1836,15 @@ export function App() {
         currency={currency}
         editingRecurring={editingRecurring}
       />
+        </Suspense>
+      </ChunkErrorBoundary>
+      )}
 
       {/* 5. Transaction Detail Modal */}
-      <TransactionDetailModal
+{selectedTxForDetail !== null && (
+      <ChunkErrorBoundary sectionName="Transaction details" resetKey={txDetailKey} onRetry={retryTxDetail}>
+        <Suspense fallback={null}>
+        <TransactionDetailModal
         isOpen={selectedTxForDetail !== null}
         onClose={() => setSelectedTxForDetail(null)}
         transaction={selectedTxForDetail}
@@ -1725,6 +1866,9 @@ export function App() {
         }}
         onDelete={handleDeleteTransaction}
       />
+        </Suspense>
+      </ChunkErrorBoundary>
+      )}
     </div>
     </AppLockGuard>
     </DialogProvider>

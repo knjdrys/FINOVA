@@ -50,6 +50,16 @@ export class MoneyValue {
     return this.minorUnits / multiplier;
   }
 
+  /**
+   * Grouping-free decimal string for `type="number"` inputs. format() emits
+   * locale commas ("25,000.00") which number inputs REJECT — every edit form
+   * showed a blank amount for values >= 1,000. Never use format() for input
+   * state; never use this for display (no symbol, no grouping).
+   */
+  public toInputString(): string {
+    return String(this.getMajorUnits());
+  }
+
   public getCurrency(): CurrencyCode {
     return this.currency;
   }
